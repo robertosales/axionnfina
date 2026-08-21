@@ -15,7 +15,7 @@ function Index() {
       style={{ backgroundColor: "#fcfbf8" }}
     >
       <div className="text-xl font-medium text-foreground text-center max-w-2xl px-6">
-        OBJETIVO: Criar "Axionn Finance" — Agente Financeiro Pessoal Multi-Agente
+        continue a excutar o site
       </div>
     </div>
   );

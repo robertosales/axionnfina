@@ -15,7 +15,7 @@ function Index() {
       style={{ backgroundColor: "#fcfbf8" }}
     >
       <div className="text-xl font-medium text-foreground">
-        Corrigir tipagem de rotas
+        continue fazendo o saite
       </div>
     </div>
   );

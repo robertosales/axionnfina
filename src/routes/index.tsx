@@ -14,8 +14,8 @@ function Index() {
       className="flex min-h-screen items-center justify-center"
       style={{ backgroundColor: "#fcfbf8" }}
     >
-      <div className="text-xl font-medium text-foreground">
-        continue fazendo o saite
+      <div className="text-xl font-medium text-foreground text-center max-w-2xl px-6">
+        OBJETIVO: Criar "Axionn Finance" — Agente Financeiro Pessoal Multi-Agente
       </div>
     </div>
   );

@@ -11,8 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgentRouteImport } from './routes/agent'
+import { Route as BillsRouteImport } from './routes/bills'
 import { Route as BudgetRouteImport } from './routes/budget'
 import { Route as GoalsRouteImport } from './routes/goals'
+import { Route as InsightsRouteImport } from './routes/insights'
+import { Route as InvestmentsRouteImport } from './routes/investments'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as TaxesRouteImport } from './routes/taxes'
 import { Route as TransactionsRouteImport } from './routes/transactions'
 
 const IndexRoute = IndexRouteImport.update({
@@ -25,6 +30,11 @@ const AgentRoute = AgentRouteImport.update({
   path: '/agent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillsRoute = BillsRouteImport.update({
+  id: '/bills',
+  path: '/bills',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BudgetRoute = BudgetRouteImport.update({
   id: '/budget',
   path: '/budget',
@@ -33,6 +43,26 @@ const BudgetRoute = BudgetRouteImport.update({
 const GoalsRoute = GoalsRouteImport.update({
   id: '/goals',
   path: '/goals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InsightsRoute = InsightsRouteImport.update({
+  id: '/insights',
+  path: '/insights',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvestmentsRoute = InvestmentsRouteImport.update({
+  id: '/investments',
+  path: '/investments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TaxesRoute = TaxesRouteImport.update({
+  id: '/taxes',
+  path: '/taxes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TransactionsRoute = TransactionsRouteImport.update({
@@ -44,38 +74,89 @@ const TransactionsRoute = TransactionsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agent': typeof AgentRoute
+  '/bills': typeof BillsRoute
   '/budget': typeof BudgetRoute
   '/goals': typeof GoalsRoute
+  '/insights': typeof InsightsRoute
+  '/investments': typeof InvestmentsRoute
+  '/settings': typeof SettingsRoute
+  '/taxes': typeof TaxesRoute
   '/transactions': typeof TransactionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agent': typeof AgentRoute
+  '/bills': typeof BillsRoute
   '/budget': typeof BudgetRoute
   '/goals': typeof GoalsRoute
+  '/insights': typeof InsightsRoute
+  '/investments': typeof InvestmentsRoute
+  '/settings': typeof SettingsRoute
+  '/taxes': typeof TaxesRoute
   '/transactions': typeof TransactionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agent': typeof AgentRoute
+  '/bills': typeof BillsRoute
   '/budget': typeof BudgetRoute
   '/goals': typeof GoalsRoute
+  '/insights': typeof InsightsRoute
+  '/investments': typeof InvestmentsRoute
+  '/settings': typeof SettingsRoute
+  '/taxes': typeof TaxesRoute
   '/transactions': typeof TransactionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/agent' | '/budget' | '/goals' | '/transactions'
+  fullPaths:
+    | '/'
+    | '/agent'
+    | '/bills'
+    | '/budget'
+    | '/goals'
+    | '/insights'
+    | '/investments'
+    | '/settings'
+    | '/taxes'
+    | '/transactions'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/agent' | '/budget' | '/goals' | '/transactions'
-  id: '__root__' | '/' | '/agent' | '/budget' | '/goals' | '/transactions'
+  to:
+    | '/'
+    | '/agent'
+    | '/bills'
+    | '/budget'
+    | '/goals'
+    | '/insights'
+    | '/investments'
+    | '/settings'
+    | '/taxes'
+    | '/transactions'
+  id:
+    | '__root__'
+    | '/'
+    | '/agent'
+    | '/bills'
+    | '/budget'
+    | '/goals'
+    | '/insights'
+    | '/investments'
+    | '/settings'
+    | '/taxes'
+    | '/transactions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgentRoute: typeof AgentRoute
+  BillsRoute: typeof BillsRoute
   BudgetRoute: typeof BudgetRoute
   GoalsRoute: typeof GoalsRoute
+  InsightsRoute: typeof InsightsRoute
+  InvestmentsRoute: typeof InvestmentsRoute
+  SettingsRoute: typeof SettingsRoute
+  TaxesRoute: typeof TaxesRoute
   TransactionsRoute: typeof TransactionsRoute
 }
 
@@ -95,6 +176,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bills': {
+      id: '/bills'
+      path: '/bills'
+      fullPath: '/bills'
+      preLoaderRoute: typeof BillsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/budget': {
       id: '/budget'
       path: '/budget'
@@ -107,6 +195,34 @@ declare module '@tanstack/react-router' {
       path: '/goals'
       fullPath: '/goals'
       preLoaderRoute: typeof GoalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/insights': {
+      id: '/insights'
+      path: '/insights'
+      fullPath: '/insights'
+      preLoaderRoute: typeof InsightsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/investments': {
+      id: '/investments'
+      path: '/investments'
+      fullPath: '/investments'
+      preLoaderRoute: typeof InvestmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/taxes': {
+      id: '/taxes'
+      path: '/taxes'
+      fullPath: '/taxes'
+      preLoaderRoute: typeof TaxesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/transactions': {
@@ -122,8 +238,13 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgentRoute: AgentRoute,
+  BillsRoute: BillsRoute,
   BudgetRoute: BudgetRoute,
   GoalsRoute: GoalsRoute,
+  InsightsRoute: InsightsRoute,
+  InvestmentsRoute: InvestmentsRoute,
+  SettingsRoute: SettingsRoute,
+  TaxesRoute: TaxesRoute,
   TransactionsRoute: TransactionsRoute,
 }
 export const routeTree = rootRouteImport

@@ -46,15 +46,15 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/", label: "Transações", icon: Receipt },
-  { to: "/", label: "Orçamento", icon: PiggyBank },
-  { to: "/", label: "Investimentos", icon: LineChart },
-  { to: "/", label: "Impostos", icon: FileText },
-  { to: "/", label: "Contas", icon: CreditCard },
-  { to: "/", label: "Metas", icon: Target },
-  { to: "/", label: "Insights", icon: Sparkles },
-  { to: "/", label: "Agente IA", icon: Bot, highlight: true },
-  { to: "/", label: "Configurações", icon: Settings },
+  { to: "/transactions", label: "Transações", icon: Receipt },
+  { to: "/budget", label: "Orçamento", icon: PiggyBank },
+  { to: "/investments", label: "Investimentos", icon: LineChart },
+  { to: "/taxes", label: "Impostos", icon: FileText },
+  { to: "/bills", label: "Contas", icon: CreditCard },
+  { to: "/goals", label: "Metas", icon: Target },
+  { to: "/insights", label: "Insights", icon: Sparkles },
+  { to: "/agent", label: "Agente IA", icon: Bot, highlight: true },
+  { to: "/settings", label: "Configurações", icon: Settings },
 ];
 
 function useTheme() {

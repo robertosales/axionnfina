@@ -60,7 +60,7 @@ export function CommandPalette({ open, onOpenChange }: Props) {
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading="Navegar">
-          <CommandItem onSelect={() => run("Agente", () => navigate({ to: "/" }))}>
+          <CommandItem onSelect={() => run("Agente", () => navigate({ to: "/agent" }))}>
             <Bot className="size-4" /> Perguntar ao agente
           </CommandItem>
         </CommandGroup>

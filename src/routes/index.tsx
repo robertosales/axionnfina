@@ -147,6 +147,7 @@ function Dashboard() {
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
                 <Area
                   type="monotone"
+                  isAnimationActive={false}
                   dataKey="receitas"
                   stroke="var(--color-income)"
                   strokeWidth={2}
@@ -154,6 +155,7 @@ function Dashboard() {
                 />
                 <Area
                   type="monotone"
+                  isAnimationActive={false}
                   dataKey="despesas"
                   stroke="var(--color-expense)"
                   strokeWidth={2}
@@ -175,6 +177,7 @@ function Dashboard() {
                   innerRadius={58}
                   outerRadius={88}
                   paddingAngle={3}
+                  isAnimationActive={false}
                   stroke="none"
                 >
                   {allocation.map((slice) => (
@@ -225,8 +228,8 @@ function Dashboard() {
                   }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="planned" name="Planejado" fill="var(--color-chart-1)" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="spent" name="Realizado" fill="var(--color-chart-2)" radius={[6, 6, 0, 0]} />
+                <Bar isAnimationActive={false} dataKey="planned" name="Planejado" fill="var(--color-chart-1)" radius={[6, 6, 0, 0]} />
+                <Bar isAnimationActive={false} dataKey="spent" name="Realizado" fill="var(--color-chart-2)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

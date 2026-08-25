@@ -52,6 +52,7 @@ function InvestmentsPage() {
                   innerRadius={58}
                   outerRadius={88}
                   paddingAngle={3}
+                  isAnimationActive={false}
                   stroke="none"
                 >
                   {allocation.map((slice) => (

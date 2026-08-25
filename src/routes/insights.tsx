@@ -76,6 +76,7 @@ function InsightsPage() {
               />
               <Area
                 type="monotone"
+                  isAnimationActive={false}
                 dataKey="value"
                 stroke="var(--color-primary)"
                 strokeWidth={2}

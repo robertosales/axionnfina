@@ -4,7 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { GoalTracker } from "@/components/finance/GoalTracker";
 import { goals } from "@/lib/mock-data";
 
-export const Route = createFileRoute("/goals")({
+export const Route = createFileRoute("/_authenticated/goals")({
   head: () => ({
     meta: [
       { title: "Metas — Axionn Finance" },

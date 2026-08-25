@@ -37,7 +37,7 @@ import {
 import { daysUntil, formatBRL, formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Axionn Finance — Painel financeiro com agente de IA" },

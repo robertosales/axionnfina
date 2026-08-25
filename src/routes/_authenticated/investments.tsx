@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { allocation } from "@/lib/mock-data";
 import { formatBRL } from "@/lib/format";
 
-export const Route = createFileRoute("/investments")({
+export const Route = createFileRoute("/_authenticated/investments")({
   head: () => ({
     meta: [
       { title: "Investimentos — Axionn Finance" },

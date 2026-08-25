@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatBRL } from "@/lib/format";
 
-export const Route = createFileRoute("/taxes")({
+export const Route = createFileRoute("/_authenticated/taxes")({
   head: () => ({
     meta: [
       { title: "Impostos — Axionn Finance" },

@@ -8,7 +8,7 @@ import { agentInsights, netWorthSeries } from "@/lib/mock-data";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/insights")({
+export const Route = createFileRoute("/_authenticated/insights")({
   head: () => ({
     meta: [
       { title: "Insights — Axionn Finance" },

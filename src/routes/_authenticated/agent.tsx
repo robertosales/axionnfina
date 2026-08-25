@@ -12,7 +12,7 @@ import { agentInsights, budgetItems, goals, kpis } from "@/lib/mock-data";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/agent")({
+export const Route = createFileRoute("/_authenticated/agent")({
   head: () => ({
     meta: [
       { title: "Agente IA — Axionn Finance" },

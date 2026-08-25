@@ -228,8 +228,8 @@ function Dashboard() {
                   }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="planned" name="Planejado" fill="var(--color-chart-1)" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="spent" name="Realizado" fill="var(--color-chart-2)" radius={[6, 6, 0, 0]} />
+                <Bar isAnimationActive={false} dataKey="planned" name="Planejado" fill="var(--color-chart-1)" radius={[6, 6, 0, 0]} />
+                <Bar isAnimationActive={false} dataKey="spent" name="Realizado" fill="var(--color-chart-2)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

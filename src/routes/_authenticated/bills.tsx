@@ -9,7 +9,7 @@ import { upcomingBills } from "@/lib/mock-data";
 import { daysUntil, formatBRL, formatLongDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/bills")({
+export const Route = createFileRoute("/_authenticated/bills")({
   head: () => ({
     meta: [
       { title: "Contas a pagar — Axionn Finance" },

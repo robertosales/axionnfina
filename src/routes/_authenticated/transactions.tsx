@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { recentTransactions, type TransactionKind } from "@/lib/mock-data";
 import { formatBRL } from "@/lib/format";
 
-export const Route = createFileRoute("/transactions")({
+export const Route = createFileRoute("/_authenticated/transactions")({
   head: () => ({
     meta: [
       { title: "Transações — Axionn Finance" },

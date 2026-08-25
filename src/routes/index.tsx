@@ -147,6 +147,8 @@ function Dashboard() {
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
                 <Area
                   type="monotone"
+                isAnimationActive={false}
+                  isAnimationActive={false}
                   dataKey="receitas"
                   stroke="var(--color-income)"
                   strokeWidth={2}
@@ -154,6 +156,8 @@ function Dashboard() {
                 />
                 <Area
                   type="monotone"
+                isAnimationActive={false}
+                  isAnimationActive={false}
                   dataKey="despesas"
                   stroke="var(--color-expense)"
                   strokeWidth={2}
@@ -175,6 +179,7 @@ function Dashboard() {
                   innerRadius={58}
                   outerRadius={88}
                   paddingAngle={3}
+                  isAnimationActive={false}
                   stroke="none"
                 >
                   {allocation.map((slice) => (

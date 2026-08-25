@@ -148,7 +148,6 @@ function Dashboard() {
                 <Area
                   type="monotone"
                 isAnimationActive={false}
-                  isAnimationActive={false}
                   dataKey="receitas"
                   stroke="var(--color-income)"
                   strokeWidth={2}
@@ -157,7 +156,6 @@ function Dashboard() {
                 <Area
                   type="monotone"
                 isAnimationActive={false}
-                  isAnimationActive={false}
                   dataKey="despesas"
                   stroke="var(--color-expense)"
                   strokeWidth={2}

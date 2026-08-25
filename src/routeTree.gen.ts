@@ -9,112 +9,114 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AgentRouteImport } from './routes/agent'
-import { Route as BillsRouteImport } from './routes/bills'
-import { Route as BudgetRouteImport } from './routes/budget'
-import { Route as GoalsRouteImport } from './routes/goals'
-import { Route as InsightsRouteImport } from './routes/insights'
-import { Route as InvestmentsRouteImport } from './routes/investments'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as TaxesRouteImport } from './routes/taxes'
-import { Route as TransactionsRouteImport } from './routes/transactions'
+import { Route as AuthenticatedAgentRouteImport } from './routes/_authenticated/agent'
+import { Route as AuthenticatedBillsRouteImport } from './routes/_authenticated/bills'
+import { Route as AuthenticatedBudgetRouteImport } from './routes/_authenticated/budget'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedGoalsRouteImport } from './routes/_authenticated/goals'
+import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated/insights'
+import { Route as AuthenticatedInvestmentsRouteImport } from './routes/_authenticated/investments'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedTaxesRouteImport } from './routes/_authenticated/taxes'
+import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated/transactions'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AgentRoute = AgentRouteImport.update({
-  id: '/agent',
+const AuthenticatedAgentRoute = AuthenticatedAgentRouteImport.update({
+  id: '/_authenticated/agent',
   path: '/agent',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BillsRoute = BillsRouteImport.update({
-  id: '/bills',
+const AuthenticatedBillsRoute = AuthenticatedBillsRouteImport.update({
+  id: '/_authenticated/bills',
   path: '/bills',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BudgetRoute = BudgetRouteImport.update({
-  id: '/budget',
+const AuthenticatedBudgetRoute = AuthenticatedBudgetRouteImport.update({
+  id: '/_authenticated/budget',
   path: '/budget',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GoalsRoute = GoalsRouteImport.update({
-  id: '/goals',
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/_authenticated/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedGoalsRoute = AuthenticatedGoalsRouteImport.update({
+  id: '/_authenticated/goals',
   path: '/goals',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InsightsRoute = InsightsRouteImport.update({
-  id: '/insights',
+const AuthenticatedInsightsRoute = AuthenticatedInsightsRouteImport.update({
+  id: '/_authenticated/insights',
   path: '/insights',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InvestmentsRoute = InvestmentsRouteImport.update({
-  id: '/investments',
-  path: '/investments',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
+const AuthenticatedInvestmentsRoute =
+  AuthenticatedInvestmentsRouteImport.update({
+    id: '/_authenticated/investments',
+    path: '/investments',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/_authenticated/settings',
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TaxesRoute = TaxesRouteImport.update({
-  id: '/taxes',
+const AuthenticatedTaxesRoute = AuthenticatedTaxesRouteImport.update({
+  id: '/_authenticated/taxes',
   path: '/taxes',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TransactionsRoute = TransactionsRouteImport.update({
-  id: '/transactions',
-  path: '/transactions',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const AuthenticatedTransactionsRoute =
+  AuthenticatedTransactionsRouteImport.update({
+    id: '/_authenticated/transactions',
+    path: '/transactions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/agent': typeof AgentRoute
-  '/bills': typeof BillsRoute
-  '/budget': typeof BudgetRoute
-  '/goals': typeof GoalsRoute
-  '/insights': typeof InsightsRoute
-  '/investments': typeof InvestmentsRoute
-  '/settings': typeof SettingsRoute
-  '/taxes': typeof TaxesRoute
-  '/transactions': typeof TransactionsRoute
+  '/agent': typeof AuthenticatedAgentRoute
+  '/bills': typeof AuthenticatedBillsRoute
+  '/budget': typeof AuthenticatedBudgetRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/goals': typeof AuthenticatedGoalsRoute
+  '/insights': typeof AuthenticatedInsightsRoute
+  '/investments': typeof AuthenticatedInvestmentsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/taxes': typeof AuthenticatedTaxesRoute
+  '/transactions': typeof AuthenticatedTransactionsRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/agent': typeof AgentRoute
-  '/bills': typeof BillsRoute
-  '/budget': typeof BudgetRoute
-  '/goals': typeof GoalsRoute
-  '/insights': typeof InsightsRoute
-  '/investments': typeof InvestmentsRoute
-  '/settings': typeof SettingsRoute
-  '/taxes': typeof TaxesRoute
-  '/transactions': typeof TransactionsRoute
+  '/agent': typeof AuthenticatedAgentRoute
+  '/bills': typeof AuthenticatedBillsRoute
+  '/budget': typeof AuthenticatedBudgetRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/goals': typeof AuthenticatedGoalsRoute
+  '/insights': typeof AuthenticatedInsightsRoute
+  '/investments': typeof AuthenticatedInvestmentsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/taxes': typeof AuthenticatedTaxesRoute
+  '/transactions': typeof AuthenticatedTransactionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/agent': typeof AgentRoute
-  '/bills': typeof BillsRoute
-  '/budget': typeof BudgetRoute
-  '/goals': typeof GoalsRoute
-  '/insights': typeof InsightsRoute
-  '/investments': typeof InvestmentsRoute
-  '/settings': typeof SettingsRoute
-  '/taxes': typeof TaxesRoute
-  '/transactions': typeof TransactionsRoute
+  '/_authenticated/agent': typeof AuthenticatedAgentRoute
+  '/_authenticated/bills': typeof AuthenticatedBillsRoute
+  '/_authenticated/budget': typeof AuthenticatedBudgetRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/goals': typeof AuthenticatedGoalsRoute
+  '/_authenticated/insights': typeof AuthenticatedInsightsRoute
+  '/_authenticated/investments': typeof AuthenticatedInvestmentsRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/taxes': typeof AuthenticatedTaxesRoute
+  '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/agent'
     | '/bills'
     | '/budget'
+    | '/dashboard'
     | '/goals'
     | '/insights'
     | '/investments'
@@ -123,10 +125,10 @@ export interface FileRouteTypes {
     | '/transactions'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/agent'
     | '/bills'
     | '/budget'
+    | '/dashboard'
     | '/goals'
     | '/insights'
     | '/investments'
@@ -135,117 +137,117 @@ export interface FileRouteTypes {
     | '/transactions'
   id:
     | '__root__'
-    | '/'
-    | '/agent'
-    | '/bills'
-    | '/budget'
-    | '/goals'
-    | '/insights'
-    | '/investments'
-    | '/settings'
-    | '/taxes'
-    | '/transactions'
+    | '/_authenticated/agent'
+    | '/_authenticated/bills'
+    | '/_authenticated/budget'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/goals'
+    | '/_authenticated/insights'
+    | '/_authenticated/investments'
+    | '/_authenticated/settings'
+    | '/_authenticated/taxes'
+    | '/_authenticated/transactions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AgentRoute: typeof AgentRoute
-  BillsRoute: typeof BillsRoute
-  BudgetRoute: typeof BudgetRoute
-  GoalsRoute: typeof GoalsRoute
-  InsightsRoute: typeof InsightsRoute
-  InvestmentsRoute: typeof InvestmentsRoute
-  SettingsRoute: typeof SettingsRoute
-  TaxesRoute: typeof TaxesRoute
-  TransactionsRoute: typeof TransactionsRoute
+  AuthenticatedAgentRoute: typeof AuthenticatedAgentRoute
+  AuthenticatedBillsRoute: typeof AuthenticatedBillsRoute
+  AuthenticatedBudgetRoute: typeof AuthenticatedBudgetRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedGoalsRoute: typeof AuthenticatedGoalsRoute
+  AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
+  AuthenticatedInvestmentsRoute: typeof AuthenticatedInvestmentsRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedTaxesRoute: typeof AuthenticatedTaxesRoute
+  AuthenticatedTransactionsRoute: typeof AuthenticatedTransactionsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/agent': {
-      id: '/agent'
+    '/_authenticated/agent': {
+      id: '/_authenticated/agent'
       path: '/agent'
       fullPath: '/agent'
-      preLoaderRoute: typeof AgentRouteImport
+      preLoaderRoute: typeof AuthenticatedAgentRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/bills': {
-      id: '/bills'
+    '/_authenticated/bills': {
+      id: '/_authenticated/bills'
       path: '/bills'
       fullPath: '/bills'
-      preLoaderRoute: typeof BillsRouteImport
+      preLoaderRoute: typeof AuthenticatedBillsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/budget': {
-      id: '/budget'
+    '/_authenticated/budget': {
+      id: '/_authenticated/budget'
       path: '/budget'
       fullPath: '/budget'
-      preLoaderRoute: typeof BudgetRouteImport
+      preLoaderRoute: typeof AuthenticatedBudgetRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/goals': {
-      id: '/goals'
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/goals': {
+      id: '/_authenticated/goals'
       path: '/goals'
       fullPath: '/goals'
-      preLoaderRoute: typeof GoalsRouteImport
+      preLoaderRoute: typeof AuthenticatedGoalsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/insights': {
-      id: '/insights'
+    '/_authenticated/insights': {
+      id: '/_authenticated/insights'
       path: '/insights'
       fullPath: '/insights'
-      preLoaderRoute: typeof InsightsRouteImport
+      preLoaderRoute: typeof AuthenticatedInsightsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/investments': {
-      id: '/investments'
+    '/_authenticated/investments': {
+      id: '/_authenticated/investments'
       path: '/investments'
       fullPath: '/investments'
-      preLoaderRoute: typeof InvestmentsRouteImport
+      preLoaderRoute: typeof AuthenticatedInvestmentsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings': {
-      id: '/settings'
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
       path: '/settings'
       fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/taxes': {
-      id: '/taxes'
+    '/_authenticated/taxes': {
+      id: '/_authenticated/taxes'
       path: '/taxes'
       fullPath: '/taxes'
-      preLoaderRoute: typeof TaxesRouteImport
+      preLoaderRoute: typeof AuthenticatedTaxesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/transactions': {
-      id: '/transactions'
+    '/_authenticated/transactions': {
+      id: '/_authenticated/transactions'
       path: '/transactions'
       fullPath: '/transactions'
-      preLoaderRoute: typeof TransactionsRouteImport
+      preLoaderRoute: typeof AuthenticatedTransactionsRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AgentRoute: AgentRoute,
-  BillsRoute: BillsRoute,
-  BudgetRoute: BudgetRoute,
-  GoalsRoute: GoalsRoute,
-  InsightsRoute: InsightsRoute,
-  InvestmentsRoute: InvestmentsRoute,
-  SettingsRoute: SettingsRoute,
-  TaxesRoute: TaxesRoute,
-  TransactionsRoute: TransactionsRoute,
+  AuthenticatedAgentRoute: AuthenticatedAgentRoute,
+  AuthenticatedBillsRoute: AuthenticatedBillsRoute,
+  AuthenticatedBudgetRoute: AuthenticatedBudgetRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedGoalsRoute: AuthenticatedGoalsRoute,
+  AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
+  AuthenticatedInvestmentsRoute: AuthenticatedInvestmentsRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedTaxesRoute: AuthenticatedTaxesRoute,
+  AuthenticatedTransactionsRoute: AuthenticatedTransactionsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -60,7 +60,7 @@ export const Route = createFileRoute("/api/chat")({
         const result = streamText({
           model: gateway(MODEL),
           system: SYSTEM_PROMPT,
-          messages: convertToModelMessages(body.messages),
+          messages: await convertToModelMessages(body.messages),
           stopWhen: stepCountIs(50),
           tools: {
             resumo_financeiro: tool({
@@ -163,8 +163,7 @@ export const Route = createFileRoute("/api/chat")({
               inputSchema: z.object({ meses: z.number().describe("Quantidade de meses a projetar") }),
               execute: async ({ meses }) => {
                 const { data, error } = await supabase.rpc("get_cashflow_projection", {
-                  _user_id: userId,
-                  _months: Math.max(1, Math.min(12, Math.round(meses))),
+                  horizon_days: Math.max(30, Math.min(365, Math.round(meses) * 30)),
                 });
                 if (error) return { erro: error.message };
                 return { projecao: data };

@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { recentTransactions, type TransactionKind } from "@/lib/mock-data";
+import { type TransactionKind } from "@/lib/mock-data";
+import { useTransactions } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/transactions")({
@@ -43,10 +44,11 @@ const filters = [
 function TransactionsPage() {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<(typeof filters)[number]["key"]>("all");
+  const { data: transactions = [], isLoading } = useTransactions();
 
   const rows = useMemo(
     () =>
-      recentTransactions.filter((t) => {
+      transactions.filter((t) => {
         const matchKind = kind === "all" || t.kind === (kind as TransactionKind);
         const q = query.trim().toLowerCase();
         const matchQuery =
@@ -56,7 +58,7 @@ function TransactionsPage() {
           t.category.toLowerCase().includes(q);
         return matchKind && matchQuery;
       }),
-    [kind, query],
+    [kind, query, transactions],
   );
 
   const total = rows.reduce((sum, t) => sum + t.amount, 0);
@@ -109,7 +111,7 @@ function TransactionsPage() {
 
         {rows.length === 0 ? (
           <p className="p-10 text-center text-sm text-muted-foreground">
-            Nenhuma transação encontrada com esses filtros.
+            {isLoading ? "Carregando transações…" : "Nenhuma transação encontrada."}
           </p>
         ) : (
           <div>

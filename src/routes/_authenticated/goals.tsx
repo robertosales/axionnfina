@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { GoalTracker } from "@/components/finance/GoalTracker";
-import { goals } from "@/lib/mock-data";
+import { useGoals } from "@/lib/finance-data";
 
 export const Route = createFileRoute("/_authenticated/goals")({
   head: () => ({
@@ -26,6 +26,8 @@ export const Route = createFileRoute("/_authenticated/goals")({
 });
 
 function GoalsPage() {
+  const { data: goals = [], isLoading } = useGoals();
+
   return (
     <AppShell>
       <header className="mb-6">
@@ -34,6 +36,12 @@ function GoalsPage() {
           {goals.length} metas ativas com projeção de aporte mensal
         </p>
       </header>
+
+      {goals.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          {isLoading ? "Carregando metas…" : "Você ainda não criou metas."}
+        </p>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {goals.map((goal) => (

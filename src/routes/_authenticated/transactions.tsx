@@ -7,10 +7,32 @@ import { TransactionRow } from "@/components/finance/TransactionRow";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type TransactionKind } from "@/lib/mock-data";
-import { useTransactions } from "@/lib/finance-data";
+import {
+  useAccounts,
+  useCreateTransaction,
+  useDeleteTransaction,
+  useTransactions,
+  useUpdateTransactionCategory,
+} from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/transactions")({
   head: () => ({
@@ -45,6 +67,71 @@ function TransactionsPage() {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<(typeof filters)[number]["key"]>("all");
   const { data: transactions = [], isLoading } = useTransactions();
+  const { data: accounts = [] } = useAccounts();
+  const createTransaction = useCreateTransaction();
+  const updateCategory = useUpdateTransactionCategory();
+  const deleteTransaction = useDeleteTransaction();
+
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    description: "",
+    amount: "",
+    type: "expense" as "expense" | "income" | "transfer",
+    category: "Outros",
+    merchant: "",
+    accountId: "",
+    occurredAt: new Date().toISOString().slice(0, 10),
+  });
+
+  const categories = useMemo(
+    () => Array.from(new Set(transactions.map((t) => t.category))).sort(),
+    [transactions],
+  );
+
+  const submit = () => {
+    const value = Math.abs(Number(form.amount.replace(",", ".")));
+    if (!form.description.trim() || !Number.isFinite(value) || value === 0) {
+      toast.error("Informe descrição e valor");
+      return;
+    }
+    createTransaction.mutate(
+      {
+        description: form.description.trim(),
+        amount: form.type === "income" ? value : -value,
+        type: form.type,
+        category: form.category.trim() || "Outros",
+        merchant: form.merchant.trim() || form.description.trim(),
+        accountId: form.accountId || null,
+        occurredAt: form.occurredAt,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Transação registrada");
+          setOpen(false);
+          setForm((prev) => ({ ...prev, description: "", amount: "", merchant: "" }));
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  };
+
+  const exportCsv = () => {
+    const header = "data;descricao;estabelecimento;categoria;tipo;valor";
+    const body = rows
+      .map((t) =>
+        [t.date, t.description, t.merchant, t.category, t.kind, t.amount.toFixed(2)]
+          .map((field) => String(field).replaceAll(";", ","))
+          .join(";"),
+      )
+      .join("\n");
+    const blob = new Blob([`${header}\n${body}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "transacoes-axionn.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const rows = useMemo(
     () =>
@@ -74,10 +161,10 @@ function TransactionsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={exportCsv} disabled={rows.length === 0}>
             <Download className="size-4" /> Exportar
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={() => setOpen(true)}>
             <Plus className="size-4" /> Nova transação
           </Button>
         </div>
@@ -116,11 +203,124 @@ function TransactionsPage() {
         ) : (
           <div>
             {rows.map((t) => (
-              <TransactionRow key={t.id} transaction={t} />
+              <TransactionRow
+                key={t.id}
+                transaction={t}
+                categories={categories}
+                onCategoryChange={(category) =>
+                  updateCategory.mutate(
+                    { id: t.id, category },
+                    {
+                      onSuccess: () => toast.success("Categoria atualizada"),
+                      onError: (error) => toast.error(error.message),
+                    },
+                  )
+                }
+                onDelete={() =>
+                  deleteTransaction.mutate(t.id, {
+                    onSuccess: () => toast.success("Transação excluída"),
+                    onError: (error) => toast.error(error.message),
+                  })
+                }
+              />
             ))}
           </div>
         )}
       </Card>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Nova transação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="desc">Descrição</Label>
+              <Input
+                id="desc"
+                value={form.description}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="amount">Valor</Label>
+                <Input
+                  id="amount"
+                  value={form.amount}
+                  onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="date">Data</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={form.occurredAt}
+                  onChange={(e) => setForm((p) => ({ ...p, occurredAt: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Tipo</Label>
+                <Select
+                  value={form.type}
+                  onValueChange={(v) => setForm((p) => ({ ...p, type: v as typeof p.type }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="expense">Despesa</SelectItem>
+                    <SelectItem value="income">Receita</SelectItem>
+                    <SelectItem value="transfer">Transferência</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="category">Categoria</Label>
+                <Input
+                  id="category"
+                  list="new-tx-categories"
+                  value={form.category}
+                  onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
+                />
+                <datalist id="new-tx-categories">
+                  {categories.map((category) => (
+                    <option key={category} value={category} />
+                  ))}
+                </datalist>
+              </div>
+            </div>
+            {accounts.length > 0 && (
+              <div className="space-y-1.5">
+                <Label>Conta</Label>
+                <Select
+                  value={form.accountId}
+                  onValueChange={(v) => setForm((p) => ({ ...p, accountId: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={submit} disabled={createTransaction.isPending}>
+              {createTransaction.isPending ? "Salvando…" : "Registrar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

@@ -20,9 +20,19 @@ const kindLabel: Record<Transaction["kind"], string> = {
   investment: "Investimento",
 };
 
-/** Linha de transação expansível com detalhes brutos. */
-export function TransactionRow({ transaction }: { transaction: Transaction }) {
+type Props = {
+  transaction: Transaction;
+  /** Recategorização inline (atualização otimista feita pelo chamador). */
+  onCategoryChange?: (category: string) => void;
+  onDelete?: () => void;
+  categories?: readonly string[];
+};
+
+/** Linha de transação expansível com detalhes brutos e ações inline. */
+export function TransactionRow({ transaction, onCategoryChange, onDelete, categories = [] }: Props) {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(transaction.category);
 
   return (
     <div className="border-b border-border/60 last:border-0">
@@ -78,6 +88,66 @@ export function TransactionRow({ transaction }: { transaction: Transaction }) {
             <dt className="text-muted-foreground">Status</dt>
             <dd className="font-medium">{transaction.pending ? "Pendente" : "Liquidada"}</dd>
           </div>
+
+          {(onCategoryChange || onDelete) && (
+            <div className="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-4">
+              {onCategoryChange &&
+                (editing ? (
+                  <>
+                    <input
+                      list="tx-categories"
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      className="focus-ring h-8 rounded-md border border-border bg-background px-2 text-xs"
+                      aria-label="Nova categoria"
+                    />
+                    <datalist id="tx-categories">
+                      {categories.map((category) => (
+                        <option key={category} value={category} />
+                      ))}
+                    </datalist>
+                    <button
+                      type="button"
+                      className="focus-ring rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+                      onClick={() => {
+                        onCategoryChange(draft.trim() || transaction.category);
+                        setEditing(false);
+                      }}
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      type="button"
+                      className="focus-ring rounded-md border border-border px-3 py-1.5 text-xs"
+                      onClick={() => {
+                        setDraft(transaction.category);
+                        setEditing(false);
+                      }}
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="focus-ring rounded-md border border-border px-3 py-1.5 text-xs"
+                    onClick={() => setEditing(true)}
+                  >
+                    Recategorizar
+                  </button>
+                ))}
+
+              {onDelete && (
+                <button
+                  type="button"
+                  className="focus-ring rounded-md border border-danger/50 px-3 py-1.5 text-xs text-danger"
+                  onClick={onDelete}
+                >
+                  Excluir
+                </button>
+              )}
+            </div>
+          )}
         </dl>
       )}
     </div>

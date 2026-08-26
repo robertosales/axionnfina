@@ -26,8 +26,16 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useSessionUser } from "@/hooks/use-session-user";
-import { useAccounts, useBudgets, useInsights, useSeedDemoData } from "@/lib/finance-data";
-import { allocation, cashflow, kpis, netWorthSeries, upcomingBills } from "@/lib/mock-data";
+import {
+  useAccounts,
+  useBudgets,
+  useCashflow,
+  useInsights,
+  useInvestments,
+  useNetWorthSeries,
+  usePayables,
+  useSeedDemoData,
+} from "@/lib/finance-data";
 import { daysUntil, formatBRL, formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +73,10 @@ function Dashboard() {
   const { data: accounts = [], isLoading: loadingAccounts } = useAccounts();
   const { data: agentInsights = [] } = useInsights();
   const { items: budgetItems } = useBudgets();
+  const { data: cashflow } = useCashflow();
+  const { data: netWorthSeries = [] } = useNetWorthSeries();
+  const { allocation } = useInvestments();
+  const { data: upcomingBills = [] } = usePayables();
   const seed = useSeedDemoData();
 
   const netWorth = accounts.reduce((total, account) => total + account.balance, 0);
@@ -72,6 +84,25 @@ function Dashboard() {
     .filter((account) => account.type === "CHECKING" || account.type === "SAVINGS")
     .reduce((total, account) => total + account.balance, 0);
   const empty = !loadingAccounts && accounts.length === 0;
+
+  const currentMonth = cashflow.at(-1);
+  const previousMonth = cashflow.at(-2);
+  const savingsRate =
+    currentMonth && currentMonth.receitas > 0
+      ? (currentMonth.saldo / currentMonth.receitas) * 100
+      : 0;
+  const previousSavingsRate =
+    previousMonth && previousMonth.receitas > 0
+      ? (previousMonth.saldo / previousMonth.receitas) * 100
+      : 0;
+  const netWorthChange =
+    netWorthSeries.length > 1 && netWorthSeries[netWorthSeries.length - 2]!.value > 0
+      ? ((netWorth - netWorthSeries[netWorthSeries.length - 2]!.value) /
+          netWorthSeries[netWorthSeries.length - 2]!.value) *
+        100
+      : 0;
+  const openBills = upcomingBills.filter((bill) => bill.dbStatus !== "paid");
+  const nextBill = openBills[0];
 
   return (
     <AppShell>
@@ -91,28 +122,30 @@ function Dashboard() {
         <KPICard
           label="Patrimônio líquido"
           value={formatBRL(netWorth)}
-          change={kpis.netWorth.change}
+          change={Math.round(netWorthChange * 10) / 10}
           icon={TrendingUp}
           sparkline={netWorthSeries.map((p) => ({ value: p.value }))}
         />
         <KPICard
           label="Liquidez imediata"
           value={formatBRL(liquidity)}
-          change={kpis.liquidity.change}
+          change={Math.round((currentMonth?.saldo ?? 0) > 0 ? 100 * (currentMonth!.saldo / Math.max(currentMonth!.receitas, 1)) : 0) / 10}
           icon={Wallet}
           sparkline={cashflow.map((p) => ({ value: p.saldo }))}
         />
         <KPICard
           label="Taxa de poupança"
-          value={`${kpis.savingsRate.value.toString().replace(".", ",")}%`}
-          change={kpis.savingsRate.change}
+          value={`${savingsRate.toFixed(1).replace(".", ",")}%`}
+          change={Math.round((savingsRate - previousSavingsRate) * 10) / 10}
           icon={ArrowUpRight}
           tone="success"
         />
         <KPICard
           label="Próximo vencimento"
-          value={formatBRL(kpis.nextBill.value)}
-          hint={`${kpis.nextBill.label} · ${formatShortDate(kpis.nextBill.dueDate)}`}
+          value={formatBRL(nextBill?.amount ?? 0)}
+          hint={
+            nextBill ? `${nextBill.name} · ${formatShortDate(nextBill.dueDate)}` : "Sem contas abertas"
+          }
           icon={CalendarClock}
           tone="danger"
         />
@@ -279,7 +312,7 @@ function Dashboard() {
         <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
           <h2 className="text-base font-semibold">Próximas contas</h2>
           <ul className="mt-4 space-y-3">
-            {upcomingBills.map((bill) => {
+            {openBills.slice(0, 4).map((bill) => {
               const days = daysUntil(bill.dueDate);
               return (
                 <li key={bill.id} className="flex items-center justify-between gap-3">

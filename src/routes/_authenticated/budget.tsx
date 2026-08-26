@@ -1,9 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { BudgetProgress } from "@/components/finance/BudgetProgress";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useBudgets } from "@/lib/finance-data";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useBudgets, useUpsertBudget } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/budget")({
@@ -29,16 +42,45 @@ export const Route = createFileRoute("/_authenticated/budget")({
 
 function BudgetPage() {
   const { items: budgetItems, isLoading } = useBudgets();
-  const planned = budgetItems.reduce((s, i) => s + i.planned, 0);
+  const plannedTotal = budgetItems.reduce((s, i) => s + i.planned, 0);
   const spent = budgetItems.reduce((s, i) => s + i.spent, 0);
+  const upsert = useUpsertBudget();
+  const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState("");
+  const [planned, setPlanned] = useState("");
+
+  const save = () => {
+    const value = Number(planned.replace(",", "."));
+    if (!category.trim() || !Number.isFinite(value) || value <= 0) {
+      toast.error("Informe categoria e valor planejado");
+      return;
+    }
+    upsert.mutate(
+      { category: category.trim(), planned: value },
+      {
+        onSuccess: () => {
+          toast.success("Categoria salva");
+          setOpen(false);
+          setCategory("");
+          setPlanned("");
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  };
 
   return (
     <AppShell>
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Orçamento</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {formatBRL(spent)} gastos de {formatBRL(planned)} planejados neste mês
-        </p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Orçamento</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {formatBRL(spent)} gastos de {formatBRL(plannedTotal)} planejados neste mês
+          </p>
+        </div>
+        <Button size="sm" onClick={() => setOpen(true)}>
+          <Plus className="size-4" /> Nova categoria
+        </Button>
       </header>
 
       {budgetItems.length === 0 && (
@@ -54,6 +96,29 @@ function BudgetPage() {
           </Card>
         ))}
       </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Nova categoria de orçamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="cat">Categoria</Label>
+              <Input id="cat" value={category} onChange={(e) => setCategory(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="planned">Valor planejado</Label>
+              <Input id="planned" value={planned} onChange={(e) => setPlanned(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={save} disabled={upsert.isPending}>
+              {upsert.isPending ? "Salvando…" : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

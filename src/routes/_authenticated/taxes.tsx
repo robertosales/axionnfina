@@ -4,6 +4,7 @@ import { FileText } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useTaxSummary } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/taxes")({
@@ -27,61 +28,89 @@ export const Route = createFileRoute("/_authenticated/taxes")({
   component: TaxesPage,
 });
 
-const apuracao = [
-  { label: "Ações — swing trade", profit: 1240, rate: 0.15 },
-  { label: "Ações — day trade", profit: 0, rate: 0.2 },
-  { label: "FIIs", profit: 0, rate: 0.2 },
-  { label: "Dividendos (isentos)", profit: 860, rate: 0 },
+const MONTHS = [
+  "janeiro",
+  "fevereiro",
+  "março",
+  "abril",
+  "maio",
+  "junho",
+  "julho",
+  "agosto",
+  "setembro",
+  "outubro",
+  "novembro",
+  "dezembro",
 ] as const;
 
 function TaxesPage() {
-  const darf = apuracao.reduce((sum, item) => sum + item.profit * item.rate, 0);
+  const { data, isLoading } = useTaxSummary();
+  const now = new Date();
+
+  const rows = [
+    {
+      label: "Ações — swing trade",
+      base: data?.swing_gross ?? 0,
+      tax: data?.swing_tax ?? 0,
+      note: data?.swing_exempt ? "Isento (vendas até R$ 20.000/mês)" : "Alíquota 15%",
+    },
+    { label: "Day trade", base: 0, tax: data?.daytrade_tax ?? 0, note: "Alíquota 20%" },
+    { label: "FIIs", base: 0, tax: data?.fii_tax ?? 0, note: "Alíquota 20%" },
+    { label: "Dividendos", base: data?.dividends ?? 0, tax: 0, note: "Isentos na pessoa física" },
+  ];
 
   return (
     <AppShell>
       <header className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Impostos</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Apuração de agosto de 2026</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Apuração de {MONTHS[now.getMonth()]} de {now.getFullYear()}
+        </p>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
-          <h2 className="text-base font-semibold">Apuração por natureza</h2>
-          <ul className="mt-4 divide-y divide-border/60">
-            {apuracao.map((item) => (
-              <li key={item.label} className="flex items-center justify-between gap-3 py-3">
-                <div>
-                  <p className="text-sm font-medium">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Alíquota {Math.round(item.rate * 100)}%
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="numeric text-sm font-semibold">{formatBRL(item.profit)}</p>
-                  <p className="numeric text-xs text-muted-foreground">
-                    imposto {formatBRL(item.profit * item.rate)}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Card>
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Calculando apuração…</p>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+          <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+            <h2 className="text-base font-semibold">Apuração por natureza</h2>
+            <ul className="mt-4 divide-y divide-border/60">
+              {rows.map((item) => (
+                <li key={item.label} className="flex items-center justify-between gap-3 py-3">
+                  <div>
+                    <p className="text-sm font-medium">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">{item.note}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="numeric text-sm font-semibold">{formatBRL(item.base)}</p>
+                    <p className="numeric text-xs text-muted-foreground">
+                      imposto {formatBRL(item.tax)}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Card>
 
-        <Card className="h-fit rounded-xl border-border/60 p-5 shadow-elevation-1">
-          <div className="flex items-center gap-2">
-            <FileText className="size-4 text-primary" aria-hidden />
-            <h2 className="text-sm font-semibold">DARF estimada</h2>
-          </div>
-          <p className="numeric mt-3 text-2xl font-semibold">{formatBRL(darf)}</p>
-          <Badge variant="outline" className="mt-2 rounded-full text-[10px]">
-            Vencimento: último dia útil de setembro
-          </Badge>
-          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-            Estimativa informativa gerada a partir das operações sincronizadas. A apuração
-            definitiva depende da conferência de custos médios e prejuízos acumulados.
-          </p>
-        </Card>
-      </div>
+          <Card className="h-fit rounded-xl border-border/60 p-5 shadow-elevation-1">
+            <div className="flex items-center gap-2">
+              <FileText className="size-4 text-primary" aria-hidden />
+              <h2 className="text-sm font-semibold">DARF estimada</h2>
+            </div>
+            <p className="numeric mt-3 text-2xl font-semibold">{formatBRL(data?.darf_due ?? 0)}</p>
+            <Badge variant="outline" className="mt-2 rounded-full text-[10px]">
+              Vencimento: último dia útil do mês seguinte
+            </Badge>
+            <p className="numeric mt-3 text-xs text-muted-foreground">
+              IR retido na fonte: {formatBRL(data?.withheld ?? 0)}
+            </p>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              Estimativa informativa gerada a partir das operações sincronizadas. A apuração
+              definitiva depende da conferência de custos médios e prejuízos acumulados.
+            </p>
+          </Card>
+        </div>
+      )}
     </AppShell>
   );
 }

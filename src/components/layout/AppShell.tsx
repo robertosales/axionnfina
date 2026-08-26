@@ -45,7 +45,7 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/transactions", label: "Transações", icon: Receipt },
   { to: "/budget", label: "Orçamento", icon: PiggyBank },
   { to: "/investments", label: "Investimentos", icon: LineChart },
@@ -56,6 +56,7 @@ const navItems: NavItem[] = [
   { to: "/agent", label: "Agente IA", icon: Bot, highlight: true },
   { to: "/settings", label: "Configurações", icon: Settings },
 ];
+
 
 function useTheme() {
   const [dark, setDark] = useState(true);

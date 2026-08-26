@@ -82,7 +82,7 @@ function useTheme() {
 
 function Brand({ collapsed }: { collapsed: boolean }) {
   return (
-    <Link to="/" className="focus-ring flex items-center gap-2.5 rounded-lg px-1 py-1">
+    <Link to="/dashboard" className="focus-ring flex items-center gap-2.5 rounded-lg px-1 py-1">
       <span
         className="grid size-9 shrink-0 place-items-center rounded-xl text-primary-foreground"
         style={{ background: "var(--gradient-primary)" }}

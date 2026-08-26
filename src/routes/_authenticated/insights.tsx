@@ -38,7 +38,10 @@ const tone = {
 } as const;
 
 function InsightsPage() {
+  const { data: agentInsights = [] } = useInsights();
+
   return (
+
     <AppShell>
       <header className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Insights</h1>

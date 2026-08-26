@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/AppShell";
 import { BudgetProgress } from "@/components/finance/BudgetProgress";
 import { Card } from "@/components/ui/card";
-import { budgetItems } from "@/lib/mock-data";
+import { useBudgets } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/budget")({
@@ -28,6 +28,7 @@ export const Route = createFileRoute("/_authenticated/budget")({
 });
 
 function BudgetPage() {
+  const { items: budgetItems, isLoading } = useBudgets();
   const planned = budgetItems.reduce((s, i) => s + i.planned, 0);
   const spent = budgetItems.reduce((s, i) => s + i.spent, 0);
 
@@ -39,6 +40,12 @@ function BudgetPage() {
           {formatBRL(spent)} gastos de {formatBRL(planned)} planejados neste mês
         </p>
       </header>
+
+      {budgetItems.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          {isLoading ? "Carregando orçamento…" : "Nenhuma categoria de orçamento cadastrada ainda."}
+        </p>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {budgetItems.map((item) => (

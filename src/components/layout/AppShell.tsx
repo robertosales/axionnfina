@@ -22,6 +22,7 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 
 import { CommandPalette } from "@/components/layout/CommandPalette";
+import { useSessionUser } from "@/hooks/use-session-user";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,7 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/transactions", label: "Transações", icon: Receipt },
   { to: "/budget", label: "Orçamento", icon: PiggyBank },
   { to: "/investments", label: "Investimentos", icon: LineChart },
@@ -56,6 +57,7 @@ const navItems: NavItem[] = [
   { to: "/agent", label: "Agente IA", icon: Bot, highlight: true },
   { to: "/settings", label: "Configurações", icon: Settings },
 ];
+
 
 function useTheme() {
   const [dark, setDark] = useState(true);
@@ -81,7 +83,7 @@ function useTheme() {
 
 function Brand({ collapsed }: { collapsed: boolean }) {
   return (
-    <Link to="/" className="focus-ring flex items-center gap-2.5 rounded-lg px-1 py-1">
+    <Link to="/dashboard" className="focus-ring flex items-center gap-2.5 rounded-lg px-1 py-1">
       <span
         className="grid size-9 shrink-0 place-items-center rounded-xl text-primary-foreground"
         style={{ background: "var(--gradient-primary)" }}
@@ -154,6 +156,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { dark, toggle } = useTheme();
+  const { name, initials, signOut } = useSessionUser();
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -253,20 +257,22 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Button variant="ghost" size="icon" className="ml-1" aria-label="Menu do perfil">
                   <Avatar className="size-8">
                     <AvatarFallback className="bg-accent text-xs text-accent-foreground">
-                      RS
+                      {initials}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Roberto Sales</DropdownMenuLabel>
+                <DropdownMenuLabel className="truncate">{name}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Trocar perfil</DropdownMenuItem>
-                <DropdownMenuItem>Configurações</DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/settings">Configurações</Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Sair</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => void signOut()}>Sair</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
           </div>
         </header>
 

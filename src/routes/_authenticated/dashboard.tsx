@@ -24,16 +24,10 @@ import { KPICard } from "@/components/finance/KPICard";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  accounts,
-  agentInsights,
-  allocation,
-  budgetItems,
-  cashflow,
-  kpis,
-  netWorthSeries,
-  upcomingBills,
-} from "@/lib/mock-data";
+import { Button } from "@/components/ui/button";
+import { useSessionUser } from "@/hooks/use-session-user";
+import { useAccounts, useBudgets, useInsights, useSeedDemoData } from "@/lib/finance-data";
+import { allocation, cashflow, kpis, netWorthSeries, upcomingBills } from "@/lib/mock-data";
 import { daysUntil, formatBRL, formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -67,26 +61,43 @@ const severityTone = {
 } as const;
 
 function Dashboard() {
+  const { name } = useSessionUser();
+  const { data: accounts = [], isLoading: loadingAccounts } = useAccounts();
+  const { data: agentInsights = [] } = useInsights();
+  const { items: budgetItems } = useBudgets();
+  const seed = useSeedDemoData();
+
+  const netWorth = accounts.reduce((total, account) => total + account.balance, 0);
+  const liquidity = accounts
+    .filter((account) => account.type === "CHECKING" || account.type === "SAVINGS")
+    .reduce((total, account) => total + account.balance, 0);
+  const empty = !loadingAccounts && accounts.length === 0;
+
   return (
     <AppShell>
-      <header className="mb-8">
-        <p className="text-sm text-muted-foreground">Olá, Roberto</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
-          Visão geral de agosto
-        </h1>
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm text-muted-foreground">Olá, {name}</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Visão geral</h1>
+        </div>
+        {empty && (
+          <Button size="sm" onClick={() => seed.mutate()} disabled={seed.isPending}>
+            {seed.isPending ? "Criando…" : "Popular com dados de exemplo"}
+          </Button>
+        )}
       </header>
 
       <section aria-label="Indicadores" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KPICard
           label="Patrimônio líquido"
-          value={formatBRL(kpis.netWorth.value)}
+          value={formatBRL(netWorth)}
           change={kpis.netWorth.change}
           icon={TrendingUp}
           sparkline={netWorthSeries.map((p) => ({ value: p.value }))}
         />
         <KPICard
           label="Liquidez imediata"
-          value={formatBRL(kpis.liquidity.value)}
+          value={formatBRL(liquidity)}
           change={kpis.liquidity.change}
           icon={Wallet}
           sparkline={cashflow.map((p) => ({ value: p.saldo }))}
@@ -106,6 +117,7 @@ function Dashboard() {
           tone="danger"
         />
       </section>
+
 
       <section className="mt-6 grid gap-4 lg:grid-cols-3">
         <ChartCard

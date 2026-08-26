@@ -4,7 +4,8 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as RToolti
 import { AppShell } from "@/components/layout/AppShell";
 import { ChartCard } from "@/components/finance/ChartCard";
 import { Card } from "@/components/ui/card";
-import { agentInsights, netWorthSeries } from "@/lib/mock-data";
+import { netWorthSeries } from "@/lib/mock-data";
+import { useInsights } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -37,7 +38,10 @@ const tone = {
 } as const;
 
 function InsightsPage() {
+  const { data: agentInsights = [] } = useInsights();
+
   return (
+
     <AppShell>
       <header className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Insights</h1>

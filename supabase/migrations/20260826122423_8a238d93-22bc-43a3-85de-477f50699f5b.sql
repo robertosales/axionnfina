@@ -1,0 +1,1 @@
+ALTER FUNCTION public.match_agent_memories(extensions.vector, float, int) SET search_path = public, extensions;

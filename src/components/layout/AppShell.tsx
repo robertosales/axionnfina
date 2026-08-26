@@ -155,6 +155,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { dark, toggle } = useTheme();
+  const { name, initials, signOut } = useSessionUser();
+
 
   return (
     <div className="min-h-screen bg-background">

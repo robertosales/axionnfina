@@ -53,6 +53,30 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       agent_insights: {
         Row: {
           created_at: string
@@ -83,6 +107,113 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      agent_memories: {
+        Row: {
+          content: string
+          created_at: string
+          embedding: string | null
+          id: string
+          importance: number
+          memory_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          importance?: number
+          memory_type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          importance?: number
+          memory_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      agent_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          parts: Json
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          parts?: Json
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          parts?: Json
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "agent_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_logs: {
+        Row: {
+          created_at: string
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          operation: string
+          record_id: string | null
+          table_name: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          operation: string
+          record_id?: string | null
+          table_name: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          operation?: string
+          record_id?: string | null
+          table_name?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -152,6 +283,275 @@ export type Database = {
         }
         Relationships: []
       }
+      institutions: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          logo_color: string
+          name: string
+          openfinance_participant: boolean
+          short_name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          logo_color?: string
+          name: string
+          openfinance_participant?: boolean
+          short_name?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          logo_color?: string
+          name?: string
+          openfinance_participant?: boolean
+          short_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      investment_positions: {
+        Row: {
+          account_id: string | null
+          asset_class: Database["public"]["Enums"]["asset_class"]
+          average_price: number
+          created_at: string
+          current_price: number
+          id: string
+          name: string
+          quantity: number
+          ticker: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          asset_class?: Database["public"]["Enums"]["asset_class"]
+          average_price?: number
+          created_at?: string
+          current_price?: number
+          id?: string
+          name?: string
+          quantity?: number
+          ticker: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          asset_class?: Database["public"]["Enums"]["asset_class"]
+          average_price?: number
+          created_at?: string
+          current_price?: number
+          id?: string
+          name?: string
+          quantity?: number
+          ticker?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investment_positions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      net_worth_snapshots: {
+        Row: {
+          created_at: string
+          id: string
+          liquidity: number
+          month: string
+          net_worth: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          liquidity?: number
+          month?: string
+          net_worth?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          liquidity?: number
+          month?: string
+          net_worth?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      openfinance_consents: {
+        Row: {
+          code_verifier: string | null
+          consent_id: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          institution_id: string
+          last_synced_at: string | null
+          scopes: string[]
+          state: string | null
+          status: Database["public"]["Enums"]["consent_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          code_verifier?: string | null
+          consent_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          institution_id: string
+          last_synced_at?: string | null
+          scopes?: string[]
+          state?: string | null
+          status?: Database["public"]["Enums"]["consent_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          code_verifier?: string | null
+          consent_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          institution_id?: string
+          last_synced_at?: string | null
+          scopes?: string[]
+          state?: string | null
+          status?: Database["public"]["Enums"]["consent_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openfinance_consents_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      openfinance_tokens: {
+        Row: {
+          consent_id: string
+          created_at: string
+          encrypted_access_token: string
+          encrypted_refresh_token: string | null
+          expires_at: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          consent_id: string
+          created_at?: string
+          encrypted_access_token: string
+          encrypted_refresh_token?: string | null
+          expires_at?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          consent_id?: string
+          created_at?: string
+          encrypted_access_token?: string
+          encrypted_refresh_token?: string | null
+          expires_at?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openfinance_tokens_consent_id_fkey"
+            columns: ["consent_id"]
+            isOneToOne: false
+            referencedRelation: "openfinance_consents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payables: {
+        Row: {
+          account_id: string | null
+          amount: number
+          barcode: string | null
+          category: string
+          confirmation_token: string | null
+          created_at: string
+          description: string
+          due_date: string
+          id: string
+          pix_key: string | null
+          recurring: boolean
+          scheduled_for: string | null
+          status: Database["public"]["Enums"]["bill_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount?: number
+          barcode?: string | null
+          category?: string
+          confirmation_token?: string | null
+          created_at?: string
+          description: string
+          due_date?: string
+          id?: string
+          pix_key?: string | null
+          recurring?: boolean
+          scheduled_for?: string | null
+          status?: Database["public"]["Enums"]["bill_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          barcode?: string | null
+          category?: string
+          confirmation_token?: string | null
+          created_at?: string
+          description?: string
+          due_date?: string
+          id?: string
+          pix_key?: string | null
+          recurring?: boolean
+          scheduled_for?: string | null
+          status?: Database["public"]["Enums"]["bill_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payables_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -176,6 +576,131 @@ export type Database = {
         }
         Relationships: []
       }
+      receivables: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string
+          description: string
+          due_date: string
+          id: string
+          payer: string
+          recurring: boolean
+          status: Database["public"]["Enums"]["bill_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          description: string
+          due_date?: string
+          id?: string
+          payer?: string
+          recurring?: boolean
+          status?: Database["public"]["Enums"]["bill_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          description?: string
+          due_date?: string
+          id?: string
+          payer?: string
+          recurring?: boolean
+          status?: Database["public"]["Enums"]["bill_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receivables_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_events: {
+        Row: {
+          asset_class: Database["public"]["Enums"]["asset_class"]
+          created_at: string
+          gross_amount: number
+          id: string
+          kind: string
+          occurred_at: string
+          profit: number
+          ticker: string
+          updated_at: string
+          user_id: string
+          withheld: number
+        }
+        Insert: {
+          asset_class?: Database["public"]["Enums"]["asset_class"]
+          created_at?: string
+          gross_amount?: number
+          id?: string
+          kind?: string
+          occurred_at?: string
+          profit?: number
+          ticker?: string
+          updated_at?: string
+          user_id: string
+          withheld?: number
+        }
+        Update: {
+          asset_class?: Database["public"]["Enums"]["asset_class"]
+          created_at?: string
+          gross_amount?: number
+          id?: string
+          kind?: string
+          occurred_at?: string
+          profit?: number
+          ticker?: string
+          updated_at?: string
+          user_id?: string
+          withheld?: number
+        }
+        Relationships: []
+      }
+      transaction_categories: {
+        Row: {
+          code: string
+          color: string
+          created_at: string
+          id: string
+          kind: string
+          label: string
+          parent_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          color?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          label: string
+          parent_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          color?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string
+          parent_code?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           account_id: string | null
@@ -183,6 +708,7 @@ export type Database = {
           category: string
           created_at: string
           description: string
+          external_id: string | null
           id: string
           merchant: string | null
           method: string | null
@@ -197,6 +723,7 @@ export type Database = {
           category?: string
           created_at?: string
           description: string
+          external_id?: string | null
           id?: string
           merchant?: string | null
           method?: string | null
@@ -211,6 +738,7 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string
+          external_id?: string | null
           id?: string
           merchant?: string | null
           method?: string | null
@@ -234,10 +762,49 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_irpf_monthly: {
+        Args: { p_month: number; p_year: number }
+        Returns: Json
+      }
+      get_cashflow_projection: {
+        Args: { horizon_days?: number }
+        Returns: {
+          expenses: number
+          income: number
+          month: string
+          projected: number
+        }[]
+      }
+      match_agent_memories: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          content: string
+          id: string
+          memory_type: string
+          similarity: number
+        }[]
+      }
+      upsert_transaction_idempotent: {
+        Args: { p_data: Json; p_idempotency_key: string }
+        Returns: string
+      }
     }
     Enums: {
       account_type: "checking" | "savings" | "credit" | "investment"
+      asset_class:
+        | "stock"
+        | "fii"
+        | "fixed_income"
+        | "crypto"
+        | "fund"
+        | "etf"
+        | "cash"
+      bill_status: "pending" | "paid" | "overdue" | "canceled"
+      consent_status: "pending" | "authorised" | "revoked" | "expired"
       insight_severity: "info" | "warning" | "critical"
       transaction_type: "income" | "expense" | "transfer"
     }
@@ -368,6 +935,17 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["checking", "savings", "credit", "investment"],
+      asset_class: [
+        "stock",
+        "fii",
+        "fixed_income",
+        "crypto",
+        "fund",
+        "etf",
+        "cash",
+      ],
+      bill_status: ["pending", "paid", "overdue", "canceled"],
+      consent_status: ["pending", "authorised", "revoked", "expired"],
       insight_severity: ["info", "warning", "critical"],
       transaction_type: ["income", "expense", "transfer"],
     },

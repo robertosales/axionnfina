@@ -52,7 +52,7 @@ const toolLabels: Record<string, string> = {
 
 function AgentPage() {
   const [draft, setDraft] = useState("");
-  const { accounts } = useAccounts();
+  const { data: accounts = [] } = useAccounts();
   const { items: budgetItems } = useBudgets();
   const { data: goals = [] } = useGoals();
   const { data: insights = [] } = useInsights();

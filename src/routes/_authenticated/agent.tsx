@@ -71,7 +71,7 @@ function AgentPage() {
   const busy = status === "submitted" || status === "streaming";
   const netWorth = accounts.reduce((sum, account) => sum + account.balance, 0);
   const liquidity = accounts
-    .filter((account) => account.type !== "credit")
+    .filter((account) => account.type !== "CREDIT_CARD")
     .reduce((sum, account) => sum + account.balance, 0);
 
   const send = (text: string) => {

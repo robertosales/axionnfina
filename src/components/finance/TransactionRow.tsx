@@ -20,9 +20,19 @@ const kindLabel: Record<Transaction["kind"], string> = {
   investment: "Investimento",
 };
 
-/** Linha de transação expansível com detalhes brutos. */
-export function TransactionRow({ transaction }: { transaction: Transaction }) {
+type Props = {
+  transaction: Transaction;
+  /** Recategorização inline (atualização otimista feita pelo chamador). */
+  onCategoryChange?: (category: string) => void;
+  onDelete?: () => void;
+  categories?: readonly string[];
+};
+
+/** Linha de transação expansível com detalhes brutos e ações inline. */
+export function TransactionRow({ transaction, onCategoryChange, onDelete, categories = [] }: Props) {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(transaction.category);
 
   return (
     <div className="border-b border-border/60 last:border-0">

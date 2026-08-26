@@ -254,20 +254,22 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Button variant="ghost" size="icon" className="ml-1" aria-label="Menu do perfil">
                   <Avatar className="size-8">
                     <AvatarFallback className="bg-accent text-xs text-accent-foreground">
-                      RS
+                      {initials}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Roberto Sales</DropdownMenuLabel>
+                <DropdownMenuLabel className="truncate">{name}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Trocar perfil</DropdownMenuItem>
-                <DropdownMenuItem>Configurações</DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/settings">Configurações</Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Sair</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => void signOut()}>Sair</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
           </div>
         </header>
 

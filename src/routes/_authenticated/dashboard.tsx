@@ -24,16 +24,10 @@ import { KPICard } from "@/components/finance/KPICard";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  accounts,
-  agentInsights,
-  allocation,
-  budgetItems,
-  cashflow,
-  kpis,
-  netWorthSeries,
-  upcomingBills,
-} from "@/lib/mock-data";
+import { Button } from "@/components/ui/button";
+import { useSessionUser } from "@/hooks/use-session-user";
+import { useAccounts, useBudgets, useInsights, useSeedDemoData } from "@/lib/finance-data";
+import { allocation, cashflow, kpis, netWorthSeries, upcomingBills } from "@/lib/mock-data";
 import { daysUntil, formatBRL, formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 

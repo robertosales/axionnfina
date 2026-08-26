@@ -22,6 +22,7 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 
 import { CommandPalette } from "@/components/layout/CommandPalette";
+import { useSessionUser } from "@/hooks/use-session-user";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

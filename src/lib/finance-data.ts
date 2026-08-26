@@ -209,7 +209,7 @@ export function useSeedDemoData() {
         description: tx.description,
         merchant: tx.merchant,
         category: tx.category,
-        type: (tx.kind === "income" ? "income" : tx.kind === "transfer" ? "transfer" : "expense") satisfies DbTransactionType,
+        type: ((tx.kind === "income" ? "income" : tx.kind === "transfer" ? "transfer" : "expense") satisfies DbTransactionType) as DbTransactionType,
         amount: tx.amount,
         occurred_at: tx.date,
       }));
@@ -242,11 +242,11 @@ export function useSeedDemoData() {
           user_id: userId,
           title: insight.title,
           description: insight.body,
-          severity: (insight.severity === "warning"
+          severity: ((insight.severity === "warning"
             ? "warning"
             : insight.severity === "danger"
               ? "critical"
-              : "info") satisfies DbSeverity,
+              : "info") satisfies DbSeverity) as DbSeverity,
         })),
       );
       if (insightError) throw insightError;

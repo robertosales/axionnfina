@@ -109,6 +109,22 @@ export function useUpsertAccount() {
   });
 }
 
+/** Atualiza o carimbo da conta após uma sincronização Open Finance. */
+export function useSyncAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (accountId: string) => {
+      await requireUserId();
+      const { error } = await supabase
+        .from("accounts")
+        .update({ last_sync_at: new Date().toISOString() })
+        .eq("id", accountId);
+      if (error) throw error;
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["accounts"] }),
+  });
+}
+
 export function useOpenFinanceInstitutions() {
   return useQuery({
     queryKey: ["openfinance-institutions"],

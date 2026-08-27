@@ -1,0 +1,3 @@
+ALTER TABLE public.accounts
+  ADD COLUMN IF NOT EXISTS branch TEXT,
+  ADD COLUMN IF NOT EXISTS account_number TEXT;

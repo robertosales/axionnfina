@@ -55,6 +55,9 @@ function SettingsPage() {
   const [name, setName] = useState("");
   const [type, setType] = useState<AccountType>("CHECKING");
   const [balance, setBalance] = useState("0");
+  const [branch, setBranch] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [openFinance, setOpenFinance] = useState(false);
   const [enabled, setEnabled] = useState<Record<string, boolean>>(
     Object.fromEntries(scopes.map((s) => [s.id, s.default])),
   );
@@ -66,13 +69,16 @@ function SettingsPage() {
       return;
     }
     upsertAccount.mutate(
-      { institution: institution.trim(), name: name.trim(), type, balance: amount },
+      { institution: institution.trim(), name: name.trim(), type, balance: amount, branch, accountNumber, openFinance },
       {
         onSuccess: () => {
           toast.success("Conta cadastrada com sucesso");
           setOpen(false);
           setInstitution("");
           setName("");
+           setBranch("");
+           setAccountNumber("");
+           setOpenFinance(false);
           setType("CHECKING");
           setBalance("0");
         },
@@ -150,6 +156,7 @@ function SettingsPage() {
              <div className="space-y-1.5"><Label htmlFor="institution">Instituição</Label><Input id="institution" value={institution} onChange={(event) => setInstitution(event.target.value)} placeholder="Ex.: Nubank" /></div>
              <div className="space-y-1.5"><Label htmlFor="account-name">Nome da conta</Label><Input id="account-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Conta corrente" /></div>
              <div className="space-y-1.5"><Label>Tipo</Label><Select value={type} onValueChange={(value) => setType(value as AccountType)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="CHECKING">Conta corrente</SelectItem><SelectItem value="SAVINGS">Poupança</SelectItem><SelectItem value="CREDIT_CARD">Cartão de crédito</SelectItem><SelectItem value="INVESTMENT">Investimentos</SelectItem></SelectContent></Select></div>
+             {type === "CHECKING" && <><div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label htmlFor="branch">Agência</Label><Input id="branch" value={branch} onChange={(event) => setBranch(event.target.value)} /></div><div className="space-y-1.5"><Label htmlFor="account-number">Número da conta</Label><Input id="account-number" value={accountNumber} onChange={(event) => setAccountNumber(event.target.value)} /></div></div><div className="flex items-center justify-between rounded-lg border border-border p-3"><Label htmlFor="open-finance">Conectar via Open Finance</Label><Switch id="open-finance" checked={openFinance} onCheckedChange={setOpenFinance} /></div></>}
              <div className="space-y-1.5"><Label htmlFor="account-balance">Saldo atual</Label><Input id="account-balance" inputMode="decimal" value={balance} onChange={(event) => setBalance(event.target.value)} placeholder="0,00" /></div>
            </div>
            <DialogFooter><Button onClick={saveAccount} disabled={upsertAccount.isPending}>{upsertAccount.isPending ? "Salvando…" : "Salvar conta"}</Button></DialogFooter>

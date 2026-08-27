@@ -95,11 +95,10 @@ export function useUpsertAccount() {
         name: input.name,
         type: uiToDbAccountType[input.type],
         balance: input.balance,
-        open_finance: false,
+        open_finance: input.openFinance ?? false,
         last_sync_at: new Date().toISOString(),
         branch: input.branch?.trim() || null,
         account_number: input.accountNumber?.trim() || null,
-        open_finance: input.openFinance ?? false,
       };
       const { error } = input.id
         ? await supabase.from("accounts").update(payload).eq("id", input.id)

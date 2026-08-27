@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Link2, Plus, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { useAccounts, useUpsertAccount } from "@/lib/finance-data";
+import { useAccounts, useCreateOpenFinanceConsent, useOpenFinanceInstitutions, useUpsertAccount } from "@/lib/finance-data";
 import type { AccountType } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -50,6 +50,8 @@ const scopes = [
 function SettingsPage() {
   const { data: accounts = [], isLoading } = useAccounts();
   const upsertAccount = useUpsertAccount();
+  const institutionsQuery = useOpenFinanceInstitutions();
+  const createConsent = useCreateOpenFinanceConsent();
   const [open, setOpen] = useState(false);
   const [institution, setInstitution] = useState("");
   const [name, setName] = useState("");
@@ -61,6 +63,18 @@ function SettingsPage() {
   const [enabled, setEnabled] = useState<Record<string, boolean>>(
     Object.fromEntries(scopes.map((s) => [s.id, s.default])),
   );
+  const [institutionId, setInstitutionId] = useState("");
+
+  const connectOpenFinance = () => {
+    if (!institutionId) {
+      toast.error("Selecione uma instituição participante");
+      return;
+    }
+    createConsent.mutate({ institutionId, scopes: Object.entries(enabled).filter(([, value]) => value).map(([key]) => key) }, {
+      onSuccess: () => toast.success("Consentimento autorizado e conexão registrada"),
+      onError: (error) => toast.error(error.message),
+    });
+  };
 
   const saveAccount = () => {
     const amount = Number(balance.replace(",", "."));
@@ -136,6 +150,23 @@ function SettingsPage() {
               </li>
             ))}
           </ul>
+
+          <div className="mt-5 space-y-3 border-t border-border pt-5">
+            <div className="flex items-center gap-2">
+              <Link2 className="size-4 text-primary" aria-hidden />
+              <h3 className="text-sm font-semibold">Conectar instituição</h3>
+            </div>
+            <Select value={institutionId} onValueChange={setInstitutionId}>
+              <SelectTrigger><SelectValue placeholder={institutionsQuery.isLoading ? "Carregando instituições…" : "Escolha seu banco"} /></SelectTrigger>
+              <SelectContent>
+                {(institutionsQuery.data ?? []).map((institution) => <SelectItem key={institution.id} value={institution.id}>{institution.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Button className="w-full" onClick={connectOpenFinance} disabled={createConsent.isPending || institutionsQuery.isLoading}>
+              <CheckCircle2 className="size-4" /> {createConsent.isPending ? "Conectando…" : "Autorizar conexão"}
+            </Button>
+            <p className="text-[11px] text-muted-foreground">Ambiente de teste: o consentimento é registrado com segurança para validar o fluxo completo.</p>
+          </div>
 
           <Separator className="my-5" />
 

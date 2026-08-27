@@ -73,6 +73,35 @@ export function useAccounts() {
   });
 }
 
+export function useUpsertAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id?: string;
+      institution: string;
+      name: string;
+      type: AccountType;
+      balance: number;
+    }) => {
+      const userId = await requireUserId();
+      const payload = {
+        user_id: userId,
+        institution: input.institution,
+        name: input.name,
+        type: uiToDbAccountType[input.type],
+        balance: input.balance,
+        open_finance: false,
+        last_sync_at: new Date().toISOString(),
+      };
+      const { error } = input.id
+        ? await supabase.from("accounts").update(payload).eq("id", input.id)
+        : await supabase.from("accounts").insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["accounts"] }),
+  });
+}
+
 /** Transações mais recentes do usuário logado. */
 export function useTransactions(limit = 200) {
   return useQuery({

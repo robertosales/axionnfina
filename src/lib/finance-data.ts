@@ -109,6 +109,40 @@ export function useUpsertAccount() {
   });
 }
 
+export function useOpenFinanceInstitutions() {
+  return useQuery({
+    queryKey: ["openfinance-institutions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("institutions")
+        .select("id, name, short_name, code")
+        .eq("openfinance_participant", true)
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useCreateOpenFinanceConsent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { institutionId: string; scopes: string[] }) => {
+      const userId = await requireUserId();
+      const { error } = await supabase.from("openfinance_consents").insert({
+        user_id: userId,
+        institution_id: input.institutionId,
+        scopes: input.scopes,
+        status: "authorised",
+        consent_id: `demo-consent-${crypto.randomUUID()}`,
+        last_synced_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["accounts"] }),
+  });
+}
+
 /** Transações mais recentes do usuário logado. */
 export function useTransactions(limit = 200) {
   return useQuery({

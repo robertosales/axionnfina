@@ -43,7 +43,7 @@ export function AccountCard({ account }: { account: Account }) {
           )}
         </div>
         <p className="truncate text-xs text-muted-foreground">
-          {meta.label} · sync {syncLabel(account.lastSyncedAt)}
+           {meta.label}{account.branch ? ` · Ag. ${account.branch}` : ""}{account.accountNumber ? ` · Conta ${account.accountNumber}` : ""} · sync {syncLabel(account.lastSyncedAt)}
         </p>
       </div>
 

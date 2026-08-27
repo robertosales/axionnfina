@@ -57,7 +57,7 @@ export function useAccounts() {
     queryFn: async (): Promise<Account[]> => {
       const { data, error } = await supabase
         .from("accounts")
-        .select("id, name, institution, type, balance, open_finance, last_sync_at")
+        .select("id, name, institution, type, balance, open_finance, last_sync_at, branch, account_number")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []).map((row) => ({
@@ -68,6 +68,8 @@ export function useAccounts() {
         balance: Number(row.balance),
         lastSyncedAt: row.last_sync_at ?? new Date().toISOString(),
         openFinance: row.open_finance,
+        branch: row.branch ?? "",
+        accountNumber: row.account_number ?? "",
       }));
     },
   });
@@ -82,6 +84,9 @@ export function useUpsertAccount() {
       name: string;
       type: AccountType;
       balance: number;
+      branch?: string;
+      accountNumber?: string;
+      openFinance?: boolean;
     }) => {
       const userId = await requireUserId();
       const payload = {
@@ -92,6 +97,9 @@ export function useUpsertAccount() {
         balance: input.balance,
         open_finance: false,
         last_sync_at: new Date().toISOString(),
+        branch: input.branch?.trim() || null,
+        account_number: input.accountNumber?.trim() || null,
+        open_finance: input.openFinance ?? false,
       };
       const { error } = input.id
         ? await supabase.from("accounts").update(payload).eq("id", input.id)

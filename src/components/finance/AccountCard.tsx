@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useSyncAccount } from "@/lib/finance-data";
 
 const typeMeta = {
   CHECKING: { icon: Landmark, label: "Conta corrente" },
@@ -23,6 +24,7 @@ function syncLabel(iso: string): string {
 }
 
 export function AccountCard({ account }: { account: Account }) {
+  const syncAccount = useSyncAccount();
   const meta = typeMeta[account.type] ?? { icon: Building2, label: "Conta" };
   const Icon = meta.icon;
   const negative = account.balance < 0;
@@ -56,7 +58,14 @@ export function AccountCard({ account }: { account: Account }) {
         >
           {formatBRL(account.balance)}
         </p>
-        <Button variant="ghost" size="sm" className="mt-1 h-7 px-2 text-xs text-muted-foreground">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-1 h-7 px-2 text-xs text-muted-foreground"
+          onClick={() => syncAccount.mutate(account.id)}
+          disabled={!account.openFinance || syncAccount.isPending}
+          title={account.openFinance ? "Sincronizar dados da conta" : "Ative o Open Finance para sincronizar"}
+        >
           <RefreshCw className="size-3" /> Sincronizar
         </Button>
       </div>

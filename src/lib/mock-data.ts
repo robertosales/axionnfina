@@ -14,6 +14,8 @@ export type Account = {
   balance: number;
   lastSyncedAt: string;
   openFinance: boolean;
+  branch?: string;
+  accountNumber?: string;
 };
 
 export type Transaction = {

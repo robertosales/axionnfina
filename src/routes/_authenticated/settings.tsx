@@ -1,16 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ShieldCheck } from "lucide-react";
+import { Plus, ShieldCheck } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { AccountCard } from "@/components/finance/AccountCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { accounts } from "@/lib/mock-data";
+import { useAccounts, useUpsertAccount } from "@/lib/finance-data";
+import type { AccountType } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -43,9 +48,38 @@ const scopes = [
 ] as const;
 
 function SettingsPage() {
+  const { data: accounts = [], isLoading } = useAccounts();
+  const upsertAccount = useUpsertAccount();
+  const [open, setOpen] = useState(false);
+  const [institution, setInstitution] = useState("");
+  const [name, setName] = useState("");
+  const [type, setType] = useState<AccountType>("CHECKING");
+  const [balance, setBalance] = useState("0");
   const [enabled, setEnabled] = useState<Record<string, boolean>>(
     Object.fromEntries(scopes.map((s) => [s.id, s.default])),
   );
+
+  const saveAccount = () => {
+    const amount = Number(balance.replace(",", "."));
+    if (!institution.trim() || !name.trim() || !Number.isFinite(amount)) {
+      toast.error("Informe instituição, nome e saldo válidos");
+      return;
+    }
+    upsertAccount.mutate(
+      { institution: institution.trim(), name: name.trim(), type, balance: amount },
+      {
+        onSuccess: () => {
+          toast.success("Conta cadastrada com sucesso");
+          setOpen(false);
+          setInstitution("");
+          setName("");
+          setType("CHECKING");
+          setBalance("0");
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  };
 
   return (
     <AppShell>
@@ -58,9 +92,14 @@ function SettingsPage() {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-3">
-          <h2 className="text-base font-semibold">Instituições conectadas</h2>
+           <div className="flex items-center justify-between gap-3">
+             <h2 className="text-base font-semibold">Minhas contas</h2>
+             <Button size="sm" onClick={() => setOpen(true)}><Plus className="size-4" /> Nova conta</Button>
+           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            {accounts.map((account) => (
+             {isLoading && <p className="text-sm text-muted-foreground">Carregando contas…</p>}
+             {!isLoading && accounts.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma conta cadastrada.</p>}
+             {accounts.map((account) => (
               <AccountCard key={account.id} account={account} />
             ))}
           </div>
@@ -103,6 +142,19 @@ function SettingsPage() {
           </Button>
         </Card>
       </div>
+
+       <Dialog open={open} onOpenChange={setOpen}>
+         <DialogContent className="rounded-2xl">
+           <DialogHeader><DialogTitle>Cadastrar nova conta</DialogTitle></DialogHeader>
+           <div className="space-y-4">
+             <div className="space-y-1.5"><Label htmlFor="institution">Instituição</Label><Input id="institution" value={institution} onChange={(event) => setInstitution(event.target.value)} placeholder="Ex.: Nubank" /></div>
+             <div className="space-y-1.5"><Label htmlFor="account-name">Nome da conta</Label><Input id="account-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Conta corrente" /></div>
+             <div className="space-y-1.5"><Label>Tipo</Label><Select value={type} onValueChange={(value) => setType(value as AccountType)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="CHECKING">Conta corrente</SelectItem><SelectItem value="SAVINGS">Poupança</SelectItem><SelectItem value="CREDIT_CARD">Cartão de crédito</SelectItem><SelectItem value="INVESTMENT">Investimentos</SelectItem></SelectContent></Select></div>
+             <div className="space-y-1.5"><Label htmlFor="account-balance">Saldo atual</Label><Input id="account-balance" inputMode="decimal" value={balance} onChange={(event) => setBalance(event.target.value)} placeholder="0,00" /></div>
+           </div>
+           <DialogFooter><Button onClick={saveAccount} disabled={upsertAccount.isPending}>{upsertAccount.isPending ? "Salvando…" : "Salvar conta"}</Button></DialogFooter>
+         </DialogContent>
+       </Dialog>
     </AppShell>
   );
 }

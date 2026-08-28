@@ -134,6 +134,7 @@ export async function getWalletSummary(): Promise<WalletSummary | null> {
  * Cria ou atualiza uma conta financeira.
  */
 export async function upsertAccount(data: {
+  id?: string;
   name?: string;
   institution?: string;
   institution_id?: string;
@@ -149,13 +150,31 @@ export async function upsertAccount(data: {
   external_id?: string;
   metadata?: Record<string, unknown>;
 }): Promise<string | null> {
+  if (data.id) {
+    const { id, metadata, ...changes } = data;
+    const { data: updated, error } = await supabase
+      .from("accounts")
+      .update({
+        ...changes,
+        ...(metadata === undefined ? {} : { metadata: metadata as Json }),
+      })
+      .eq("id", id)
+      .select("id")
+      .single();
+
+    if (error) {
+      throw new Error(`Nao foi possivel atualizar a conta: ${error.message}`);
+    }
+
+    return updated.id;
+  }
+
   const { data: id, error } = await supabase.rpc("upsert_account", {
     p_data: data as unknown as Json,
   });
 
   if (error) {
-    console.error("[AccountService] upsertAccount failed:", error);
-    return null;
+    throw new Error(`Nao foi possivel salvar a conta: ${error.message}`);
   }
 
   return id as string;
@@ -170,8 +189,7 @@ export async function archiveAccount(accountId: string): Promise<boolean> {
   });
 
   if (error) {
-    console.error("[AccountService] archiveAccount failed:", error);
-    return false;
+    throw new Error(`Nao foi possivel arquivar a conta: ${error.message}`);
   }
 
   return data as boolean;
@@ -186,8 +204,7 @@ export async function setPrimaryAccount(accountId: string): Promise<boolean> {
   });
 
   if (error) {
-    console.error("[AccountService] setPrimaryAccount failed:", error);
-    return false;
+    throw new Error(`Nao foi possivel definir a conta principal: ${error.message}`);
   }
 
   return data as boolean;

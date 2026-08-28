@@ -25,7 +25,7 @@ export class TransactionNormalizer {
   private cleanDescription(description: string): string {
     return description
       .replace(/\s+/g, ' ')
-      .replace(/[^\p{L}\p{N}\s.,\-/()]/gu, '')
+      .replace(/[^\p{L}\p{N}\s.,*\-/()]/gu, '')
       .trim()
       .slice(0, 200);
   }
@@ -39,6 +39,7 @@ export class TransactionNormalizer {
     }
 
     const patterns = [
+      /^(.+?\d+)(?:\s+[A-Z]{2,})+\s+BR$/i,
       /^([A-Z0-9\s.]+?)\s+\d{2}\/\d{2}/,
       /^([A-Z0-9\s.]+?)\s+BR\s+/i,
       /^([A-Z0-9\s.]+?)\s+\d{4}/,

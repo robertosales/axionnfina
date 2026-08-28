@@ -157,11 +157,17 @@ type HealthScoreInput = {
  * 4. Regularidade: 0 transações = 0pts, ≥20/mês = 25pts
  */
 export function calculateHealthScore(input: HealthScoreInput) {
-  const savings = Math.min(25, Math.round((input.savingsRate / 30) * 25));
-  const diversification = Math.min(25, Math.round((input.uniqueCategories / 5) * 25));
-  const debtRatio = input.totalAssets > 0 ? input.totalDebts / input.totalAssets : 0;
-  const debt = Math.max(0, Math.round((1 - debtRatio) * 25));
-  const regularity = Math.min(25, Math.round((input.monthlyTransactions / 20) * 25));
+  const savings = Math.max(0, Math.min(25, Math.round((input.savingsRate / 30) * 25)));
+  const diversification = Math.max(
+    0,
+    Math.min(25, Math.round(((input.uniqueCategories - 1) / 4) * 25)),
+  );
+  const debtRatio = input.totalAssets > 0 ? input.totalDebts / input.totalAssets : null;
+  const debt = debtRatio === null ? 0 : Math.max(0, Math.min(25, Math.round((1 - debtRatio) * 25)));
+  const regularity = Math.max(
+    0,
+    Math.min(25, Math.round((input.monthlyTransactions / 20) * 25)),
+  );
 
   const total = savings + diversification + debt + regularity;
 

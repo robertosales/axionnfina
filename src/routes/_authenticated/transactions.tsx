@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { type ColumnDef } from "@tanstack/react-table";
-import { Download, Plus, Trash2 } from "lucide-react";
+import { Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -31,6 +31,7 @@ import {
   useCreateTransaction,
   useDeleteTransaction,
   useTransactions,
+  useUpdateTransaction,
   useUpdateTransactionCategory,
 } from "@/lib/finance-data";
 import { formatBRL, formatShortDate, initials } from "@/lib/format";
@@ -86,10 +87,12 @@ function TransactionsPage() {
   const { data: transactions = [], isLoading } = useTransactions();
   const { data: accounts = [] } = useAccounts();
   const createTransaction = useCreateTransaction();
+  const updateTransaction = useUpdateTransaction();
   const updateCategory = useUpdateTransactionCategory();
   const deleteTransaction = useDeleteTransaction();
 
   const [open, setOpen] = useState(false);
+  const [editTransactionId, setEditTransactionId] = useState<string | null>(null);
   const [form, setForm] = useState({
     description: "",
     amount: "",
@@ -114,14 +117,41 @@ function TransactionsPage() {
     [filteredTransactions],
   );
 
+  const openNewTransaction = useCallback(() => {
+    setEditTransactionId(null);
+    setForm({
+      description: "",
+      amount: "",
+      type: "expense",
+      category: "Outros",
+      merchant: "",
+      accountId: "",
+      occurredAt: new Date().toISOString().slice(0, 10),
+    });
+    setOpen(true);
+  }, []);
+
+  const openEditTransaction = useCallback((transaction: Transaction) => {
+    setEditTransactionId(transaction.id);
+    setForm({
+      description: transaction.description,
+      amount: String(Math.abs(transaction.amount)),
+      type: transaction.kind === "investment" ? "expense" : transaction.kind,
+      category: transaction.category,
+      merchant: transaction.merchant,
+      accountId: transaction.accountId ?? "",
+      occurredAt: transaction.date,
+    });
+    setOpen(true);
+  }, []);
+
   const submit = useCallback(() => {
     const value = Math.abs(Number(form.amount.replace(",", ".")));
     if (!form.description.trim() || !Number.isFinite(value) || value === 0) {
       toast.error("Informe descrição e valor");
       return;
     }
-    createTransaction.mutate(
-      {
+    const payload = {
         description: form.description.trim(),
         amount: form.type === "income" ? value : -value,
         type: form.type,
@@ -129,17 +159,23 @@ function TransactionsPage() {
         merchant: form.merchant.trim() || form.description.trim(),
         accountId: form.accountId || null,
         occurredAt: form.occurredAt,
-      },
-      {
+      };
+    const options = {
         onSuccess: () => {
-          toast.success("Transação registrada");
+          toast.success(editTransactionId ? "Transação atualizada" : "Transação registrada");
           setOpen(false);
+          setEditTransactionId(null);
           setForm((prev) => ({ ...prev, description: "", amount: "", merchant: "" }));
         },
-        onError: (error) => toast.error(error.message),
-      },
-    );
-  }, [form, createTransaction]);
+        onError: (error: Error) => toast.error(error.message),
+      };
+
+    if (editTransactionId) {
+      updateTransaction.mutate({ ...payload, id: editTransactionId }, options);
+    } else {
+      createTransaction.mutate(payload, options);
+    }
+  }, [form, editTransactionId, createTransaction, updateTransaction]);
 
   const exportCsv = useCallback(() => {
     const header = "data;descricao;estabelecimento;categoria;tipo;valor";
@@ -267,7 +303,15 @@ function TransactionsPage() {
         header: "",
         size: 60,
         cell: ({ row }) => (
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-1">
+            <button
+              type="button"
+              onClick={() => openEditTransaction(row.original)}
+              className="focus-ring rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+              title="Editar"
+            >
+              <Pencil className="size-3.5" />
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -285,7 +329,7 @@ function TransactionsPage() {
         ),
       },
     ],
-    [updateCategory, deleteTransaction],
+    [updateCategory, deleteTransaction, openEditTransaction],
   );
 
   /* Sub-componente expandido */
@@ -327,7 +371,7 @@ function TransactionsPage() {
           <Button variant="outline" size="sm" onClick={exportCsv} disabled={filteredTransactions.length === 0}>
             <Download className="size-4" /> Exportar
           </Button>
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <Button size="sm" onClick={openNewTransaction}>
             <Plus className="size-4" /> Nova transação
           </Button>
         </div>
@@ -362,10 +406,16 @@ function TransactionsPage() {
         ))}
       </datalist>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen);
+          if (!nextOpen) setEditTransactionId(null);
+        }}
+      >
         <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Nova transação</DialogTitle>
+            <DialogTitle>{editTransactionId ? "Editar transação" : "Nova transação"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
@@ -449,8 +499,12 @@ function TransactionsPage() {
             )}
           </div>
           <DialogFooter>
-            <Button onClick={submit} disabled={createTransaction.isPending}>
-              {createTransaction.isPending ? "Salvando…" : "Registrar"}
+            <Button onClick={submit} disabled={createTransaction.isPending || updateTransaction.isPending}>
+              {createTransaction.isPending || updateTransaction.isPending
+                ? "Salvando…"
+                : editTransactionId
+                  ? "Salvar alterações"
+                  : "Registrar"}
             </Button>
           </DialogFooter>
         </DialogContent>

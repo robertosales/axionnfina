@@ -27,21 +27,28 @@ export function formatPercent(value: number, digits = 1): string {
 /** Data curta: 12 ago. */
 export function formatShortDate(iso: string): string {
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(
-    new Date(iso),
+    parseCalendarDate(iso),
   );
 }
 
 /** Data completa: 12 de agosto de 2026. */
 export function formatLongDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date(iso));
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(parseCalendarDate(iso));
 }
 
 /** Dias restantes até uma data (pode ser negativo). */
 export function daysUntil(iso: string, from: Date = new Date()): number {
   const day = 86_400_000;
-  const target = new Date(iso).setHours(0, 0, 0, 0);
-  const base = new Date(from).setHours(0, 0, 0, 0);
+  const [year, month, date] = iso.slice(0, 10).split("-").map(Number);
+  if (year === undefined || month === undefined || date === undefined) return Number.NaN;
+  const target = Date.UTC(year, month - 1, date);
+  const base = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
   return Math.round((target - base) / day);
+}
+
+function parseCalendarDate(iso: string): Date {
+  const calendarDate = iso.length === 10 ? `${iso}T12:00:00` : iso;
+  return new Date(calendarDate);
 }
 
 /** Iniciais para avatar fallback. */

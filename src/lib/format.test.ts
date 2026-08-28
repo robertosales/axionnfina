@@ -84,7 +84,7 @@ describe("initials", () => {
 describe("formatShortDate", () => {
   it("formata data no formato curto", () => {
     const result = formatShortDate("2026-08-15");
-    expect(result).toMatch(/\d{2}\.\s/);
+    expect(result).toMatch(/^15 de ago\.$/);
   });
 });
 

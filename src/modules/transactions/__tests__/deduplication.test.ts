@@ -1,15 +1,16 @@
 import { deduplicationEngine } from '../deduplication';
 import { ExternalTransaction, NormalizedTransaction } from '../types';
+import { describe, expect, it, vi } from 'vitest';
 
 // Mock Supabase
-jest.mock('@/lib/supabase/server', () => ({
+vi.mock('@/lib/supabase/server', () => ({
   createClient: () => ({
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          eq: jest.fn(() => ({
-            eq: jest.fn(() => ({
-              maybeSingle: jest.fn(),
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              maybeSingle: vi.fn(),
             })),
           })),
         })),

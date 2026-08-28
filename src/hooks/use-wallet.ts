@@ -36,6 +36,7 @@ export function useUpsertAccount() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: {
+      id?: string;
       name?: string;
       institution?: string;
       institution_id?: string;

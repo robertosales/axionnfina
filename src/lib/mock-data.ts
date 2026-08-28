@@ -27,6 +27,7 @@ export type Transaction = {
   amount: number;
   date: string;
   accountName: string;
+  accountId?: string | null;
   pending?: boolean;
 };
 

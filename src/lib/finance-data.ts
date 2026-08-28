@@ -171,7 +171,7 @@ export function useTransactions(limit = 200) {
     queryFn: async (): Promise<Transaction[]> => {
       const { data, error } = await supabase
         .from("transactions")
-        .select("id, description, merchant, category, type, amount, occurred_at, accounts(name)")
+        .select("id, account_id, description, merchant, category, type, amount, occurred_at, accounts(name)")
         .order("occurred_at", { ascending: false })
         .limit(limit);
       if (error) throw error;
@@ -184,6 +184,7 @@ export function useTransactions(limit = 200) {
         amount: Number(row.amount),
         date: row.occurred_at,
         accountName: row.accounts?.name ?? "—",
+        accountId: row.account_id,
       }));
     },
   });
@@ -509,6 +510,40 @@ export function useUpdateTransactionCategory() {
   return useMutation({
     mutationFn: async ({ id, category }: { id: string; category: string }) => {
       const { error } = await supabase.from("transactions").update({ category }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      void queryClient.invalidateQueries({ queryKey: ["budgets"] });
+    },
+  });
+}
+
+export function useUpdateTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      description: string;
+      amount: number;
+      type: DbTransactionType;
+      category: string;
+      merchant?: string;
+      accountId?: string | null;
+      occurredAt: string;
+    }) => {
+      const { error } = await supabase
+        .from("transactions")
+        .update({
+          account_id: input.accountId ?? null,
+          description: input.description,
+          amount: input.amount,
+          type: input.type,
+          category: input.category,
+          merchant: input.merchant ?? null,
+          occurred_at: input.occurredAt,
+        })
+        .eq("id", input.id);
       if (error) throw error;
     },
     onSuccess: () => {

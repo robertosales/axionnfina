@@ -213,6 +213,12 @@ JOIN public.transaction_categories pc ON pc.code = m.parent_code
 ON CONFLICT (code) DO NOTHING;
 
 -- =============== 7. ATUALIZAR TABELAS DE TRANSACOES EXISTENTES ===============
+-- category_id precisa existir antes do backfill. A migration da Fase 4 tambem
+-- declara a coluna com IF NOT EXISTS para manter compatibilidade em reexecucoes.
+ALTER TABLE public.transactions
+  ADD COLUMN IF NOT EXISTS category_id uuid
+  REFERENCES public.transaction_categories(id) ON DELETE SET NULL;
+
 UPDATE public.transactions
 SET category_id = (
   SELECT id FROM public.transaction_categories tc

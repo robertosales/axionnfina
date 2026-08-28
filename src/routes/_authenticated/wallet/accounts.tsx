@@ -117,13 +117,13 @@ function AccountsPage() {
 
     try {
       await upsertAccount.mutateAsync({
+        ...(editId ? { id: editId } : { is_manual: true }),
         name: form.name,
         institution: form.institution,
         ...(form.institution_id ? { institution_id: form.institution_id } : {}),
         type: form.type,
         balance: parseFloat(form.balance) || 0,
         is_primary: form.is_primary,
-        is_manual: true,
       });
 
       toast.success(editId ? "Conta atualizada" : "Conta criada");

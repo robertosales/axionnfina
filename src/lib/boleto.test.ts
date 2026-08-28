@@ -5,7 +5,7 @@ import { mod10, mod11, digitableLineToBarcode, parseDigitableLine } from "@/lib/
 describe("mod10", () => {
   it("calcula DV módulo 10 corretamente", () => {
     // Exemplo: campo 1 de um boleto real
-    expect(mod10("00190000")).toBe(9);
+    expect(mod10("00190500")).toBe(9);
   });
 });
 

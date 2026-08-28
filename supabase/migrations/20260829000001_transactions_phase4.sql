@@ -5,16 +5,27 @@
 -- transaction_categories columns: id, code, label, name, parent_code, kind, parent_id, icon, color, is_system, sort_order, created_at, updated_at
 
 -- =============== TYPES ===============
-CREATE TYPE public.categorization_source AS ENUM (
-  'mcc', 'rule', 'user', 'ml', 'llm', 'manual'
-);
-CREATE TYPE public.transaction_status AS ENUM (
-  'pending', 'settled', 'cancelled', 'failed', 'reversed'
-);
-CREATE TYPE public.ledger_entry_type AS ENUM ('debit', 'credit');
+DO $$ BEGIN
+  CREATE TYPE public.categorization_source AS ENUM (
+    'mcc', 'rule', 'user', 'ml', 'llm', 'manual'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.transaction_status AS ENUM (
+    'pending', 'settled', 'cancelled', 'failed', 'reversed'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.ledger_entry_type AS ENUM ('debit', 'credit');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- =============== EXTERNAL TRANSACTIONS (raw from provider) ===============
-CREATE TABLE public.external_transactions (
+CREATE TABLE IF NOT EXISTS public.external_transactions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   connection_id uuid NOT NULL REFERENCES public.account_connections(id) ON DELETE CASCADE,
   account_id uuid NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,
@@ -38,18 +49,19 @@ CREATE TABLE public.external_transactions (
 GRANT SELECT, INSERT ON public.external_transactions TO authenticated;
 GRANT ALL ON public.external_transactions TO service_role;
 ALTER TABLE public.external_transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS external_transactions_own ON public.external_transactions;
 CREATE POLICY external_transactions_own ON public.external_transactions
   FOR ALL TO authenticated
   USING (connection_id IN (
     SELECT id FROM public.account_connections WHERE user_id = auth.uid()
   ));
-CREATE INDEX idx_external_transactions_account ON public.external_transactions(account_id, posted_at DESC);
-CREATE INDEX idx_external_transactions_connection ON public.external_transactions(connection_id, posted_at DESC);
-CREATE INDEX idx_external_transactions_posted ON public.external_transactions(posted_at DESC);
-CREATE INDEX idx_external_transactions_processed ON public.external_transactions(processed_at) WHERE processed_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_external_transactions_account ON public.external_transactions(account_id, posted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_external_transactions_connection ON public.external_transactions(connection_id, posted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_external_transactions_posted ON public.external_transactions(posted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_external_transactions_processed ON public.external_transactions(processed_at) WHERE processed_at IS NULL;
 
 -- =============== TRANSACTION ENRICHMENTS (categorization audit trail) ===============
-CREATE TABLE public.transaction_enrichments (
+CREATE TABLE IF NOT EXISTS public.transaction_enrichments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   transaction_id uuid NOT NULL REFERENCES public.transactions(id) ON DELETE CASCADE,
   category_id uuid REFERENCES public.transaction_categories(id) ON DELETE SET NULL,
@@ -65,15 +77,16 @@ CREATE TABLE public.transaction_enrichments (
 GRANT SELECT, INSERT ON public.transaction_enrichments TO authenticated;
 GRANT ALL ON public.transaction_enrichments TO service_role;
 ALTER TABLE public.transaction_enrichments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS transaction_enrichments_own ON public.transaction_enrichments;
 CREATE POLICY transaction_enrichments_own ON public.transaction_enrichments
   FOR ALL TO authenticated
   USING (transaction_id IN (
     SELECT id FROM public.transactions WHERE user_id = auth.uid()
   ));
-CREATE INDEX idx_transaction_enrichments_tx ON public.transaction_enrichments(transaction_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transaction_enrichments_tx ON public.transaction_enrichments(transaction_id, created_at DESC);
 
 -- =============== TRANSACTION TAGS (user-defined) ===============
-CREATE TABLE public.transaction_tags (
+CREATE TABLE IF NOT EXISTS public.transaction_tags (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL,
@@ -85,11 +98,12 @@ CREATE TABLE public.transaction_tags (
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.transaction_tags TO authenticated;
 GRANT ALL ON public.transaction_tags TO service_role;
 ALTER TABLE public.transaction_tags ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS transaction_tags_own ON public.transaction_tags;
 CREATE POLICY transaction_tags_own ON public.transaction_tags
   FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- =============== TRANSACTION PAIRS (transfers between own accounts) ===============
-CREATE TABLE public.transaction_pairs (
+CREATE TABLE IF NOT EXISTS public.transaction_pairs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   debit_transaction_id uuid NOT NULL REFERENCES public.transactions(id) ON DELETE CASCADE,
@@ -105,12 +119,13 @@ CREATE TABLE public.transaction_pairs (
 GRANT SELECT, INSERT, UPDATE ON public.transaction_pairs TO authenticated;
 GRANT ALL ON public.transaction_pairs TO service_role;
 ALTER TABLE public.transaction_pairs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS transaction_pairs_own ON public.transaction_pairs;
 CREATE POLICY transaction_pairs_own ON public.transaction_pairs
   FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE INDEX idx_transaction_pairs_user ON public.transaction_pairs(user_id, matched_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transaction_pairs_user ON public.transaction_pairs(user_id, matched_at DESC);
 
 -- =============== LEDGER ACCOUNTS (chart of accounts) ===============
-CREATE TABLE public.ledger_accounts (
+CREATE TABLE IF NOT EXISTS public.ledger_accounts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   code text NOT NULL,
@@ -129,12 +144,13 @@ CREATE TABLE public.ledger_accounts (
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.ledger_accounts TO authenticated;
 GRANT ALL ON public.ledger_accounts TO service_role;
 ALTER TABLE public.ledger_accounts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ledger_accounts_own ON public.ledger_accounts;
 CREATE POLICY ledger_accounts_own ON public.ledger_accounts
   FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE INDEX idx_ledger_accounts_user ON public.ledger_accounts(user_id, type, code);
+CREATE INDEX IF NOT EXISTS idx_ledger_accounts_user ON public.ledger_accounts(user_id, type, code);
 
 -- =============== JOURNAL ENTRIES ===============
-CREATE TABLE public.journal_entries (
+CREATE TABLE IF NOT EXISTS public.journal_entries (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   entry_date date NOT NULL,
@@ -151,15 +167,17 @@ CREATE TABLE public.journal_entries (
 GRANT SELECT, INSERT, UPDATE ON public.journal_entries TO authenticated;
 GRANT ALL ON public.journal_entries TO service_role;
 ALTER TABLE public.journal_entries ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS journal_entries_own ON public.journal_entries;
 CREATE POLICY journal_entries_own ON public.journal_entries
   FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+DROP TRIGGER IF EXISTS journal_entries_updated_at ON public.journal_entries;
 CREATE TRIGGER journal_entries_updated_at BEFORE UPDATE ON public.journal_entries
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-CREATE INDEX idx_journal_entries_user_date ON public.journal_entries(user_id, entry_date DESC);
-CREATE INDEX idx_journal_entries_reference ON public.journal_entries(reference_type, reference_id);
+CREATE INDEX IF NOT EXISTS idx_journal_entries_user_date ON public.journal_entries(user_id, entry_date DESC);
+CREATE INDEX IF NOT EXISTS idx_journal_entries_reference ON public.journal_entries(reference_type, reference_id);
 
 -- =============== JOURNAL LINES ===============
-CREATE TABLE public.journal_lines (
+CREATE TABLE IF NOT EXISTS public.journal_lines (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   journal_entry_id uuid NOT NULL REFERENCES public.journal_entries(id) ON DELETE CASCADE,
   ledger_account_id uuid NOT NULL REFERENCES public.ledger_accounts(id) ON DELETE RESTRICT,
@@ -173,13 +191,21 @@ CREATE TABLE public.journal_lines (
 GRANT SELECT, INSERT ON public.journal_lines TO authenticated;
 GRANT ALL ON public.journal_lines TO service_role;
 ALTER TABLE public.journal_lines ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS journal_lines_own ON public.journal_lines;
 CREATE POLICY journal_lines_own ON public.journal_lines
   FOR ALL TO authenticated
   USING (journal_entry_id IN (
     SELECT id FROM public.journal_entries WHERE user_id = auth.uid()
+  ) AND ledger_account_id IN (
+    SELECT id FROM public.ledger_accounts WHERE user_id = auth.uid()
+  ))
+  WITH CHECK (journal_entry_id IN (
+    SELECT id FROM public.journal_entries WHERE user_id = auth.uid()
+  ) AND ledger_account_id IN (
+    SELECT id FROM public.ledger_accounts WHERE user_id = auth.uid()
   ));
-CREATE INDEX idx_journal_lines_entry ON public.journal_lines(journal_entry_id, sort_order);
-CREATE INDEX idx_journal_lines_account ON public.journal_lines(ledger_account_id);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON public.journal_lines(journal_entry_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_account ON public.journal_lines(ledger_account_id);
 
 -- =============== ALTER EXISTING transactions TABLE ===============
 -- Add new columns to existing transactions table
@@ -262,6 +288,77 @@ SET status = 'settled',
     )
 WHERE category_id IS NULL;
 
+-- Mantem o contrato legado (category/merchant/occurred_at) sincronizado com o
+-- novo contrato (category_id/merchant_name/posted_at). A UI atual ainda le os
+-- campos legados, enquanto o pipeline Open Finance usa os novos campos.
+CREATE OR REPLACE FUNCTION public.sync_transaction_compatibility_fields()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  v_category_id uuid;
+  v_category_code text;
+  v_category_name text;
+BEGIN
+  IF TG_OP = 'INSERT' OR NEW.posted_at IS DISTINCT FROM OLD.posted_at THEN
+    NEW.posted_at := COALESCE(NEW.posted_at, NEW.occurred_at::timestamptz);
+    NEW.occurred_at := NEW.posted_at::date;
+  ELSIF NEW.occurred_at IS DISTINCT FROM OLD.occurred_at THEN
+    NEW.posted_at := NEW.occurred_at::timestamptz;
+  END IF;
+
+  IF TG_OP = 'INSERT' OR NEW.merchant_name IS DISTINCT FROM OLD.merchant_name THEN
+    NEW.merchant_name := COALESCE(NEW.merchant_name, NEW.merchant);
+    NEW.merchant := NEW.merchant_name;
+  ELSIF NEW.merchant IS DISTINCT FROM OLD.merchant THEN
+    NEW.merchant_name := NEW.merchant;
+  END IF;
+
+  IF NEW.is_transfer THEN
+    NEW.type := 'transfer';
+  ELSIF NEW.amount > 0 THEN
+    NEW.type := 'income';
+  ELSE
+    NEW.type := 'expense';
+  END IF;
+
+  IF TG_OP = 'INSERT' OR NEW.category_id IS DISTINCT FROM OLD.category_id THEN
+    SELECT id, code, COALESCE(name, label, code)
+    INTO v_category_id, v_category_code, v_category_name
+    FROM public.transaction_categories
+    WHERE id = NEW.category_id;
+
+    IF v_category_id IS NOT NULL THEN
+      NEW.category := v_category_name;
+    END IF;
+  ELSIF NEW.category IS DISTINCT FROM OLD.category THEN
+    SELECT id, code
+    INTO v_category_id, v_category_code
+    FROM public.transaction_categories
+    WHERE lower(code) = lower(NEW.category)
+       OR lower(name) = lower(NEW.category)
+       OR lower(label) = lower(NEW.category)
+    ORDER BY CASE WHEN lower(code) = lower(NEW.category) THEN 0 ELSE 1 END
+    LIMIT 1;
+
+    SELECT id INTO v_category_id
+    FROM public.transaction_categories
+    WHERE code = COALESCE(v_category_code, 'other_unclassified')
+    LIMIT 1;
+
+    NEW.category_id := v_category_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS transactions_compatibility_fields ON public.transactions;
+CREATE TRIGGER transactions_compatibility_fields
+  BEFORE INSERT OR UPDATE ON public.transactions
+  FOR EACH ROW EXECUTE FUNCTION public.sync_transaction_compatibility_fields();
+
 -- Trigger transactions_updated_at already exists from migration 20260825124059
 
 CREATE INDEX IF NOT EXISTS idx_transactions_account ON public.transactions(account_id, posted_at DESC);
@@ -280,7 +377,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_column THEN RAISE NOTICE 'available_balance already exists'; END $$;
 
 -- =============== USER CATEGORIZATION RULES ===============
-CREATE TABLE public.user_categorization_rules (
+CREATE TABLE IF NOT EXISTS public.user_categorization_rules (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL,
@@ -296,16 +393,32 @@ CREATE TABLE public.user_categorization_rules (
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_categorization_rules TO authenticated;
 GRANT ALL ON public.user_categorization_rules TO service_role;
 ALTER TABLE public.user_categorization_rules ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS user_categorization_rules_own ON public.user_categorization_rules;
 CREATE POLICY user_categorization_rules_own ON public.user_categorization_rules
   FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+DROP TRIGGER IF EXISTS user_categorization_rules_updated_at ON public.user_categorization_rules;
 CREATE TRIGGER user_categorization_rules_updated_at BEFORE UPDATE ON public.user_categorization_rules
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-CREATE INDEX idx_user_categorization_rules_user ON public.user_categorization_rules(user_id, priority DESC);
+CREATE INDEX IF NOT EXISTS idx_user_categorization_rules_user ON public.user_categorization_rules(user_id, priority DESC);
 
 -- =============== DEFAULT LEDGER ACCOUNTS (seed data) ===============
-INSERT INTO public.ledger_accounts (user_id, code, name, type, subtype, is_system, sort_order)
-SELECT auth.uid(), code, name, type, subtype, true, sort_order
-FROM (VALUES
+-- Migrations nao possuem sessao de usuario; portanto auth.uid() e NULL durante
+-- o deploy. O seed recebe o usuario explicitamente, atende usuarios existentes
+-- e tambem e executado para novos cadastros por trigger.
+CREATE OR REPLACE FUNCTION public.seed_default_ledger_accounts(p_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+BEGIN
+  IF p_user_id IS NULL OR NOT EXISTS (SELECT 1 FROM auth.users WHERE id = p_user_id) THEN
+    RAISE EXCEPTION 'A valid user_id is required to seed ledger accounts';
+  END IF;
+
+  INSERT INTO public.ledger_accounts (user_id, code, name, type, subtype, is_system, sort_order)
+  SELECT p_user_id, code, name, type, subtype, true, sort_order
+  FROM (VALUES
   -- Ativos
   ('1.1.1', 'Caixa e Equivalentes', 'asset', 'cash', 10),
   ('1.1.2', 'Contas Correntes', 'asset', 'checking', 11),
@@ -341,7 +454,90 @@ FROM (VALUES
   ('5.1.10', 'Despesas - Investimentos', 'expense', 'investment_fees', 409),
   ('5.1.11', 'Despesas - Outras', 'expense', 'other', 410)
 ) AS v(code, name, type, subtype, sort_order)
-ON CONFLICT (user_id, code) DO NOTHING;
+  ON CONFLICT (user_id, code) DO NOTHING;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.seed_default_ledger_accounts(uuid) FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION public.initialize_user_ledger()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+BEGIN
+  PERFORM public.seed_default_ledger_accounts(NEW.id);
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created_ledger ON auth.users;
+CREATE TRIGGER on_auth_user_created_ledger
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.initialize_user_ledger();
+
+SELECT public.seed_default_ledger_accounts(id)
+FROM auth.users;
+
+-- Cada conta financeira precisa de uma contraparte propria no ledger. Sem
+-- esse vinculo, pair_transfer gera linhas com ledger_account_id nulo.
+CREATE OR REPLACE FUNCTION public.sync_financial_account_ledger()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.ledger_accounts (
+    user_id, code, name, type, subtype, account_id, is_system, is_active, sort_order
+  ) VALUES (
+    NEW.user_id,
+    'account.' || NEW.id::text,
+    NEW.name,
+    CASE WHEN NEW.type = 'credit' THEN 'liability' ELSE 'asset' END,
+    NEW.type::text,
+    NEW.id,
+    false,
+    NOT COALESCE(NEW.is_archived, false),
+    50
+  )
+  ON CONFLICT (user_id, code) DO UPDATE SET
+    name = EXCLUDED.name,
+    type = EXCLUDED.type,
+    subtype = EXCLUDED.subtype,
+    account_id = EXCLUDED.account_id,
+    is_active = EXCLUDED.is_active;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS accounts_sync_ledger ON public.accounts;
+CREATE TRIGGER accounts_sync_ledger
+  AFTER INSERT OR UPDATE OF name, type, is_archived ON public.accounts
+  FOR EACH ROW EXECUTE FUNCTION public.sync_financial_account_ledger();
+
+INSERT INTO public.ledger_accounts (
+  user_id, code, name, type, subtype, account_id, is_system, is_active, sort_order
+)
+SELECT
+  a.user_id,
+  'account.' || a.id::text,
+  a.name,
+  CASE WHEN a.type = 'credit' THEN 'liability' ELSE 'asset' END,
+  a.type::text,
+  a.id,
+  false,
+  NOT a.is_archived,
+  50
+FROM public.accounts a
+ON CONFLICT (user_id, code) DO UPDATE SET
+  name = EXCLUDED.name,
+  type = EXCLUDED.type,
+  subtype = EXCLUDED.subtype,
+  account_id = EXCLUDED.account_id,
+  is_active = EXCLUDED.is_active;
 
 -- =============== RPC: create_journal_entry ===============
 CREATE OR REPLACE FUNCTION public.create_journal_entry(
@@ -364,8 +560,34 @@ DECLARE
   v_total_credit numeric(14,2) := 0;
   v_line record;
 BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  IF jsonb_typeof(p_lines) <> 'array' OR jsonb_array_length(p_lines) < 2 THEN
+    RAISE EXCEPTION 'Journal entry requires at least two lines';
+  END IF;
+
   FOR v_line IN SELECT * FROM jsonb_array_elements(p_lines) AS line
   LOOP
+    IF (v_line->>'amount')::numeric <= 0 THEN
+      RAISE EXCEPTION 'Journal line amounts must be positive';
+    END IF;
+
+    IF v_line->>'entry_type' NOT IN ('debit', 'credit') THEN
+      RAISE EXCEPTION 'Invalid journal entry type';
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM public.ledger_accounts la
+      WHERE la.id = (v_line->>'ledger_account_id')::uuid
+        AND la.user_id = auth.uid()
+        AND la.is_active
+    ) THEN
+      RAISE EXCEPTION 'Ledger account not found or access denied';
+    END IF;
+
     IF v_line->>'entry_type' = 'debit' THEN
       v_total_debit := v_total_debit + (v_line->>'amount')::numeric;
     ELSE
@@ -391,7 +613,7 @@ BEGIN
     (line->>'amount')::numeric,
     COALESCE(line->>'currency', 'BRL'),
     line->>'description',
-    (line->>'sort_order')::int
+    COALESCE((line->>'sort_order')::int, 0)
   FROM jsonb_array_elements(p_lines) AS line;
 
   RETURN v_entry_id;
@@ -587,7 +809,9 @@ BEGIN
     RAISE EXCEPTION 'One or both transactions not found or access denied';
   END IF;
 
-  IF v_debit.amount != v_credit.amount THEN
+  IF abs(v_debit.amount) != abs(v_credit.amount)
+     OR v_debit.amount >= 0
+     OR v_credit.amount <= 0 THEN
     RAISE EXCEPTION 'Transfer amounts must match';
   END IF;
 
@@ -604,7 +828,7 @@ BEGIN
     user_id, debit_transaction_id, credit_transaction_id, amount, currency, is_manual
   ) VALUES (
     auth.uid(), p_debit_transaction_id, p_credit_transaction_id,
-    v_debit.amount, v_debit.currency, p_is_manual
+    abs(v_debit.amount), v_debit.currency, p_is_manual
   ) RETURNING id INTO v_pair_id;
 
   UPDATE public.transactions
@@ -618,14 +842,14 @@ BEGIN
       jsonb_build_object(
         'ledger_account_id', (SELECT id FROM public.ledger_accounts WHERE user_id = auth.uid() AND account_id = v_debit.account_id),
         'entry_type', 'credit',
-        'amount', v_debit.amount,
+        'amount', abs(v_debit.amount),
         'description', 'Saída: ' || v_debit.description,
         'sort_order', 1
       ),
       jsonb_build_object(
         'ledger_account_id', (SELECT id FROM public.ledger_accounts WHERE user_id = auth.uid() AND account_id = v_credit.account_id),
         'entry_type', 'debit',
-        'amount', v_credit.amount,
+        'amount', abs(v_credit.amount),
         'description', 'Entrada: ' || v_credit.description,
         'sort_order', 2
       )
@@ -729,12 +953,13 @@ AS $$
     FROM public.transactions debit
     JOIN public.transactions credit
       ON credit.user_id = debit.user_id
-     AND credit.amount = debit.amount
+     AND credit.amount = abs(debit.amount)
      AND credit.currency = debit.currency
      AND credit.account_id != debit.account_id
      AND debit.amount < 0
      AND credit.amount > 0
-    WHERE debit.user_id = p_user_id
+    WHERE debit.user_id = auth.uid()
+      AND p_user_id = auth.uid()
       AND credit.posted_at BETWEEN debit.posted_at - (p_window_days || ' days')::interval
                                AND debit.posted_at + (p_window_days || ' days')::interval
       AND (credit.description ILIKE '%' || debit.description || '%'

@@ -43,9 +43,28 @@ function AuthPage() {
   const [mode, setMode] = useState<Mode>("signin");
 
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
-    });
+    let active = true;
+
+    void supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn("[Auth] Could not restore the stored session.", error.message);
+          return;
+        }
+
+        if (active && data.session) {
+          void navigate({ to: "/dashboard", replace: true });
+        }
+      })
+      .catch((error) => {
+        // A storage or network failure should leave the login form usable.
+        console.error("[Auth] Failed to read the stored session.", error);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [navigate]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -70,7 +89,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-      navigate({ to: "/dashboard", replace: true });
+      await navigate({ to: "/dashboard", replace: true });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível continuar.");
     } finally {

@@ -265,10 +265,10 @@ export async function logSecurityEvent(params: {
   const { data, error } = await supabase.rpc("log_security_event", {
     p_event_type: params.eventType,
     p_severity: params.severity ?? "low",
-    p_ip_address: params.ipAddress,
-    p_user_agent: params.userAgent,
-    p_device_id: params.deviceId,
-    p_country: params.country,
+    ...(params.ipAddress === undefined ? {} : { p_ip_address: params.ipAddress }),
+    ...(params.userAgent === undefined ? {} : { p_user_agent: params.userAgent }),
+    ...(params.deviceId === undefined ? {} : { p_device_id: params.deviceId }),
+    ...(params.country === undefined ? {} : { p_country: params.country }),
     p_metadata: (params.metadata ?? {}) as Json,
   });
 

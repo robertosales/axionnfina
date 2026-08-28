@@ -204,7 +204,7 @@ export async function createBalanceSnapshot(
   const { data, error } = await supabase.rpc("create_balance_snapshot", {
     p_account_id: accountId,
     p_balance: balance,
-    p_available_balance: availableBalance,
+    ...(availableBalance === undefined ? {} : { p_available_balance: availableBalance }),
   });
 
   if (error) {

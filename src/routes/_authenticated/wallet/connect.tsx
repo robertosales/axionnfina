@@ -52,8 +52,8 @@ function ConnectPage() {
 
       // 2. Criar conexão
       await createConnection.mutateAsync({
-        institutionId: institutionId,
-        consent_id: consent?.id,
+        institution_id: institutionId,
+        ...(consent?.id ? { consent_id: consent.id } : {}),
         status: "pending",
         external_provider: "pluggy",
       });
@@ -175,7 +175,7 @@ function ConnectPage() {
                   <div className="flex items-center gap-3">
                     <div
                       className="size-8 rounded-full"
-                      style={{ backgroundColor: inst.logo_color }}
+                      style={{ backgroundColor: inst.logo_color ?? "#6366f1" }}
                     />
                     <div>
                       <p className="text-sm font-medium">{inst.short_name || inst.name}</p>

@@ -13,6 +13,7 @@ export type OpenFinanceConnectionStatus =
   | "pending"
   | "authenticating"
   | "active"
+  | "inactive"
   | "degraded"
   | "expired"
   | "revoked"

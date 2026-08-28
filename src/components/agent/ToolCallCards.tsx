@@ -75,9 +75,9 @@ type BudgetRow = {
 /* ------------------------------------------------------------------ */
 
 function TransactionsResult({ result }: { result: Record<string, unknown> }) {
-  const transactions = (result.transacoes as TransactionMiniRow[]) ?? [];
-  const total = (result.total as number) ?? 0;
-  const quantity = (result.quantidade as number) ?? 0;
+  const transactions = (result["transacoes"] as TransactionMiniRow[]) ?? [];
+  const total = (result["total"] as number) ?? 0;
+  const quantity = (result["quantidade"] as number) ?? 0;
 
   return (
     <Card className="rounded-xl border-border/60 p-4 shadow-elevation-1">
@@ -131,7 +131,7 @@ function TransactionsResult({ result }: { result: Record<string, unknown> }) {
 /* ------------------------------------------------------------------ */
 
 function CashflowResult({ result }: { result: Record<string, unknown> }) {
-  const projection = (result.projecao as Array<{ month: string; income: number; expenses: number; projected: number }>) ?? [];
+  const projection = (result["projecao"] as Array<{ month: string; income: number; expenses: number; projected: number }>) ?? [];
 
   if (projection.length === 0) {
     return (
@@ -190,7 +190,7 @@ function CashflowResult({ result }: { result: Record<string, unknown> }) {
 /* ------------------------------------------------------------------ */
 
 function BudgetResult({ result }: { result: Record<string, unknown> }) {
-  const budgets = (result as BudgetRow[]) ?? [];
+  const budgets = (result as unknown as BudgetRow[]) ?? [];
 
   if (budgets.length === 0) {
     return (
@@ -232,11 +232,11 @@ function BudgetResult({ result }: { result: Record<string, unknown> }) {
 /* ------------------------------------------------------------------ */
 
 function FinanceSummaryResult({ result }: { result: Record<string, unknown> }) {
-  const patrimonio = (result.patrimonio as number) ?? 0;
-  const receitasMes = (result.receitasMes as number) ?? 0;
-  const despesasMes = (result.despesasMes as number) ?? 0;
-  const taxaPoupanca = (result.taxaPoupanca as number) ?? 0;
-  const contas = (result.contas as Array<{ name: string; balance: number; institution: string }>) ?? [];
+  const patrimonio = (result["patrimonio"] as number) ?? 0;
+  const receitasMes = (result["receitasMes"] as number) ?? 0;
+  const despesasMes = (result["despesasMes"] as number) ?? 0;
+  const taxaPoupanca = (result["taxaPoupanca"] as number) ?? 0;
+  const contas = (result["contas"] as Array<{ name: string; balance: number; institution: string }>) ?? [];
 
   return (
     <Card className="rounded-xl border-border/60 p-4 shadow-elevation-1">
@@ -287,7 +287,7 @@ function FinanceSummaryResult({ result }: { result: Record<string, unknown> }) {
 /* ------------------------------------------------------------------ */
 
 function GoalsResult({ result }: { result: Record<string, unknown> }) {
-  const goals = (result as Array<{ title: string; target_amount: number; current_amount: number; deadline: string }>) ?? [];
+  const goals = (result as unknown as Array<{ title: string; target_amount: number; current_amount: number; deadline: string }>) ?? [];
 
   if (goals.length === 0) {
     return (
@@ -346,10 +346,10 @@ function SchedulePixResult({
   onConfirm?: (data: Record<string, unknown>) => void;
   onCancel?: () => void;
 }) {
-  const amount = (result.amount as number) ?? 0;
-  const to = (result.to as string) ?? "Destinatário";
-  const when = (result.when as string) ?? "";
-  const confirmationToken = (result.confirmationToken as string) ?? "";
+  const amount = (result["amount"] as number) ?? 0;
+  const to = (result["to"] as string) ?? "Destinatário";
+  const when = (result["when"] as string) ?? "";
+  const confirmationToken = (result["confirmationToken"] as string) ?? "";
 
   return (
     <Card className="rounded-xl border border-warning/40 bg-warning/5 p-4 shadow-elevation-1">
@@ -417,28 +417,28 @@ function TaxPreviewResult({ result }: { result: Record<string, unknown> }) {
       <div className="mt-3 space-y-2">
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">Swing trade (base)</span>
-          <span className="numeric font-medium">{formatBRL(Number(result.swing_gross) || 0)}</span>
+          <span className="numeric font-medium">{formatBRL(Number(result["swing_gross"]) || 0)}</span>
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">Imposto swing</span>
-          <span className="numeric font-medium text-warning">{formatBRL(Number(result.swing_tax) || 0)}</span>
+          <span className="numeric font-medium text-warning">{formatBRL(Number(result["swing_tax"]) || 0)}</span>
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">Day trade</span>
-          <span className="numeric font-medium text-warning">{formatBRL(Number(result.daytrade_tax) || 0)}</span>
+          <span className="numeric font-medium text-warning">{formatBRL(Number(result["daytrade_tax"]) || 0)}</span>
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">FIIs</span>
-          <span className="numeric font-medium text-warning">{formatBRL(Number(result.fii_tax) || 0)}</span>
+          <span className="numeric font-medium text-warning">{formatBRL(Number(result["fii_tax"]) || 0)}</span>
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">Dividendos</span>
-          <span className="numeric font-medium text-income">{formatBRL(Number(result.dividends) || 0)}</span>
+          <span className="numeric font-medium text-income">{formatBRL(Number(result["dividends"]) || 0)}</span>
         </div>
         <Separator className="my-2" />
         <div className="flex items-center justify-between text-xs">
           <span className="font-medium">DARF estimada</span>
-          <span className="numeric font-semibold text-danger">{formatBRL(Number(result.darf_due) || 0)}</span>
+          <span className="numeric font-semibold text-danger">{formatBRL(Number(result["darf_due"]) || 0)}</span>
         </div>
       </div>
     </Card>
@@ -499,7 +499,7 @@ export function ToolCallRenderer({
     case "tool-metas":
       return <GoalsResult result={r} />;
     case "tool-schedule_pix_payment":
-      return <SchedulePixResult result={r} onConfirm={onConfirm} onCancel={onCancel} />;
+      return <SchedulePixResult result={r} {...(onConfirm ? { onConfirm } : {})} {...(onCancel ? { onCancel } : {})} />;
     case "tool-calculate_tax_preview":
       return <TaxPreviewResult result={r} />;
     default:

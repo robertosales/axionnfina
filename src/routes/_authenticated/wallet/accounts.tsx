@@ -49,7 +49,7 @@ import {
 } from "@/hooks/use-wallet";
 import { useInstitutions } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
-import type { AccountType } from "@/lib/account-service";
+import type { AccountType, WalletSummary } from "@/lib/account-service";
 
 export const Route = createFileRoute("/_authenticated/wallet/accounts")({
   head: () => ({
@@ -96,7 +96,7 @@ function AccountsPage() {
     setDialogOpen(true);
   };
 
-  const handleOpenEdit = (account: (typeof summary extends { accounts: (infer A)[] } ? A : never)) => {
+  const handleOpenEdit = (account: WalletSummary["accounts"][number]) => {
     setEditId(account.id);
     setForm({
       name: account.name,
@@ -119,7 +119,7 @@ function AccountsPage() {
       await upsertAccount.mutateAsync({
         name: form.name,
         institution: form.institution,
-        institution_id: form.institution_id || undefined,
+        ...(form.institution_id ? { institution_id: form.institution_id } : {}),
         type: form.type,
         balance: parseFloat(form.balance) || 0,
         is_primary: form.is_primary,

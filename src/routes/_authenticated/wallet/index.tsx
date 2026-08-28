@@ -18,7 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { useWalletSummary } from "@/hooks/use-wallet";
 import { formatBRL } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/wallet")({
+export const Route = createFileRoute("/_authenticated/wallet/")({
   head: () => ({
     meta: [
       { title: "Minha Carteira — Axionn Finance" },

@@ -36,6 +36,15 @@ import {
 import { formatBRL, formatShortDate, initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+
+declare module "@tanstack/react-table" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface TableMeta<TData extends unknown> {
+    editingId?: string | null;
+    setEditingId?: (id: string | null) => void;
+  }
+}
+
 export const Route = createFileRoute("/_authenticated/transactions")({
   head: () => ({
     meta: [

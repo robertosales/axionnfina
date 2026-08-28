@@ -46,14 +46,14 @@ function ConnectPage() {
     try {
       // 1. Criar consentimento
       const consent = await createConsent.mutateAsync({
-        institution_id: institutionId,
+        institutionId: institutionId,
         scopes: ["accounts", "transactions", "credit_cards"],
       });
 
       // 2. Criar conexão
       await createConnection.mutateAsync({
         institution_id: institutionId,
-        consent_id: consent?.id,
+        ...(consent?.id ? { consent_id: consent.id } : {}),
         status: "pending",
         external_provider: "pluggy",
       });
@@ -175,7 +175,7 @@ function ConnectPage() {
                   <div className="flex items-center gap-3">
                     <div
                       className="size-8 rounded-full"
-                      style={{ backgroundColor: inst.logo_color }}
+                      style={{ backgroundColor: inst.logo_color ?? "#6366f1" }}
                     />
                     <div>
                       <p className="text-sm font-medium">{inst.short_name || inst.name}</p>

@@ -131,7 +131,7 @@ export function useOpenFinanceInstitutions() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("institutions")
-        .select("id, name, short_name, code")
+        .select("id, name, short_name, code, logo_color")
         .eq("openfinance_participant", true)
         .order("name");
       if (error) throw error;
@@ -145,15 +145,20 @@ export function useCreateOpenFinanceConsent() {
   return useMutation({
     mutationFn: async (input: { institutionId: string; scopes: string[] }) => {
       const userId = await requireUserId();
-      const { error } = await supabase.from("openfinance_consents").insert({
-        user_id: userId,
-        institution_id: input.institutionId,
-        scopes: input.scopes,
-        status: "authorised",
-        consent_id: `demo-consent-${crypto.randomUUID()}`,
-        last_synced_at: new Date().toISOString(),
-      });
+      const { data, error } = await supabase
+        .from("openfinance_consents")
+        .insert({
+          user_id: userId,
+          institution_id: input.institutionId,
+          scopes: input.scopes,
+          status: "authorised",
+          consent_id: `demo-consent-${crypto.randomUUID()}`,
+          last_synced_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      return data;
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["accounts"] }),
   });
@@ -802,3 +807,6 @@ export function useSeedDemoData() {
     },
   });
 }
+
+/** Alias: lista de instituições participantes. */
+export const useInstitutions = useOpenFinanceInstitutions;

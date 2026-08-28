@@ -3,7 +3,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Desktop,
+  Monitor,
+  Key,
+  ShieldCheck,
   Globe,
   LogOut,
   ShieldAlert,
@@ -47,13 +49,13 @@ export const Route = createFileRoute("/_authenticated/security")({
 });
 
 function SeverityBadge({ severity }: { severity: string }) {
-  const variants: Record<string, { color: string; icon: typeof Shield }> = {
+  const variants: Record<string, { color: string; icon: typeof CheckCircle2 }> = {
     low: { color: "text-chart-2", icon: CheckCircle2 },
     medium: { color: "text-chart-4", icon: AlertTriangle },
     high: { color: "text-orange-500", icon: ShieldAlert },
     critical: { color: "text-danger", icon: XCircle },
   };
-  const v = variants[severity] ?? variants.low;
+  const v = variants[severity] ?? variants["low"]!;
   const Icon = v.icon;
   return (
     <Badge variant="outline" className="gap-1 text-xs">
@@ -98,7 +100,7 @@ function EventTypeLabel({ eventType }: { eventType: string }) {
 
 function DeviceIcon({ type }: { type: string }) {
   if (type === "mobile") return <Smartphone className="size-4" />;
-  return <Desktop className="size-4" />;
+  return <Monitor className="size-4" />;
 }
 
 function SummaryCard({
@@ -113,7 +115,7 @@ function SummaryCard({
     {
       label: "Dispositivos ativos",
       value: summary.active_devices,
-      icon: Desktop,
+      icon: Monitor,
       color: "text-chart-1",
     },
     {
@@ -199,7 +201,7 @@ function SecurityPage() {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Desktop className="size-5 text-primary" />
+              <Monitor className="size-5 text-primary" />
               <div>
                 <h2 className="font-semibold">Dispositivos</h2>
                 <p className="text-sm text-muted-foreground">

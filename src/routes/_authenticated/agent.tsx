@@ -131,7 +131,7 @@ function AgentPage() {
                     }
                     if (part.type.startsWith("tool-")) {
                       const toolName = part.type;
-                      const toolInvocation = (message as Record<string, unknown>).toolInvocations as
+                      const toolInvocation = (message as unknown as Record<string, unknown>)["toolInvocations"] as
                         | Array<{
                             toolName: string;
                             state: string;

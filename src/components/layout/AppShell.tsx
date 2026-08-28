@@ -137,8 +137,7 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
               collapsed && "justify-center px-0",
             )}
           >
-            <motion.item.icon
-              layout
+            <item.icon
               className={cn(
                 "size-[18px] shrink-0",
                 item.highlight && !active && "text-primary",

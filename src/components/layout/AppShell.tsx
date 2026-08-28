@@ -16,6 +16,7 @@ import {
   Receipt,
   Search,
   Settings,
+  Shield,
   Sparkles,
   Sun,
   Target,
@@ -56,6 +57,7 @@ const navItems: NavItem[] = [
   { to: "/goals", label: "Metas", icon: Target },
   { to: "/insights", label: "Insights", icon: Sparkles },
   { to: "/agent", label: "Agente IA", icon: Bot, highlight: true },
+  { to: "/security", label: "Segurança", icon: Shield },
   { to: "/settings", label: "Configurações", icon: Settings },
 ];
 

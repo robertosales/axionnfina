@@ -201,7 +201,7 @@ export class PluggyAdapter implements OpenFinanceProvider {
         method: "POST",
         body: JSON.stringify({
           connectorId: input.institution_id,
-          webhookUrl: `${process.env.APP_URL ?? "http://localhost:3000"}/api/webhooks/openfinance/pluggy`,
+          webhookUrl: `${process.env["APP_URL"] ?? "http://localhost:3000"}/api/webhooks/openfinance/pluggy`,
         }),
       },
     );

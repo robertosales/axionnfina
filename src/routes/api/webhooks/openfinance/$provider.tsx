@@ -13,6 +13,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { handleWebhook } from "@/lib/openfinance-service";
 import { getOpenFinanceConfig } from "@/lib/openfinance-config";
+import { readWebhookSecret, verifyWebhookSecret } from "@/lib/webhook-security";
 
 export const Route = createFileRoute(
   "/api/webhooks/openfinance/$provider",
@@ -34,10 +35,17 @@ export const Route = createFileRoute(
         }
 
         try {
-          const payload = await request.json();
+          if (!config.webhookSecret) {
+            console.error(`[Webhook:${provider}] PLUGGY_WEBHOOK_SECRET is not configured.`);
+            return new Response("Webhook security is not configured", { status: 503 });
+          }
 
-          // TODO: Validate webhook signature when provider supports it
-          // if (config.webhookSecret) { ... }
+          const providedSecret = readWebhookSecret(request.headers);
+          if (!(await verifyWebhookSecret(providedSecret, config.webhookSecret))) {
+            return new Response("Unauthorized", { status: 401 });
+          }
+
+          const payload = await request.json();
 
           // Process webhook asynchronously (non-blocking)
           // In production, this should be queued to a background job

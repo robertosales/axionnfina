@@ -313,6 +313,7 @@ export type WebhookEventType =
   | "sync_failed";
 
 export type WebhookEvent = {
+  external_event_id: string;
   event_type: WebhookEventType;
   provider_connection_id: string;
   timestamp: string;

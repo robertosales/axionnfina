@@ -20,7 +20,7 @@ import type {
   WebhookEvent,
 } from "@/providers/openfinance/types";
 import { getErrorDefinition } from "@/providers/openfinance/errors";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 /* ------------------------------------------------------------------ */
 /* Provider Registry                                                    */
@@ -61,14 +61,11 @@ export function isOpenFinancePaymentsEnabled(): boolean {
 
 type DbConnectionStatus = Database["public"]["Enums"]["connection_status"];
 
-function mapProviderStatusToDb(
-  status: OpenFinanceConnection["status"],
-): DbConnectionStatus {
+function mapProviderStatusToDb(status: OpenFinanceConnection["status"]): DbConnectionStatus {
   switch (status) {
     case "active":
     case "degraded":
     case "authenticating":
-    case "syncing":
       return "active";
     case "pending":
       return "pending";
@@ -84,9 +81,7 @@ function mapProviderStatusToDb(
   }
 }
 
-function mapDbStatusToProvider(
-  status: DbConnectionStatus,
-): OpenFinanceConnection["status"] {
+function mapDbStatusToProvider(status: DbConnectionStatus): OpenFinanceConnection["status"] {
   switch (status) {
     case "active":
       return "active";
@@ -115,9 +110,25 @@ function getProviderConnectionId(metadata: unknown): string | null {
 
 function buildConnectionMetadata(
   providerConnectionId: string,
-  extra: Record<string, unknown> = {},
-): Record<string, unknown> {
+  extra: Record<string, Json | undefined> = {},
+): Json {
   return { provider_connection_id: providerConnectionId, ...extra };
+}
+
+function mapAccountType(
+  type: ExternalAccount["type"],
+): Database["public"]["Enums"]["account_type"] {
+  switch (type) {
+    case "savings":
+      return "savings";
+    case "credit_card":
+      return "credit";
+    case "investment":
+    case "brokerage":
+      return "investment";
+    default:
+      return "checking";
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -186,10 +197,7 @@ export async function getConnectionStatus(
   }
 }
 
-export async function revokeConnection(
-  userId: string,
-  connectionId: string,
-): Promise<boolean> {
+export async function revokeConnection(userId: string, connectionId: string): Promise<boolean> {
   const { data, error } = await supabase
     .from("account_connections")
     .select("external_provider, metadata")
@@ -222,10 +230,7 @@ export async function revokeConnection(
 /* Sync Engine                                                          */
 /* ------------------------------------------------------------------ */
 
-export async function syncConnection(
-  userId: string,
-  connectionId: string,
-): Promise<SyncResult> {
+export async function syncConnection(userId: string, connectionId: string): Promise<SyncResult> {
   const start = Date.now();
 
   const { data: conn, error: connError } = await supabase
@@ -243,7 +248,9 @@ export async function syncConnection(
       transactions_imported: 0,
       investments_imported: 0,
       duplicates_skipped: 0,
-      errors: [{ code: "ACCOUNT_NOT_FOUND", message: "Connection not found", entity: "connection" }],
+      errors: [
+        { code: "ACCOUNT_NOT_FOUND", message: "Connection not found", entity: "connection" },
+      ],
       duration_ms: Date.now() - start,
     };
   }
@@ -257,7 +264,13 @@ export async function syncConnection(
       transactions_imported: 0,
       investments_imported: 0,
       duplicates_skipped: 0,
-      errors: [{ code: "ACCOUNT_NOT_FOUND", message: "Provider connection id missing", entity: "connection" }],
+      errors: [
+        {
+          code: "ACCOUNT_NOT_FOUND",
+          message: "Provider connection id missing",
+          entity: "connection",
+        },
+      ],
       duration_ms: Date.now() - start,
     };
   }
@@ -312,7 +325,7 @@ export async function syncConnection(
     investments_imported: syncResult.investments_imported,
     duplicates_skipped: syncResult.duplicates_skipped,
     duration_ms: syncResult.duration_ms,
-    errors: syncResult.errors as unknown[],
+    errors: JSON.parse(JSON.stringify(syncResult.errors)) as Json,
   });
 
   return syncResult;
@@ -333,7 +346,7 @@ async function persistAccounts(
       p_data: {
         name: acc.name,
         institution_id: institutionId,
-        type: acc.type,
+        type: mapAccountType(acc.type),
         balance: acc.current_balance,
         available_balance: acc.available_balance,
         credit_limit: acc.credit_limit,
@@ -349,10 +362,7 @@ async function persistAccounts(
   }
 }
 
-async function persistBalances(
-  userId: string,
-  balances: ExternalBalance[],
-): Promise<void> {
+async function persistBalances(userId: string, balances: ExternalBalance[]): Promise<void> {
   for (const bal of balances) {
     // Buscar account pelo external_id
     const { data: account } = await supabase
@@ -363,11 +373,12 @@ async function persistBalances(
       .single();
 
     if (account) {
-      await supabase.rpc("create_balance_snapshot", {
+      const snapshotArgs: Database["public"]["Functions"]["create_balance_snapshot"]["Args"] = {
         p_account_id: account.id,
         p_balance: bal.current,
-        p_available_balance: bal.available ?? undefined,
-      });
+      };
+      if (bal.available !== null) snapshotArgs.p_available_balance = bal.available;
+      await supabase.rpc("create_balance_snapshot", snapshotArgs);
     }
   }
 }
@@ -406,7 +417,7 @@ async function persistTransactions(
 const ASSET_CLASS_MAP: Record<string, Database["public"]["Enums"]["asset_class"]> = {
   stock: "stock",
   fii: "fii",
-  "fixed_income": "fixed_income",
+  fixed_income: "fixed_income",
   crypto: "crypto",
   fund: "fund",
   etf: "etf",
@@ -446,10 +457,7 @@ async function persistInvestments(
 /* Webhook Handler                                                      */
 /* ------------------------------------------------------------------ */
 
-export async function handleWebhook(
-  provider: string,
-  payload: unknown,
-): Promise<void> {
+export async function handleWebhook(provider: string, payload: unknown): Promise<void> {
   const adapter = getProvider(provider);
   const event = await adapter.handleWebhook(payload);
 
@@ -459,7 +467,7 @@ export async function handleWebhook(
     .from("provider_webhook_events")
     .select("id")
     .eq("provider", provider)
-    .eq("external_event_id", `${event.provider_connection_id}:${event.event_type}`)
+    .eq("external_event_id", event.external_event_id)
     .single();
 
   if (existing) {
@@ -469,7 +477,7 @@ export async function handleWebhook(
 
   await supabase.from("provider_webhook_events").insert({
     provider,
-    external_event_id: `${event.provider_connection_id}:${event.event_type}`,
+    external_event_id: event.external_event_id,
     event_type: event.event_type,
     status: "received",
     payload_hash: payloadHash,
@@ -484,10 +492,11 @@ export async function handleWebhook(
         .from("account_connections")
         .update({
           status: event.event_type === "connection_revoked" ? "inactive" : "error",
-          error_message: event.event_type === "connection_revoked" ? "Revogado pelo usuário" : "Erro na conexão",
+          error_message:
+            event.event_type === "connection_revoked" ? "Revogado pelo usuário" : "Erro na conexão",
           updated_at: new Date().toISOString(),
         })
-        .eq("id", event.provider_connection_id);
+        .contains("metadata", { provider_connection_id: event.provider_connection_id });
       break;
 
     case "sync_completed":
@@ -498,7 +507,7 @@ export async function handleWebhook(
       const { data: conn } = await supabase
         .from("account_connections")
         .select("id, user_id")
-        .eq("id", event.provider_connection_id)
+        .contains("metadata", { provider_connection_id: event.provider_connection_id })
         .single();
 
       if (conn) {

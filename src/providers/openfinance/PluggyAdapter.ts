@@ -432,25 +432,27 @@ export class PluggyAdapter implements OpenFinanceProvider {
   async handleWebhook(payload: unknown): Promise<WebhookEvent> {
     const data = payload as {
       event?: string;
+      eventId?: string;
       itemId?: string;
       type?: string;
       data?: Record<string, unknown>;
     };
 
     const eventTypeMap: Record<string, WebhookEvent["event_type"]> = {
-      item_created: "connection_created",
-      item_updated: "connection_updated",
-      item_error: "connection_error",
-      item_disabled: "connection_revoked",
-      item_outdated: "consent_expired",
-      accounts_created: "account_updated",
-      transactions_created: "transactions_updated",
-      transactions_updated: "transactions_updated",
-      investments_created: "investments_updated",
-      investments_updated: "investments_updated",
+      "item/created": "connection_created",
+      "item/updated": "connection_updated",
+      "item/error": "connection_error",
+      "item/deleted": "connection_revoked",
+      "accounts/created": "account_updated",
+      "accounts/updated": "account_updated",
+      "transactions/created": "transactions_updated",
+      "transactions/updated": "transactions_updated",
+      "investments/created": "investments_updated",
+      "investments/updated": "investments_updated",
     };
 
     return {
+      external_event_id: data.eventId ?? "",
       event_type: eventTypeMap[data.event ?? data.type ?? ""] ?? "sync_completed",
       provider_connection_id: data.itemId ?? "",
       timestamp: new Date().toISOString(),

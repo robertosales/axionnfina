@@ -20,6 +20,7 @@ import {
   Sparkles,
   Sun,
   Target,
+  Wallet,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -49,6 +50,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/wallet", label: "Carteira", icon: Wallet },
   { to: "/transactions", label: "Transações", icon: Receipt },
   { to: "/budget", label: "Orçamento", icon: PiggyBank },
   { to: "/investments", label: "Investimentos", icon: LineChart },

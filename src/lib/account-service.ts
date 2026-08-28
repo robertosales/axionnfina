@@ -1,3 +1,4 @@
+import type { Json } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -149,7 +150,7 @@ export async function upsertAccount(data: {
   metadata?: Record<string, unknown>;
 }): Promise<string | null> {
   const { data: id, error } = await supabase.rpc("upsert_account", {
-    p_data: data,
+    p_data: data as unknown as Json,
   });
 
   if (error) {
@@ -203,7 +204,7 @@ export async function createBalanceSnapshot(
   const { data, error } = await supabase.rpc("create_balance_snapshot", {
     p_account_id: accountId,
     p_balance: balance,
-    p_available_balance: availableBalance ?? null,
+    p_available_balance: availableBalance,
   });
 
   if (error) {
@@ -265,7 +266,7 @@ export async function createConnection(data: {
   metadata?: Record<string, unknown>;
 }): Promise<string | null> {
   const { data: id, error } = await supabase.rpc("create_connection", {
-    p_data: data,
+    p_data: data as unknown as Json,
   });
 
   if (error) {

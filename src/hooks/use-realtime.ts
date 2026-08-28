@@ -15,7 +15,7 @@ type UseRealtimeOptions = {
   /** Schema do banco (padrão: 'public'). */
   schema?: string;
   /** Filtro de eventos: INSERT, UPDATE, DELETE, * (padrão: *). */
-  event?: "INSERT" | "UPDATE" | | "DELETE" | "*";
+  event?: "INSERT" | "UPDATE" | "DELETE" | "*";
   /** Habilitar/desabilitar a subscription. */
   enabled?: boolean;
 };

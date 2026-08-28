@@ -1,4 +1,4 @@
-import { describe, expect, it } from "zod";
+import { describe, expect, it } from "vitest";
 
 import {
   accountSchema,
@@ -36,7 +36,7 @@ describe("Domain Schemas", () => {
       expect(result.success).toBe(true);
     });
 
-    rejeita("rejeita tipo inválido", () => {
+    it("rejeita tipo inválido", () => {
       const result = accountSchema.safeParse({
         id: "550e8400-e29b-41d4-a716-446655440000",
         name: "Conta",

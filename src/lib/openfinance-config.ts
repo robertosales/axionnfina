@@ -19,13 +19,13 @@ export type OpenFinanceConfig = {
  */
 export function getOpenFinanceConfig(): OpenFinanceConfig {
   return {
-    enabled: process.env.OPEN_FINANCE_ENABLED === "true",
-    provider: process.env.OPENFINANCE_PROVIDER ?? "pluggy",
-    investmentsEnabled: process.env.OPEN_FINANCE_INVESTMENTS_ENABLED === "true",
-    paymentsEnabled: process.env.OPEN_FINANCE_PAYMENTS_ENABLED === "true",
-    syncIntervalMinutes: parseInt(process.env.OPEN_FINANCE_SYNC_INTERVAL ?? "360", 10),
-    maxRetries: parseInt(process.env.OPEN_FINANCE_MAX_RETRIES ?? "3", 10),
-    webhookSecret: process.env.PLUGGY_WEBHOOK_SECRET ?? null,
+    enabled: process.env["OPEN_FINANCE_ENABLED"] === "true",
+    provider: process.env["OPENFINANCE_PROVIDER"] ?? "pluggy",
+    investmentsEnabled: process.env["OPEN_FINANCE_INVESTMENTS_ENABLED"] === "true",
+    paymentsEnabled: process.env["OPEN_FINANCE_PAYMENTS_ENABLED"] === "true",
+    syncIntervalMinutes: parseInt(process.env["OPEN_FINANCE_SYNC_INTERVAL"] ?? "360", 10),
+    maxRetries: parseInt(process.env["OPEN_FINANCE_MAX_RETRIES"] ?? "3", 10),
+    webhookSecret: process.env["PLUGGY_WEBHOOK_SECRET"] ?? null,
   };
 }
 

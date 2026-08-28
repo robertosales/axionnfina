@@ -27,6 +27,7 @@ import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedWalletIndexRouteImport } from './routes/_authenticated/wallet/index'
 import { Route as AuthenticatedWalletAccountsRouteImport } from './routes/_authenticated/wallet/accounts'
 import { Route as AuthenticatedWalletConnectRouteImport } from './routes/_authenticated/wallet/connect'
+import { Route as ApiWebhooksOpenfinanceProviderRouteImport } from './routes/api/webhooks/openfinance/$provider'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -122,6 +123,12 @@ const AuthenticatedWalletConnectRoute =
     path: '/wallet/connect',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiWebhooksOpenfinanceProviderRoute =
+  ApiWebhooksOpenfinanceProviderRouteImport.update({
+    id: '/api/webhooks/openfinance/$provider',
+    path: '/api/webhooks/openfinance/$provider',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -141,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/wallet/': typeof AuthenticatedWalletIndexRoute
+  '/api/webhooks/openfinance/$provider': typeof ApiWebhooksOpenfinanceProviderRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -160,6 +168,7 @@ export interface FileRoutesByTo {
   '/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/wallet': typeof AuthenticatedWalletIndexRoute
+  '/api/webhooks/openfinance/$provider': typeof ApiWebhooksOpenfinanceProviderRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -181,6 +190,7 @@ export interface FileRoutesById {
   '/_authenticated/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/_authenticated/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/_authenticated/wallet/': typeof AuthenticatedWalletIndexRoute
+  '/api/webhooks/openfinance/$provider': typeof ApiWebhooksOpenfinanceProviderRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/wallet/accounts'
     | '/wallet/connect'
     | '/wallet/'
+    | '/api/webhooks/openfinance/$provider'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/wallet/accounts'
     | '/wallet/connect'
     | '/wallet'
+    | '/api/webhooks/openfinance/$provider'
   id:
     | '__root__'
     | '/'
@@ -241,6 +253,7 @@ export interface FileRouteTypes {
     | '/_authenticated/wallet/accounts'
     | '/_authenticated/wallet/connect'
     | '/_authenticated/wallet/'
+    | '/api/webhooks/openfinance/$provider'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -248,6 +261,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiWebhooksOpenfinanceProviderRoute: typeof ApiWebhooksOpenfinanceProviderRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -378,6 +392,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWalletConnectRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/webhooks/openfinance/$provider': {
+      id: '/api/webhooks/openfinance/$provider'
+      path: '/api/webhooks/openfinance/$provider'
+      fullPath: '/api/webhooks/openfinance/$provider'
+      preLoaderRoute: typeof ApiWebhooksOpenfinanceProviderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -423,6 +444,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiWebhooksOpenfinanceProviderRoute: ApiWebhooksOpenfinanceProviderRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

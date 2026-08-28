@@ -725,6 +725,110 @@ export type Database = {
           },
         ]
       }
+      openfinance_sync_errors: {
+        Row: {
+          connection_id: string
+          created_at: string
+          entity: string
+          error_code: string
+          id: string
+          message: string
+          provider: string
+          provider_error: string | null
+          sync_id: string | null
+        }
+        Insert: {
+          connection_id: string
+          created_at?: string
+          entity: string
+          error_code: string
+          id?: string
+          message: string
+          provider: string
+          provider_error?: string | null
+          sync_id?: string | null
+        }
+        Update: {
+          connection_id?: string
+          created_at?: string
+          entity?: string
+          error_code?: string
+          id?: string
+          message?: string
+          provider?: string
+          provider_error?: string | null
+          sync_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openfinance_sync_errors_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "account_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "openfinance_sync_errors_sync_id_fkey"
+            columns: ["sync_id"]
+            isOneToOne: false
+            referencedRelation: "openfinance_syncs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      openfinance_syncs: {
+        Row: {
+          accounts_imported: number
+          balances_imported: number
+          connection_id: string
+          created_at: string
+          duplicates_skipped: number
+          duration_ms: number | null
+          errors: Json | null
+          id: string
+          investments_imported: number
+          provider: string
+          status: Database["public"]["Enums"]["sync_status"]
+          transactions_imported: number
+        }
+        Insert: {
+          accounts_imported?: number
+          balances_imported?: number
+          connection_id: string
+          created_at?: string
+          duplicates_skipped?: number
+          duration_ms?: number | null
+          errors?: Json | null
+          id?: string
+          investments_imported?: number
+          provider: string
+          status?: Database["public"]["Enums"]["sync_status"]
+          transactions_imported?: number
+        }
+        Update: {
+          accounts_imported?: number
+          balances_imported?: number
+          connection_id?: string
+          created_at?: string
+          duplicates_skipped?: number
+          duration_ms?: number | null
+          errors?: Json | null
+          id?: string
+          investments_imported?: number
+          provider?: string
+          status?: Database["public"]["Enums"]["sync_status"]
+          transactions_imported?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openfinance_syncs_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "account_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       openfinance_tokens: {
         Row: {
           consent_id: string
@@ -856,6 +960,42 @@ export type Database = {
           display_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      provider_webhook_events: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_type: string
+          external_event_id: string
+          id: string
+          payload_hash: string | null
+          processed_at: string | null
+          provider: string
+          status: Database["public"]["Enums"]["webhook_event_status"]
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          external_event_id: string
+          id?: string
+          payload_hash?: string | null
+          processed_at?: string | null
+          provider: string
+          status?: Database["public"]["Enums"]["webhook_event_status"]
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          external_event_id?: string
+          id?: string
+          payload_hash?: string | null
+          processed_at?: string | null
+          provider?: string
+          status?: Database["public"]["Enums"]["webhook_event_status"]
         }
         Relationships: []
       }
@@ -1236,6 +1376,14 @@ export type Database = {
         }[]
       }
       get_security_summary: { Args: never; Returns: Json }
+      get_sync_errors: {
+        Args: { p_connection_id: string; p_limit?: number }
+        Returns: Json
+      }
+      get_sync_history: {
+        Args: { p_connection_id: string; p_limit?: number }
+        Returns: Json
+      }
       get_wallet_summary: { Args: never; Returns: Json }
       log_security_event: {
         Args: {
@@ -1266,6 +1414,7 @@ export type Database = {
       revoke_all_sessions: { Args: never; Returns: number }
       revoke_device: { Args: { p_device_id: string }; Returns: boolean }
       set_primary_account: { Args: { p_account_id: string }; Returns: boolean }
+      trigger_sync: { Args: { p_connection_id: string }; Returns: Json }
       upsert_account: { Args: { p_data: Json }; Returns: string }
       upsert_transaction_idempotent: {
         Args: { p_data: Json; p_idempotency_key: string }
@@ -1316,7 +1465,14 @@ export type Database = {
         | "device_removed"
         | "suspicious_activity"
       severity_level: "low" | "medium" | "high" | "critical"
+      sync_status: "pending" | "running" | "completed" | "failed" | "cancelled"
       transaction_type: "income" | "expense" | "transfer"
+      webhook_event_status:
+        | "received"
+        | "processing"
+        | "processed"
+        | "failed"
+        | "duplicate"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1489,7 +1645,15 @@ export const Constants = {
         "suspicious_activity",
       ],
       severity_level: ["low", "medium", "high", "critical"],
+      sync_status: ["pending", "running", "completed", "failed", "cancelled"],
       transaction_type: ["income", "expense", "transfer"],
+      webhook_event_status: [
+        "received",
+        "processing",
+        "processed",
+        "failed",
+        "duplicate",
+      ],
     },
   },
 } as const

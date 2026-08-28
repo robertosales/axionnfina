@@ -46,8 +46,8 @@ type PluggyConfig = {
 };
 
 function getConfig(): PluggyConfig {
-  const clientId = process.env.PLUGGY_CLIENT_ID;
-  const clientSecret = process.env.PLUGGY_CLIENT_SECRET;
+  const clientId = process.env["PLUGGY_CLIENT_ID"];
+  const clientSecret = process.env["PLUGGY_CLIENT_SECRET"];
   if (!clientId || !clientSecret) {
     throw new Error("PLUGGY_CLIENT_ID and PLUGGY_CLIENT_SECRET must be set");
   }
@@ -201,7 +201,7 @@ export class PluggyAdapter implements OpenFinanceProvider {
         method: "POST",
         body: JSON.stringify({
           connectorId: input.institution_id,
-          webhookUrl: `${process.env.APP_URL ?? "http://localhost:3000"}/api/webhooks/openfinance/pluggy`,
+          webhookUrl: `${process.env["APP_URL"] ?? "http://localhost:3000"}/api/webhooks/openfinance/pluggy`,
         }),
       },
     );

@@ -16,11 +16,11 @@ import type {
   ExternalAccount,
   ExternalBalance,
   ExternalTransaction,
-  ExternalCreditCard,
   ExternalInvestment,
   WebhookEvent,
 } from "@/providers/openfinance/types";
 import { getErrorDefinition } from "@/providers/openfinance/errors";
+import type { Database } from "@/integrations/supabase/types";
 
 /* ------------------------------------------------------------------ */
 /* Provider Registry                                                    */
@@ -31,7 +31,7 @@ const PROVIDERS: Record<string, () => OpenFinanceProvider> = {
 };
 
 function getProvider(name?: string): OpenFinanceProvider {
-  const providerName = name ?? process.env.OPENFINANCE_PROVIDER ?? "pluggy";
+  const providerName = name ?? process.env["OPENFINANCE_PROVIDER"] ?? "pluggy";
   const factory = PROVIDERS[providerName];
   if (!factory) {
     throw new Error(`Unknown Open Finance provider: ${providerName}`);
@@ -44,15 +44,80 @@ function getProvider(name?: string): OpenFinanceProvider {
 /* ------------------------------------------------------------------ */
 
 export function isOpenFinanceEnabled(): boolean {
-  return process.env.OPEN_FINANCE_ENABLED === "true";
+  return process.env["OPEN_FINANCE_ENABLED"] === "true";
 }
 
 export function isOpenFinanceInvestmentsEnabled(): boolean {
-  return process.env.OPEN_FINANCE_INVESTMENTS_ENABLED === "true";
+  return process.env["OPEN_FINANCE_INVESTMENTS_ENABLED"] === "true";
 }
 
 export function isOpenFinancePaymentsEnabled(): boolean {
-  return process.env.OPEN_FINANCE_PAYMENTS_ENABLED === "true";
+  return process.env["OPEN_FINANCE_PAYMENTS_ENABLED"] === "true";
+}
+
+/* ------------------------------------------------------------------ */
+/* Status Mapping                                                       */
+/* ------------------------------------------------------------------ */
+
+type DbConnectionStatus = Database["public"]["Enums"]["connection_status"];
+
+function mapProviderStatusToDb(
+  status: OpenFinanceConnection["status"],
+): DbConnectionStatus {
+  switch (status) {
+    case "active":
+    case "degraded":
+    case "authenticating":
+    case "syncing":
+      return "active";
+    case "pending":
+      return "pending";
+    case "error":
+      return "error";
+    case "expired":
+    case "revoked":
+    case "removed":
+    case "inactive":
+      return "inactive";
+    default:
+      return "error";
+  }
+}
+
+function mapDbStatusToProvider(
+  status: DbConnectionStatus,
+): OpenFinanceConnection["status"] {
+  switch (status) {
+    case "active":
+      return "active";
+    case "pending":
+      return "pending";
+    case "error":
+      return "error";
+    case "inactive":
+      return "inactive";
+    default:
+      return "error";
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Metadata Helpers                                                     */
+/* ------------------------------------------------------------------ */
+
+function getProviderConnectionId(metadata: unknown): string | null {
+  if (metadata && typeof metadata === "object" && "provider_connection_id" in metadata) {
+    const value = (metadata as Record<string, unknown>)["provider_connection_id"];
+    return typeof value === "string" ? value : null;
+  }
+  return null;
+}
+
+function buildConnectionMetadata(
+  providerConnectionId: string,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return { provider_connection_id: providerConnectionId, ...extra };
 }
 
 /* ------------------------------------------------------------------ */
@@ -69,17 +134,16 @@ export async function connectInstitution(
   const result = await provider.connectInstitution({
     institution_id: institutionId,
     scopes,
-    redirect_url: `${process.env.APP_URL ?? "http://localhost:3000"}/wallet/connect/callback`,
+    redirect_url: `${process.env["APP_URL"] ?? "http://localhost:3000"}/wallet/connect/callback`,
   });
 
   // Persistir conexão
   const { error } = await supabase.from("account_connections").insert({
     user_id: userId,
     institution_id: institutionId,
-    provider: provider.providerId,
-    provider_connection_id: result.provider_connection_id,
-    status: result.status,
-    metadata: { scopes },
+    external_provider: provider.providerId,
+    status: mapProviderStatusToDb(result.status),
+    metadata: buildConnectionMetadata(result.provider_connection_id, { scopes }),
   });
 
   if (error) {
@@ -102,9 +166,20 @@ export async function getConnectionStatus(
 
   if (error || !data) return null;
 
-  const provider = getProvider(data.provider);
+  const providerConnectionId = getProviderConnectionId(data.metadata);
+  if (!providerConnectionId) return null;
+
+  const provider = getProvider(data.external_provider);
   try {
-    return await provider.getConnection(data.provider_connection_id);
+    const providerConn = await provider.getConnection(providerConnectionId);
+    return {
+      ...providerConn,
+      id: data.id,
+      user_id: userId,
+      institution_id: data.institution_id,
+      status: mapDbStatusToProvider(data.status),
+      last_successful_sync_at: null,
+    };
   } catch (err) {
     console.error("[OpenFinanceService] Failed to get connection status:", err);
     return null;
@@ -117,20 +192,23 @@ export async function revokeConnection(
 ): Promise<boolean> {
   const { data, error } = await supabase
     .from("account_connections")
-    .select("provider, provider_connection_id")
+    .select("external_provider, metadata")
     .eq("id", connectionId)
     .eq("user_id", userId)
     .single();
 
   if (error || !data) return false;
 
-  const provider = getProvider(data.provider);
+  const providerConnectionId = getProviderConnectionId(data.metadata);
+  if (!providerConnectionId) return false;
+
+  const provider = getProvider(data.external_provider);
   try {
-    await provider.revokeConnection(data.provider_connection_id);
+    await provider.revokeConnection(providerConnectionId);
 
     await supabase
       .from("account_connections")
-      .update({ status: "revoked", updated_at: new Date().toISOString() })
+      .update({ status: "inactive", updated_at: new Date().toISOString() })
       .eq("id", connectionId);
 
     return true;
@@ -170,32 +248,46 @@ export async function syncConnection(
     };
   }
 
-  const provider = getProvider(conn.provider);
-  const syncResult = await provider.syncConnection(conn.provider_connection_id);
+  const providerConnectionId = getProviderConnectionId(conn.metadata);
+  if (!providerConnectionId) {
+    return {
+      success: false,
+      accounts_imported: 0,
+      balances_imported: 0,
+      transactions_imported: 0,
+      investments_imported: 0,
+      duplicates_skipped: 0,
+      errors: [{ code: "ACCOUNT_NOT_FOUND", message: "Provider connection id missing", entity: "connection" }],
+      duration_ms: Date.now() - start,
+    };
+  }
+
+  const provider = getProvider(conn.external_provider);
+  const syncResult = await provider.syncConnection(providerConnectionId);
 
   // Persistir contas importadas
   if (syncResult.accounts_imported > 0) {
-    const accounts = await provider.getAccounts(conn.provider_connection_id);
+    const accounts = await provider.getAccounts(providerConnectionId);
     await persistAccounts(userId, connectionId, conn.institution_id, accounts);
   }
 
   // Persistir saldos
   if (syncResult.balances_imported > 0) {
-    const balances = await provider.getBalances(conn.provider_connection_id);
+    const balances = await provider.getBalances(providerConnectionId);
     await persistBalances(userId, balances);
   }
 
   // Persistir transações
   if (syncResult.transactions_imported > 0) {
     const transactions = await provider.getTransactions({
-      connection_id: conn.provider_connection_id,
+      connection_id: providerConnectionId,
     });
     await persistTransactions(userId, transactions);
   }
 
   // Persistir investimentos (quando disponível)
   if (syncResult.investments_imported > 0 && provider.getInvestments) {
-    const investments = await provider.getInvestments(conn.provider_connection_id);
+    const investments = await provider.getInvestments(providerConnectionId);
     await persistInvestments(userId, connectionId, investments);
   }
 
@@ -204,12 +296,7 @@ export async function syncConnection(
     .from("account_connections")
     .update({
       status: syncResult.success ? "active" : "error",
-      last_synced_at: new Date().toISOString(),
-      last_successful_sync_at: syncResult.success
-        ? new Date().toISOString()
-        : conn.last_successful_sync_at,
-      last_error_at: syncResult.success ? null : new Date().toISOString(),
-      last_error_code: syncResult.success ? null : syncResult.errors[0]?.code ?? null,
+      last_sync_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq("id", connectionId);
@@ -217,7 +304,7 @@ export async function syncConnection(
   // Registrar sync
   await supabase.from("openfinance_syncs").insert({
     connection_id: connectionId,
-    provider: conn.provider,
+    provider: conn.external_provider,
     status: syncResult.success ? "completed" : "failed",
     accounts_imported: syncResult.accounts_imported,
     balances_imported: syncResult.balances_imported,
@@ -225,7 +312,7 @@ export async function syncConnection(
     investments_imported: syncResult.investments_imported,
     duplicates_skipped: syncResult.duplicates_skipped,
     duration_ms: syncResult.duration_ms,
-    errors: syncResult.errors,
+    errors: syncResult.errors as unknown[],
   });
 
   return syncResult;
@@ -279,7 +366,7 @@ async function persistBalances(
       await supabase.rpc("create_balance_snapshot", {
         p_account_id: account.id,
         p_balance: bal.current,
-        p_available_balance: bal.available,
+        p_available_balance: bal.available ?? undefined,
       });
     }
   }
@@ -316,6 +403,16 @@ async function persistTransactions(
   }
 }
 
+const ASSET_CLASS_MAP: Record<string, Database["public"]["Enums"]["asset_class"]> = {
+  stock: "stock",
+  fii: "fii",
+  "fixed_income": "fixed_income",
+  crypto: "crypto",
+  fund: "fund",
+  etf: "etf",
+  cash: "cash",
+};
+
 async function persistInvestments(
   userId: string,
   connectionId: string,
@@ -335,7 +432,7 @@ async function persistInvestments(
         account_id: account?.id ?? null,
         ticker: inv.ticker,
         name: inv.name,
-        asset_class: inv.asset_class,
+        asset_class: ASSET_CLASS_MAP[inv.asset_class] ?? "stock",
         quantity: inv.quantity,
         average_price: inv.average_price,
         current_price: inv.current_price,
@@ -386,11 +483,11 @@ export async function handleWebhook(
       await supabase
         .from("account_connections")
         .update({
-          status: event.event_type === "connection_revoked" ? "revoked" : "error",
-          last_error_at: new Date().toISOString(),
+          status: event.event_type === "connection_revoked" ? "inactive" : "error",
+          error_message: event.event_type === "connection_revoked" ? "Revogado pelo usuário" : "Erro na conexão",
           updated_at: new Date().toISOString(),
         })
-        .eq("provider_connection_id", event.provider_connection_id);
+        .eq("id", event.provider_connection_id);
       break;
 
     case "sync_completed":
@@ -401,7 +498,7 @@ export async function handleWebhook(
       const { data: conn } = await supabase
         .from("account_connections")
         .select("id, user_id")
-        .eq("provider_connection_id", event.provider_connection_id)
+        .eq("id", event.provider_connection_id)
         .single();
 
       if (conn) {

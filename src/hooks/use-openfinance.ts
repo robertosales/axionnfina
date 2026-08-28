@@ -98,7 +98,7 @@ export function useRevokeConnection() {
       const { error } = await supabase
         .from("account_connections")
         .update({
-          status: "revoked",
+          status: "inactive",
           updated_at: new Date().toISOString(),
         })
         .eq("id", connectionId);

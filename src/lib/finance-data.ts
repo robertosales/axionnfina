@@ -802,3 +802,6 @@ export function useSeedDemoData() {
     },
   });
 }
+
+/** Alias: lista de instituições participantes. */
+export const useInstitutions = useOpenFinanceInstitutions;

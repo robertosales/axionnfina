@@ -46,13 +46,13 @@ function ConnectPage() {
     try {
       // 1. Criar consentimento
       const consent = await createConsent.mutateAsync({
-        institution_id: institutionId,
+        institutionId: institutionId,
         scopes: ["accounts", "transactions", "credit_cards"],
       });
 
       // 2. Criar conexão
       await createConnection.mutateAsync({
-        institution_id: institutionId,
+        institutionId: institutionId,
         consent_id: consent?.id,
         status: "pending",
         external_provider: "pluggy",

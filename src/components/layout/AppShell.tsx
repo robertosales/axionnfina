@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
   Bot,
@@ -58,7 +59,6 @@ const navItems: NavItem[] = [
   { to: "/settings", label: "Configurações", icon: Settings },
 ];
 
-
 function useTheme() {
   const [dark, setDark] = useState(true);
 
@@ -84,18 +84,29 @@ function useTheme() {
 function Brand({ collapsed }: { collapsed: boolean }) {
   return (
     <Link to="/dashboard" className="focus-ring flex items-center gap-2.5 rounded-lg px-1 py-1">
-      <span
+      <motion.span
+        layout
         className="grid size-9 shrink-0 place-items-center rounded-xl text-primary-foreground"
         style={{ background: "var(--gradient-primary)" }}
       >
         <Coins className="size-5" aria-hidden />
-      </span>
-      {!collapsed && (
-        <span className="flex flex-col leading-tight">
-          <span className="text-sm font-semibold tracking-tight">Axionn</span>
-          <span className="text-[11px] text-muted-foreground">Finance</span>
-        </span>
-      )}
+      </motion.span>
+      <AnimatePresence mode="wait">
+        {!collapsed && (
+          <motion.span
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: "auto" }}
+            exit={{ opacity: 0, width: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="flex overflow-hidden whitespace-nowrap"
+          >
+            <span className="flex flex-col leading-tight">
+              <span className="text-sm font-semibold tracking-tight">Axionn</span>
+              <span className="text-[11px] text-muted-foreground">Finance</span>
+            </span>
+          </motion.span>
+        )}
+      </AnimatePresence>
     </Link>
   );
 }
@@ -122,7 +133,8 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
               collapsed && "justify-center px-0",
             )}
           >
-            <item.icon
+            <motion.item.icon
+              layout
               className={cn(
                 "size-[18px] shrink-0",
                 item.highlight && !active && "text-primary",
@@ -130,7 +142,19 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
               )}
               aria-hidden
             />
-            {!collapsed && <span className="truncate">{item.label}</span>}
+            <AnimatePresence mode="wait">
+              {!collapsed && (
+                <motion.span
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: "auto" }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                  className="overflow-hidden whitespace-nowrap"
+                >
+                  {item.label}
+                </motion.span>
+              )}
+            </AnimatePresence>
             {!collapsed && item.highlight && (
               <Badge variant="secondary" className="ml-auto rounded-full text-[10px]">
                 beta
@@ -158,16 +182,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { dark, toggle } = useTheme();
   const { name, initials, signOut } = useSessionUser();
 
-
   return (
     <div className="min-h-screen bg-background">
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 
-      <aside
+      {/* Desktop Sidebar */}
+      <motion.aside
+        animate={{ width: collapsed ? 80 : 256 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
         className={cn(
           "fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-sidebar-border bg-sidebar",
-          "transition-[width] duration-200 ease-out lg:flex",
-          collapsed ? "w-20" : "w-64",
+          "lg:flex",
         )}
       >
         <div
@@ -198,31 +223,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             )}
           </Button>
         </div>
-      </aside>
+      </motion.aside>
 
-      <div className={cn("transition-[padding] duration-200", collapsed ? "lg:pl-20" : "lg:pl-64")}>
+      {/* Main content */}
+      <motion.div
+        animate={{ paddingLeft: collapsed ? 80 : 256 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className="hidden lg:block"
+      >
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md lg:px-10">
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menu">
-                <Menu className="size-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-64 bg-sidebar p-0">
-              <SheetTitle className="sr-only">Menu</SheetTitle>
-              <div className="flex h-16 items-center border-b border-sidebar-border px-4">
-                <Brand collapsed={false} />
-              </div>
-              <div className="py-4">
-                <NavList collapsed={false} onNavigate={() => setMobileOpen(false)} />
-              </div>
-            </SheetContent>
-          </Sheet>
-
-          <div className="lg:hidden">
-            <Brand collapsed />
-          </div>
-
           <button
             type="button"
             onClick={() => setPaletteOpen(true)}
@@ -272,11 +281,64 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <DropdownMenuItem onSelect={() => void signOut()}>Sair</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
           </div>
         </header>
 
         <main className="min-h-[calc(100vh-4rem)] p-6 lg:p-10">
+          <div className="mx-auto w-full max-w-7xl">{children}</div>
+        </main>
+      </motion.div>
+
+      {/* Mobile Header */}
+      <div className="lg:hidden">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md">
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Abrir menu">
+                <Menu className="size-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 bg-sidebar p-0">
+              <SheetTitle className="sr-only">Menu</SheetTitle>
+              <div className="flex h-16 items-center border-b border-sidebar-border px-4">
+                <Brand collapsed={false} />
+              </div>
+              <div className="py-4">
+                <NavList collapsed={false} onNavigate={() => setMobileOpen(false)} />
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          <Brand collapsed />
+
+          <div className="ml-auto flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema">
+              {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="ml-1" aria-label="Menu do perfil">
+                  <Avatar className="size-8">
+                    <AvatarFallback className="bg-accent text-xs text-accent-foreground">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="truncate">{name}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/settings">Configurações</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => void signOut()}>Sair</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+
+        <main className="min-h-[calc(100vh-4rem)] p-4">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
       </div>

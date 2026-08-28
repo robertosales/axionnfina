@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Download, Plus, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
+import { Download, Plus, Trash2 } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { AppShell } from "@/components/layout/AppShell";
-import { TransactionRow } from "@/components/finance/TransactionRow";
+import { DataTable, CopyButton } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -23,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { type TransactionKind } from "@/lib/mock-data";
+import type { Transaction } from "@/lib/mock-data";
 import {
   useAccounts,
   useCreateTransaction,
@@ -31,8 +33,8 @@ import {
   useTransactions,
   useUpdateTransactionCategory,
 } from "@/lib/finance-data";
-import { formatBRL } from "@/lib/format";
-import { toast } from "sonner";
+import { formatBRL, formatShortDate, initials } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/transactions")({
   head: () => ({
@@ -63,8 +65,14 @@ const filters = [
   { key: "investment", label: "Investimentos" },
 ] as const;
 
+const kindColors: Record<Transaction["kind"], string> = {
+  income: "text-income",
+  expense: "text-expense",
+  transfer: "text-transfer",
+  investment: "text-investment",
+};
+
 function TransactionsPage() {
-  const [query, setQuery] = useState("");
   const [kind, setKind] = useState<(typeof filters)[number]["key"]>("all");
   const { data: transactions = [], isLoading } = useTransactions();
   const { data: accounts = [] } = useAccounts();
@@ -88,7 +96,16 @@ function TransactionsPage() {
     [transactions],
   );
 
-  const submit = () => {
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((t) => kind === "all" || t.kind === kind);
+  }, [transactions, kind]);
+
+  const total = useMemo(
+    () => filteredTransactions.reduce((sum, t) => sum + t.amount, 0),
+    [filteredTransactions],
+  );
+
+  const submit = useCallback(() => {
     const value = Math.abs(Number(form.amount.replace(",", ".")));
     if (!form.description.trim() || !Number.isFinite(value) || value === 0) {
       toast.error("Informe descrição e valor");
@@ -113,11 +130,11 @@ function TransactionsPage() {
         onError: (error) => toast.error(error.message),
       },
     );
-  };
+  }, [form, createTransaction]);
 
-  const exportCsv = () => {
+  const exportCsv = useCallback(() => {
     const header = "data;descricao;estabelecimento;categoria;tipo;valor";
-    const body = rows
+    const body = filteredTransactions
       .map((t) =>
         [t.date, t.description, t.merchant, t.category, t.kind, t.amount.toFixed(2)]
           .map((field) => String(field).replaceAll(";", ","))
@@ -131,24 +148,161 @@ function TransactionsPage() {
     link.download = "transacoes-axionn.csv";
     link.click();
     URL.revokeObjectURL(url);
-  };
+  }, [filteredTransactions]);
 
-  const rows = useMemo(
-    () =>
-      transactions.filter((t) => {
-        const matchKind = kind === "all" || t.kind === (kind as TransactionKind);
-        const q = query.trim().toLowerCase();
-        const matchQuery =
-          q.length === 0 ||
-          t.description.toLowerCase().includes(q) ||
-          t.merchant.toLowerCase().includes(q) ||
-          t.category.toLowerCase().includes(q);
-        return matchKind && matchQuery;
-      }),
-    [kind, query, transactions],
+  /* Colunas da tabela */
+  const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
+    () => [
+      {
+        id: "description",
+        accessorKey: "description",
+        header: "Descrição",
+        size: 300,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-3">
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-xs font-medium">
+              {initials(row.original.merchant)}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{row.original.description}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {row.original.accountName}
+              </p>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "date",
+        accessorKey: "date",
+        header: "Data",
+        size: 100,
+        cell: ({ row }) => (
+          <span className="text-sm">{formatShortDate(row.original.date)}</span>
+        ),
+      },
+      {
+        id: "category",
+        accessorKey: "category",
+        header: "Categoria",
+        size: 180,
+        cell: ({ row, table }) => {
+          const isEditing = table.options.meta?.editingId === row.original.id;
+          if (isEditing) {
+            return (
+              <input
+                list="tx-categories-inline"
+                defaultValue={row.original.category}
+                autoFocus
+                className="focus-ring h-7 w-full rounded-md border border-border bg-background px-2 text-xs"
+                onBlur={(e) => {
+                  const newCategory = e.target.value.trim() || row.original.category;
+                  updateCategory.mutate(
+                    { id: row.original.id, category: newCategory },
+                    {
+                      onSuccess: () => {
+                        toast.success("Categoria atualizada");
+                        table.options.meta?.setEditingId?.(null);
+                      },
+                      onError: (error) => toast.error(error.message),
+                    },
+                  );
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    (e.target as HTMLInputElement).blur();
+                  }
+                  if (e.key === "Escape") {
+                    table.options.meta?.setEditingId?.(null);
+                  }
+                }}
+              />
+            );
+          }
+          return (
+            <button
+              type="button"
+              onClick={() => table.options.meta?.setEditingId?.(row.original.id)}
+              className="focus-ring rounded-md border border-transparent px-2 py-0.5 text-xs transition-colors hover:border-border hover:bg-muted"
+            >
+              {row.original.category}
+            </button>
+          );
+        },
+      },
+      {
+        id: "merchant",
+        accessorKey: "merchant",
+        header: "Estabelecimento",
+        size: 160,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm">{row.original.merchant}</span>
+            <CopyButton value={row.original.merchant} />
+          </div>
+        ),
+      },
+      {
+        id: "amount",
+        accessorKey: "amount",
+        header: "Valor",
+        size: 140,
+        cell: ({ row }) => (
+          <span className={cn("numeric text-right text-sm font-semibold", kindColors[row.original.kind])}>
+            {formatBRL(row.original.amount)}
+          </span>
+        ),
+      },
+      {
+        id: "actions",
+        header: "",
+        size: 60,
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                deleteTransaction.mutate(row.original.id, {
+                  onSuccess: () => toast.success("Transação excluída"),
+                  onError: (error) => toast.error(error.message),
+                });
+              }}
+              className="focus-ring rounded p-1 text-muted-foreground transition-colors hover:text-danger"
+              title="Excluir"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [updateCategory, deleteTransaction],
   );
 
-  const total = rows.reduce((sum, t) => sum + t.amount, 0);
+  /* Sub-componente expandido */
+  const renderSubComponent = useCallback(
+    (row: { original: Transaction }) => (
+      <div className="grid grid-cols-2 gap-4 text-xs sm:grid-cols-4">
+        <div>
+          <dt className="text-muted-foreground">Tipo</dt>
+          <dd className="font-medium capitalize">{row.original.kind}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Estabelecimento</dt>
+          <dd className="font-medium">{row.original.merchant}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Categoria</dt>
+          <dd className="font-medium">{row.original.category}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Conta</dt>
+          <dd className="font-medium">{row.original.accountName}</dd>
+        </div>
+      </div>
+    ),
+    [],
+  );
 
   return (
     <AppShell>
@@ -156,12 +310,12 @@ function TransactionsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Transações</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {rows.length} lançamentos · saldo do filtro{" "}
+            {filteredTransactions.length} lançamentos · saldo do filtro{" "}
             <span className="numeric font-medium text-foreground">{formatBRL(total)}</span>
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportCsv} disabled={rows.length === 0}>
+          <Button variant="outline" size="sm" onClick={exportCsv} disabled={filteredTransactions.length === 0}>
             <Download className="size-4" /> Exportar
           </Button>
           <Button size="sm" onClick={() => setOpen(true)}>
@@ -170,21 +324,16 @@ function TransactionsPage() {
         </div>
       </header>
 
-      <Card className="overflow-hidden rounded-xl border-border/60 p-0 shadow-elevation-1">
-        <div className="flex flex-wrap items-center gap-3 border-b border-border/60 p-4">
-          <div className="relative min-w-56 flex-1">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden
-            />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar por descrição, merchant ou categoria"
-              className="pl-9"
-              aria-label="Buscar transações"
-            />
-          </div>
+      <DataTable
+        columns={columns}
+        data={filteredTransactions}
+        rowHeight={56}
+        maxHeight={600}
+        enableFiltering
+        filterPlaceholder="Buscar por descrição, merchant ou categoria…"
+        isLoading={isLoading}
+        renderSubComponent={renderSubComponent}
+        toolbar={
           <Tabs value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
             <TabsList>
               {filters.map((f) => (
@@ -194,39 +343,15 @@ function TransactionsPage() {
               ))}
             </TabsList>
           </Tabs>
-        </div>
+        }
+      />
 
-        {rows.length === 0 ? (
-          <p className="p-10 text-center text-sm text-muted-foreground">
-            {isLoading ? "Carregando transações…" : "Nenhuma transação encontrada."}
-          </p>
-        ) : (
-          <div>
-            {rows.map((t) => (
-              <TransactionRow
-                key={t.id}
-                transaction={t}
-                categories={categories}
-                onCategoryChange={(category) =>
-                  updateCategory.mutate(
-                    { id: t.id, category },
-                    {
-                      onSuccess: () => toast.success("Categoria atualizada"),
-                      onError: (error) => toast.error(error.message),
-                    },
-                  )
-                }
-                onDelete={() =>
-                  deleteTransaction.mutate(t.id, {
-                    onSuccess: () => toast.success("Transação excluída"),
-                    onError: (error) => toast.error(error.message),
-                  })
-                }
-              />
-            ))}
-          </div>
-        )}
-      </Card>
+      {/* Datalist para inline editing */}
+      <datalist id="tx-categories-inline">
+        {categories.map((category) => (
+          <option key={category} value={category} />
+        ))}
+      </datalist>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="rounded-2xl">

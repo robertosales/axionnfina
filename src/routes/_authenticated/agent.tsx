@@ -1,10 +1,11 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { createFileRoute } from "@tanstack/react-router";
-import { Bot, Loader2, Send, Sparkles, User, Wrench } from "lucide-react";
+import { Bot, Loader2, Send, Sparkles, User } from "lucide-react";
 import { useState } from "react";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { ToolCallRenderer } from "@/components/agent/ToolCallCards";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,15 +41,9 @@ const suggestions = [
   "Quanto gastei com transporte este mês?",
   "Como está meu orçamento agora?",
   "Projete meu fluxo de caixa dos próximos 3 meses",
+  "Qual meu resumo financeiro?",
+  "Crie uma meta de férias com prazo de 6 meses",
 ];
-
-const toolLabels: Record<string, string> = {
-  "tool-resumo_financeiro": "Consultando resumo financeiro",
-  "tool-buscar_transacoes": "Buscando transações",
-  "tool-status_orcamento": "Analisando orçamento",
-  "tool-projecao_fluxo_caixa": "Projetando fluxo de caixa",
-  "tool-metas": "Consultando metas",
-};
 
 function AgentPage() {
   const [draft, setDraft] = useState("");
@@ -135,14 +130,25 @@ function AgentPage() {
                       );
                     }
                     if (part.type.startsWith("tool-")) {
+                      const toolName = part.type;
+                      const toolInvocation = (message as Record<string, unknown>).toolInvocations as
+                        | Array<{
+                            toolName: string;
+                            state: string;
+                            args: Record<string, unknown>;
+                            result?: unknown;
+                          }>
+                        | undefined;
+                      const toolCall = toolInvocation?.find(
+                        (t) => t.toolName === toolName.replace("tool-", ""),
+                      );
                       return (
-                        <p
+                        <ToolCallRenderer
                           key={index}
-                          className="inline-flex items-center gap-2 rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground"
-                        >
-                          <Wrench className="size-3" aria-hidden />
-                          {toolLabels[part.type] ?? part.type.replace("tool-", "")}
-                        </p>
+                          toolName={toolName}
+                          args={toolCall?.args ?? {}}
+                          result={toolCall?.state === "result" ? toolCall.result : undefined}
+                        />
                       );
                     }
                     return null;

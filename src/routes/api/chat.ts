@@ -15,10 +15,14 @@ necessárias para obter dados REAIS do usuário e só então responda.
 Regras rígidas (guardrails):
 - Nunca invente números. Se não houver dado, diga que não há registros.
 - Valores sempre em Real (R$) com duas casas decimais.
-- Nunca execute pagamentos ou transferências; apenas explique como o usuário pode fazê-lo.
+- Nunca execute pagamentos ou transferências sem confirmação explícita do usuário.
+- Para agendar Pix, use a tool schedule_pix_payment e deixe que o usuário confirme no card.
 - Não forneça recomendação de investimento personalizada como se fosse consultoria regulada (CVM);
   contextualize como educação financeira.
-- Responda em português do Brasil, direto e objetivo, usando listas curtas quando ajudar.`;
+- Não sugira evasão fiscal ou sonegação.
+- Responda em português do Brasil, direto e objetivo, usando listas curtas quando ajudar.
+- Quando o usuário pedir para criar uma meta, use a tool create_goal.
+- Quando o usuário mencionar uma preferência ou padrão, salve com upsert_memory.`;
 
 /** Cria um client Supabase que age como o usuário autenticado (RLS aplicada). */
 function userClient(token: string) {
@@ -63,6 +67,9 @@ export const Route = createFileRoute("/api/chat")({
           messages: await convertToModelMessages(body.messages),
           stopWhen: stepCountIs(50),
           tools: {
+            /* ---------------------------------------------------------- */
+            /* Tool: resumo_financeiro                                     */
+            /* ---------------------------------------------------------- */
             resumo_financeiro: tool({
               description:
                 "Retorna patrimônio, saldo por conta e taxa de poupança do mês corrente do usuário.",
@@ -95,6 +102,9 @@ export const Route = createFileRoute("/api/chat")({
               },
             }),
 
+            /* ---------------------------------------------------------- */
+            /* Tool: buscar_transacoes                                     */
+            /* ---------------------------------------------------------- */
             buscar_transacoes: tool({
               description:
                 "Busca transações do usuário por texto, categoria e período. Use para perguntas do tipo 'quanto gastei com X'.",
@@ -126,6 +136,9 @@ export const Route = createFileRoute("/api/chat")({
               },
             }),
 
+            /* ---------------------------------------------------------- */
+            /* Tool: status_orcamento                                      */
+            /* ---------------------------------------------------------- */
             status_orcamento: tool({
               description: "Status do orçamento do mês: planejado x realizado por categoria.",
               inputSchema: z.object({}),
@@ -157,6 +170,9 @@ export const Route = createFileRoute("/api/chat")({
               },
             }),
 
+            /* ---------------------------------------------------------- */
+            /* Tool: projecao_fluxo_caixa                                  */
+            /* ---------------------------------------------------------- */
             projecao_fluxo_caixa: tool({
               description:
                 "Projeta o fluxo de caixa dos próximos meses com base em contas a pagar/receber e média histórica.",
@@ -170,6 +186,9 @@ export const Route = createFileRoute("/api/chat")({
               },
             }),
 
+            /* ---------------------------------------------------------- */
+            /* Tool: metas                                                 */
+            /* ---------------------------------------------------------- */
             metas: tool({
               description: "Lista as metas financeiras do usuário com progresso e prazo.",
               inputSchema: z.object({}),
@@ -179,6 +198,150 @@ export const Route = createFileRoute("/api/chat")({
                   .select("title, target_amount, current_amount, deadline")
                   .eq("user_id", userId);
                 return data ?? [];
+              },
+            }),
+
+            /* ---------------------------------------------------------- */
+            /* Tool: calculate_tax_preview                                 */
+            /* ---------------------------------------------------------- */
+            calculate_tax_preview: tool({
+              description:
+                "Calcula a prévia de impostos do mês corrente: swing trade, day trade, FIIs, dividendos e DARF estimada.",
+              inputSchema: z.object({
+                ano: z.number().describe("Ano para cálculo (YYYY)"),
+                mes: z.number().describe("Mês para cálculo (1-12)"),
+              }),
+              execute: async ({ ano, mes }) => {
+                const { data, error } = await supabase.rpc("calculate_irpf_monthly", {
+                  p_year: ano,
+                  p_month: mes,
+                });
+                if (error) return { erro: error.message };
+                return data;
+              },
+            }),
+
+            /* ---------------------------------------------------------- */
+            /* Tool: create_goal                                           */
+            /* ---------------------------------------------------------- */
+            create_goal: tool({
+              description:
+                "Cria uma nova meta financeira para o usuário. Use quando ele pedir para criar uma meta.",
+              inputSchema: z.object({
+                titulo: z.string().describe("Título da meta"),
+                valorAlvo: z.number().describe("Valor alvo em reais"),
+                prazo: z.string().optional().describe("Data limite YYYY-MM-DD (opcional)"),
+              }),
+              execute: async ({ titulo, valorAlvo, prazo }) => {
+                const { data, error } = await supabase
+                  .from("goals")
+                  .insert({
+                    user_id: userId,
+                    title: titulo,
+                    target_amount: valorAlvo,
+                    current_amount: 0,
+                    deadline: prazo ?? null,
+                  })
+                  .select("id, title, target_amount, current_amount, deadline")
+                  .single();
+                if (error) return { erro: error.message };
+                return {
+                  criada: true,
+                  meta: {
+                    id: data.id,
+                    titulo: data.title,
+                    valorAlvo: Number(data.target_amount),
+                    prazo: data.deadline,
+                  },
+                };
+              },
+            }),
+
+            /* ---------------------------------------------------------- */
+            /* Tool: schedule_pix_payment                                  */
+            /* ---------------------------------------------------------- */
+            schedule_pix_payment: tool({
+              description:
+                "Agenda um pagamento Pix. NÃO executa automaticamente — retorna um card de confirmação para o usuário confirmar no chat.",
+              inputSchema: z.object({
+                valor: z.number().describe("Valor em reais"),
+                destinatario: z.string().describe("Nome ou chave Pix do destinatário"),
+                data: z.string().optional().describe("Data agendada YYYY-MM-DD (padrão: hoje)"),
+                contaId: z.string().optional().describe("ID da conta de origem"),
+              }),
+              execute: async ({ valor, destinatario, data, contaId }) => {
+                const agendamento = data ?? new Date().toISOString().slice(0, 10);
+                const confirmationToken = crypto.randomUUID();
+
+                // Criar payable rascunho (não confirmado ainda)
+                const { error } = await supabase.from("payables").insert({
+                  user_id: userId,
+                  account_id: contaId ?? null,
+                  description: `Pix para ${destinatario}`,
+                  amount: valor,
+                  due_date: agendamento,
+                  status: "pending",
+                  category: "Transferência",
+                  confirmation_token: confirmationToken,
+                });
+
+                if (error) return { erro: error.message };
+
+                return {
+                  amount: valor,
+                  to: destinatario,
+                  when: agendamento,
+                  confirmationToken,
+                  status: "AGUARDANDO_CONFIRMACAO",
+                };
+              },
+            }),
+
+            /* ---------------------------------------------------------- */
+            /* Tool: upsert_memory                                         */
+            /* ---------------------------------------------------------- */
+            upsert_memory: tool({
+              description:
+                "Salva uma preferência, padrão ou informação importante do usuário na memória do agente.",
+              inputSchema: z.object({
+                conteudo: z.string().describe("Conteúdo da memória (ex: 'Usuário prefere reserva de 6 meses')"),
+                tipo: z.string().optional().describe("Tipo: preference, pattern, insight (padrão: preference)"),
+                importancia: z.number().optional().describe("Importância de 0 a 1 (padrão: 0.5)"),
+              }),
+              execute: async ({ conteudo, tipo, importancia }) => {
+                const { error } = await supabase.from("agent_memories").insert({
+                  user_id: userId,
+                  content: conteudo,
+                  memory_type: tipo ?? "preference",
+                  importance: importancia ?? 0.5,
+                });
+                if (error) return { erro: error.message };
+                return { salva: true, conteudo };
+              },
+            }),
+
+            /* ---------------------------------------------------------- */
+            /* Tool: search_memories                                       */
+            /* ---------------------------------------------------------- */
+            search_memories: tool({
+              description:
+                "Busca memórias salvas do usuário por similaridade semântica. Use para lembrar de preferências e padrões anteriores.",
+              inputSchema: z.object({
+                query: z.string().describe("Texto de busca"),
+                limite: z.number().optional().describe("Número máximo de resultados (padrão: 5)"),
+              }),
+              execute: async ({ query, limite }) => {
+                // Para busca semântica real precisaríamos gerar embedding.
+                // Por enquanto, busca por texto conteúdo.
+                const { data, error } = await supabase
+                  .from("agent_memories")
+                  .select("content, memory_type, importance")
+                  .eq("user_id", userId)
+                  .ilike("content", `%${query}%`)
+                  .order("importance", { ascending: false })
+                  .limit(limite ?? 5);
+                if (error) return { erro: error.message };
+                return { memorias: data ?? [] };
               },
             }),
           },

@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   CheckCircle2,
   Edit,
@@ -50,6 +52,7 @@ import {
 import { useInstitutions } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
 import type { AccountType, WalletSummary } from "@/lib/account-service";
+import { listConnectors } from "@/lib/pluggy.functions";
 
 export const Route = createFileRoute("/_authenticated/wallet/accounts")({
   head: () => ({
@@ -78,6 +81,12 @@ function AccountsPage() {
   const upsertAccount = useUpsertAccount();
   const archiveAccount = useArchiveAccount();
   const setPrimary = useSetPrimaryAccount();
+  const fetchConnectors = useServerFn(listConnectors);
+  const connectorsQuery = useQuery({
+    queryKey: ["pluggy", "connectors"],
+    queryFn: () => fetchConnectors({ data: {} }),
+    staleTime: 1000 * 60 * 30,
+  });
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -243,6 +252,80 @@ function AccountsPage() {
             </Button>
           </Card>
         )}
+
+        {/* Instituições Pluggy (Open Finance) */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Instituições disponíveis</h2>
+              <p className="text-sm text-muted-foreground">
+                Conectores Open Finance da Pluggy
+                {connectorsQuery.data && !connectorsQuery.data.error
+                  ? ` · ${connectorsQuery.data.total} encontrados`
+                  : ""}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => connectorsQuery.refetch()}
+              disabled={connectorsQuery.isFetching}
+            >
+              {connectorsQuery.isFetching ? "Carregando..." : "Atualizar"}
+            </Button>
+          </div>
+
+          {connectorsQuery.isLoading ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Card key={i} className="h-20 animate-pulse bg-muted" />
+              ))}
+            </div>
+          ) : connectorsQuery.data?.error ? (
+            <Card className="p-6 text-sm text-muted-foreground">
+              Não foi possível carregar as instituições da Pluggy (
+              {connectorsQuery.data.error}). Verifique as credenciais
+              configuradas.
+            </Card>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {(connectorsQuery.data?.connectors ?? []).map((connector) => (
+                <Card key={connector.id} className="flex items-center gap-3 p-4">
+                  {connector.imageUrl ? (
+                    <img
+                      src={connector.imageUrl}
+                      alt={connector.name}
+                      loading="lazy"
+                      className="size-9 rounded-md bg-background object-contain"
+                    />
+                  ) : (
+                    <div className="flex size-9 items-center justify-center rounded-md bg-muted">
+                      <Landmark className="size-4 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{connector.name}</p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {connector.isOpenFinance && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Open Finance
+                        </Badge>
+                      )}
+                      {connector.isSandbox && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          Sandbox
+                        </Badge>
+                      )}
+                      <Badge variant="secondary" className="text-[10px]">
+                        {connector.type}
+                      </Badge>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
 
         {/* Dialog: Criar/Editar Conta */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

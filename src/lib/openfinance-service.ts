@@ -154,7 +154,7 @@ export async function connectInstitution(
     institution_id: institutionId,
     external_provider: provider.providerId,
     status: mapProviderStatusToDb(result.status),
-    metadata: buildConnectionMetadata(result.provider_connection_id, { scopes }),
+    metadata: buildConnectionMetadata(result.provider_connection_id, { scopes }) as Json,
   });
 
   if (error) {

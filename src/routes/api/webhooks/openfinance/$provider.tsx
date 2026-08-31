@@ -11,13 +11,10 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import { handleWebhook } from "@/lib/openfinance-service";
 import { getOpenFinanceConfig } from "@/lib/openfinance-config";
 import { readWebhookSecret, verifyWebhookSecret } from "@/lib/webhook-security";
 
-export const Route = createFileRoute(
-  "/api/webhooks/openfinance/$provider",
-)({
+export const Route = createFileRoute("/api/webhooks/openfinance/$provider")({
   server: {
     handlers: {
       POST: async ({ params, request }) => {
@@ -30,7 +27,7 @@ export const Route = createFileRoute(
         }
 
         // Validate provider
-        if (provider !== "pluggy" && provider !== "belvo") {
+        if (provider !== "pluggy") {
           return new Response("Invalid provider", { status: 400 });
         }
 
@@ -47,13 +44,11 @@ export const Route = createFileRoute(
 
           const payload = await request.json();
 
-          // Process webhook asynchronously (non-blocking)
-          // In production, this should be queued to a background job
-          handleWebhook(provider, payload).catch((err) => {
-            console.error(`[Webhook:${provider}] Processing failed:`, err);
-          });
+          // Await processing so a serverless runtime cannot terminate it early.
+          const { handlePluggyWebhook } = await import("@/lib/openfinance-sync.server");
+          await handlePluggyWebhook(payload);
 
-          // Return 200 immediately
+          // Confirm only after the event is durably processed.
           return new Response(JSON.stringify({ received: true }), {
             status: 200,
             headers: { "Content-Type": "application/json" },

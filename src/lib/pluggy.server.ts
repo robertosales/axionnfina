@@ -58,6 +58,149 @@ async function getApiKey(): Promise<string> {
   return data.apiKey;
 }
 
+async function pluggyRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const apiKey = await getApiKey();
+  const response = await fetch(`${PLUGGY_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-KEY": apiKey,
+      ...init.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`PLUGGY_${response.status}${detail ? `: ${detail}` : ""}`);
+  }
+
+  if (response.status === 204) return undefined as T;
+  return response.json() as Promise<T>;
+}
+
+export type PluggyItem = {
+  id: string;
+  clientUserId?: string | null;
+  status: string;
+  createdAt?: string;
+  updatedAt?: string;
+  connector: { id: number; name: string };
+};
+
+export type PluggyAccount = {
+  id: string;
+  itemId: string;
+  name: string;
+  marketingName?: string | null;
+  type: "BANK" | "CREDIT" | string;
+  subtype?: string | null;
+  number?: string | null;
+  balance: number;
+  currencyCode?: string | null;
+  bankData?: { overdraftContractedLimit?: number | null } | null;
+  creditData?: {
+    availableCreditLimit?: number | null;
+    creditLimit?: number | null;
+  } | null;
+};
+
+export type PluggyTransaction = {
+  id: string;
+  accountId: string;
+  description?: string | null;
+  amount: number;
+  type?: string | null;
+  category?: string | { description?: string | null } | null;
+  merchant?: string | { name?: string | null } | null;
+  mcc?: number | string | null;
+  status?: string | null;
+  date: string;
+  createdAt?: string | null;
+  balance?: number | null;
+  currencyCode?: string | null;
+};
+
+export async function createPluggyConnectToken(userId: string): Promise<string> {
+  const appUrl = process.env["APP_URL"];
+  const webhookSecret = process.env["PLUGGY_WEBHOOK_SECRET"];
+  const options: Record<string, string | boolean> = {
+    clientUserId: userId,
+    avoidDuplicates: true,
+  };
+  if (appUrl) {
+    options["oauthRedirectUri"] = `${appUrl.replace(/\/$/, "")}/wallet/connect`;
+    if (!webhookSecret) throw new Error("PLUGGY_WEBHOOK_SECRET não configurado.");
+    await ensurePluggyWebhook(appUrl, webhookSecret);
+  }
+
+  const data = await pluggyRequest<{ accessToken: string }>("/connect_token", {
+    method: "POST",
+    body: JSON.stringify({ options }),
+  });
+  return data.accessToken;
+}
+
+type PluggyWebhook = { id: string; event: string; url: string };
+
+async function ensurePluggyWebhook(appUrl: string, secret: string): Promise<void> {
+  const url = `${appUrl.replace(/\/$/, "")}/api/webhooks/openfinance/pluggy`;
+  if (!url.startsWith("https://")) return;
+
+  const response = await pluggyRequest<PluggyWebhook[] | { results?: PluggyWebhook[] }>(
+    "/webhooks",
+  );
+  const webhooks = Array.isArray(response) ? response : (response.results ?? []);
+  const existing = webhooks.find((webhook) => webhook.url === url && webhook.event === "all");
+  const body = JSON.stringify({
+    event: "all",
+    url,
+    headers: { "x-axionn-webhook-secret": secret },
+    enabled: true,
+  });
+
+  if (existing) {
+    await pluggyRequest(`/webhooks/${encodeURIComponent(existing.id)}`, {
+      method: "PATCH",
+      body,
+    });
+  } else {
+    await pluggyRequest("/webhooks", { method: "POST", body });
+  }
+}
+
+export function getPluggyItem(itemId: string): Promise<PluggyItem> {
+  return pluggyRequest<PluggyItem>(`/items/${encodeURIComponent(itemId)}`);
+}
+
+export async function getPluggyAccounts(itemId: string): Promise<PluggyAccount[]> {
+  const data = await pluggyRequest<{ results?: PluggyAccount[] }>(
+    `/accounts?itemId=${encodeURIComponent(itemId)}`,
+  );
+  return data.results ?? [];
+}
+
+export async function getAllPluggyTransactions(accountId: string): Promise<PluggyTransaction[]> {
+  const transactions: PluggyTransaction[] = [];
+  let path = `/v2/transactions?accountId=${encodeURIComponent(accountId)}`;
+
+  for (;;) {
+    const page = await pluggyRequest<{ results?: PluggyTransaction[]; next?: string | null }>(path);
+    transactions.push(...(page.results ?? []));
+    if (!page.next) break;
+
+    // Pluggy returns the complete next query string, e.g. "?accountId=...&after=...".
+    path = page.next.startsWith("?")
+      ? `/v2/transactions${page.next}`
+      : `/v2/transactions?${page.next}`;
+  }
+
+  return transactions;
+}
+
+export function deletePluggyItem(itemId: string): Promise<void> {
+  return pluggyRequest<void>(`/items/${encodeURIComponent(itemId)}`, { method: "DELETE" });
+}
+
 export type ListConnectorsResult = {
   connectors: PluggyConnectorSummary[];
   total: number;
@@ -69,23 +212,13 @@ export async function listPluggyConnectors(
   search: string | undefined,
 ): Promise<ListConnectorsResult> {
   try {
-    const apiKey = await getApiKey();
     const params = new URLSearchParams({ countries: "BR" });
     if (search) params.set("name", search);
 
-    const res = await fetch(
-      `${PLUGGY_BASE_URL}/connectors?${params.toString()}`,
-      { headers: { "X-API-KEY": apiKey } },
-    );
-
-    if (!res.ok) {
-      return { connectors: [], total: 0, error: `PROVIDER_ERROR_${res.status}` };
-    }
-
-    const data = (await res.json()) as {
+    const data = await pluggyRequest<{
       results?: PluggyConnectorRaw[];
       total?: number;
-    };
+    }>(`/connectors?${params.toString()}`);
 
     const connectors = (data.results ?? []).map((c) => ({
       id: c.id,

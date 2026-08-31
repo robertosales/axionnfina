@@ -1,79 +1,134 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  ArrowRight,
-  CheckCircle2,
-  ExternalLink,
-  RefreshCw,
-  Shield,
-  Unplug,
-} from "lucide-react";
-import { useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { ArrowRight, CheckCircle2, RefreshCw, Shield, Unplug } from "lucide-react";
+import { PluggyConnect } from "react-pluggy-connect";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useAccountConnections } from "@/hooks/use-wallet";
+import { useInstitutions } from "@/lib/finance-data";
 import {
-  useAccountConnections,
-  useCreateConnection,
-} from "@/hooks/use-wallet";
-import { useInstitutions, useCreateOpenFinanceConsent } from "@/lib/finance-data";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+  completeConnection,
+  createConnectToken,
+  listConnectors,
+  revokeConnection,
+  syncConnection,
+} from "@/lib/pluggy.functions";
 
 export const Route = createFileRoute("/_authenticated/wallet/connect")({
-  head: () => ({
-    meta: [{ title: "Conectar Banco — Axionn Finance" }],
-  }),
+  head: () => ({ meta: [{ title: "Conectar Banco — Axionn Finance" }] }),
   component: ConnectPage,
 });
 
+const normalizeName = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/banco|brasil|pagamentos|unibanco|economica|federal/g, "")
+    .replace(/[^a-z0-9]/g, "");
+
 function ConnectPage() {
+  const queryClient = useQueryClient();
   const { data: institutions = [] } = useInstitutions();
   const { data: connections = [] } = useAccountConnections();
-  const createConnection = useCreateConnection();
-  const createConsent = useCreateOpenFinanceConsent();
-
+  const connectorsQuery = useQuery({
+    queryKey: ["pluggy-connectors"],
+    queryFn: () => listConnectors({ data: {} }),
+    staleTime: 3_600_000,
+  });
   const [selectedInstitution, setSelectedInstitution] = useState<string | null>(null);
+  const [selectedConnector, setSelectedConnector] = useState<number | null>(null);
+  const [connectToken, setConnectToken] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
+  const [busyConnection, setBusyConnection] = useState<string | null>(null);
+
+  const connectorByInstitution = useMemo(() => {
+    const connectors = connectorsQuery.data?.connectors ?? [];
+    const entries = institutions.flatMap((institution) => {
+      const terms = [institution.short_name, institution.name].map(normalizeName).filter(Boolean);
+      const connector = connectors.find((candidate) => {
+        const name = normalizeName(candidate.name);
+        return terms.some((term) => name.includes(term) || term.includes(name));
+      });
+      return connector ? [[institution.id, connector] as const] : [];
+    });
+    return new Map(entries);
+  }, [connectorsQuery.data?.connectors, institutions]);
+
+  const resetWidget = () => {
+    setConnectToken(null);
+    setSelectedConnector(null);
+    setSelectedInstitution(null);
+    setConnecting(false);
+  };
 
   const handleConnect = async (institutionId: string) => {
+    const connector = connectorByInstitution.get(institutionId);
+    if (!connector) {
+      toast.error("Este banco não está disponível na Pluggy neste momento.");
+      return;
+    }
     setConnecting(true);
     setSelectedInstitution(institutionId);
-
     try {
-      // 1. Criar consentimento
-      const consent = await createConsent.mutateAsync({
-        institutionId: institutionId,
-        scopes: ["accounts", "transactions", "credit_cards"],
-      });
-
-      // 2. Criar conexão
-      await createConnection.mutateAsync({
-        institution_id: institutionId,
-        ...(consent?.id ? { consent_id: consent.id } : {}),
-        status: "pending",
-        external_provider: "pluggy",
-      });
-
-      toast.success("Conexão iniciada. Em produção, você seria redirecionado ao banco.");
-    } catch {
-      toast.error("Erro ao iniciar conexão");
-    } finally {
-      setConnecting(false);
-      setSelectedInstitution(null);
+      const result = await createConnectToken();
+      setSelectedConnector(connector.id);
+      setConnectToken(result.connectToken);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao iniciar conexão.");
+      resetWidget();
     }
   };
 
-  const isConnected = (institutionId: string) =>
-    connections.some(
-      (c) => c.institution_id === institutionId && c.status === "active",
-    );
+  const handleSuccess = async (data: { item: { id: string } }) => {
+    if (!selectedInstitution) return;
+    try {
+      const result = await completeConnection({
+        data: { institutionId: selectedInstitution, itemId: data.item.id },
+      });
+      await queryClient.invalidateQueries();
+      toast.success(
+        `${result.sync.accountsImported} conta(s) e ${result.sync.transactionsImported} movimentação(ões) sincronizadas.`,
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao importar os dados bancários.");
+    } finally {
+      resetWidget();
+    }
+  };
 
-  const getConnection = (institutionId: string) =>
-    connections.find((c) => c.institution_id === institutionId);
+  const handleSync = async (connectionId: string) => {
+    setBusyConnection(connectionId);
+    try {
+      const result = await syncConnection({ data: { connectionId } });
+      await queryClient.invalidateQueries();
+      toast.success(`${result.transactionsImported} movimentação(ões) sincronizadas.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao sincronizar.");
+    } finally {
+      setBusyConnection(null);
+    }
+  };
+
+  const handleRevoke = async (connectionId: string) => {
+    setBusyConnection(connectionId);
+    try {
+      await revokeConnection({ data: { connectionId } });
+      await queryClient.invalidateQueries();
+      toast.success("Consentimento revogado e conexão removida da Pluggy.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao revogar a conexão.");
+    } finally {
+      setBusyConnection(null);
+    }
+  };
 
   return (
     <AppShell>
@@ -81,33 +136,34 @@ function ConnectPage() {
         <header>
           <h1 className="text-2xl font-bold tracking-tight">Conectar Banco</h1>
           <p className="text-muted-foreground">
-            Conecte suas contas bancárias via Open Finance para sincronizar saldos e transações automaticamente.
+            Autorize seu banco e importe contas, saldos e todas as movimentações disponíveis.
           </p>
         </header>
-
-        {/* Status de conexões ativas */}
         {connections.length > 0 && (
           <Card className="p-6">
-            <h2 className="font-semibold">Conexões Ativas</h2>
+            <h2 className="font-semibold">Conexões</h2>
             <div className="mt-4 space-y-3">
-              {connections.map((conn) => {
-                const inst = institutions.find((i) => i.id === conn.institution_id);
+              {connections.map((connection) => {
+                const institution = institutions.find(
+                  (item) => item.id === connection.institution_id,
+                );
+                const busy = busyConnection === connection.id;
                 return (
                   <div
-                    key={conn.id}
+                    key={connection.id}
                     className="flex items-center justify-between rounded-lg border border-border p-3"
                   >
                     <div className="flex items-center gap-3">
                       <div
                         className="size-8 rounded-full"
-                        style={{ backgroundColor: inst?.logo_color ?? "#6366f1" }}
+                        style={{ backgroundColor: institution?.logo_color ?? "#6366f1" }}
                       />
                       <div>
-                        <p className="text-sm font-medium">{inst?.name ?? "Desconhecido"}</p>
+                        <p className="text-sm font-medium">{institution?.name ?? "Instituição"}</p>
                         <p className="text-xs text-muted-foreground">
                           Última sincronização:{" "}
-                          {conn.last_sync_at
-                            ? formatDistanceToNow(new Date(conn.last_sync_at), {
+                          {connection.last_sync_at
+                            ? formatDistanceToNow(new Date(connection.last_sync_at), {
                                 addSuffix: true,
                                 locale: ptBR,
                               })
@@ -118,25 +174,39 @@ function ConnectPage() {
                     <div className="flex items-center gap-2">
                       <Badge
                         variant={
-                          conn.status === "active"
+                          connection.status === "active"
                             ? "secondary"
-                            : conn.status === "error"
+                            : connection.status === "error"
                               ? "destructive"
                               : "outline"
                         }
                       >
-                        {conn.status === "active"
+                        {connection.status === "active"
                           ? "Ativa"
-                          : conn.status === "error"
+                          : connection.status === "error"
                             ? "Erro"
-                            : conn.status === "pending"
+                            : connection.status === "pending"
                               ? "Pendente"
                               : "Inativa"}
                       </Badge>
-                      <Button variant="ghost" size="icon" className="size-8">
-                        <RefreshCw className="size-4" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        disabled={busy}
+                        onClick={() => void handleSync(connection.id)}
+                        title="Sincronizar agora"
+                      >
+                        <RefreshCw className={`size-4 ${busy ? "animate-spin" : ""}`} />
                       </Button>
-                      <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-danger">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-muted-foreground hover:text-danger"
+                        disabled={busy}
+                        onClick={() => void handleRevoke(connection.id)}
+                        title="Revogar consentimento"
+                      >
                         <Unplug className="size-4" />
                       </Button>
                     </div>
@@ -146,42 +216,41 @@ function ConnectPage() {
             </div>
           </Card>
         )}
-
-        {/* Instituições disponíveis */}
         <Card className="p-6">
           <div className="flex items-center gap-3">
             <Shield className="size-5 text-primary" />
             <div>
-              <h2 className="font-semibold">Instituições Disponíveis</h2>
+              <h2 className="font-semibold">Instituições disponíveis</h2>
               <p className="text-sm text-muted-foreground">
-                Selecione o banco que deseja conectar.
+                Selecione o banco para abrir o consentimento oficial.
               </p>
             </div>
           </div>
           <Separator className="my-4" />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {institutions.map((inst) => {
-              const connected = isConnected(inst.id);
-              const conn = getConnection(inst.id);
+            {institutions.map((institution) => {
+              const connection = connections.find((item) => item.institution_id === institution.id);
+              const connected = connection?.status === "active";
+              const available = connectorByInstitution.has(institution.id);
               return (
                 <div
-                  key={inst.id}
-                  className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${
-                    connected
-                      ? "border-chart-2 bg-chart-2/5"
-                      : "border-border hover:border-primary/50"
-                  }`}
+                  key={institution.id}
+                  className={`flex items-center justify-between rounded-lg border p-3 ${connected ? "border-chart-2 bg-chart-2/5" : "border-border hover:border-primary/50"}`}
                 >
                   <div className="flex items-center gap-3">
                     <div
                       className="size-8 rounded-full"
-                      style={{ backgroundColor: inst.logo_color ?? "#6366f1" }}
+                      style={{ backgroundColor: institution.logo_color ?? "#6366f1" }}
                     />
                     <div>
-                      <p className="text-sm font-medium">{inst.short_name || inst.name}</p>
-                      {connected && (
-                        <p className="text-xs text-chart-2">Conectado</p>
-                      )}
+                      <p className="text-sm font-medium">
+                        {institution.short_name || institution.name}
+                      </p>
+                      <p
+                        className={`text-xs ${connected ? "text-chart-2" : "text-muted-foreground"}`}
+                      >
+                        {connected ? "Conectado" : available ? "Disponível" : "Indisponível"}
+                      </p>
                     </div>
                   </div>
                   {connected ? (
@@ -190,15 +259,14 @@ function ConnectPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleConnect(inst.id)}
-                      disabled={connecting && selectedInstitution === inst.id}
+                      onClick={() => void handleConnect(institution.id)}
+                      disabled={!available || connecting}
                     >
-                      {connecting && selectedInstitution === inst.id ? (
+                      {connecting && selectedInstitution === institution.id ? (
                         <RefreshCw className="size-4 animate-spin" />
                       ) : (
                         <>
-                          Conectar
-                          <ArrowRight className="ml-1 size-3" />
+                          Conectar <ArrowRight className="ml-1 size-3" />
                         </>
                       )}
                     </Button>
@@ -207,52 +275,37 @@ function ConnectPage() {
               );
             })}
           </div>
+          {(connectorsQuery.isError || connectorsQuery.data?.error) && (
+            <p className="mt-4 text-sm text-danger">
+              Não foi possível carregar a Pluggy. Configure PLUGGY_CLIENT_ID e PLUGGY_CLIENT_SECRET
+              no servidor.
+            </p>
+          )}
         </Card>
-
-        {/* Informações de segurança */}
         <Card className="p-6">
           <h2 className="font-semibold">Como funciona</h2>
-          <div className="mt-4 space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                1
-              </div>
-              <div>
-                <p className="text-sm font-medium">Você autoriza o acesso</p>
-                <p className="text-xs text-muted-foreground">
-                  Redirecionamos você ao banco para autorizar o compartilhamento de dados.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                2
-              </div>
-              <div>
-                <p className="text-sm font-medium">Sincronização automática</p>
-                <p className="text-xs text-muted-foreground">
-                  Saldos e transações são atualizados periodicamente.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                3
-              </div>
-              <div>
-                <p className="text-sm font-medium">Você pode revogar a qualquer momento</p>
-                <p className="text-xs text-muted-foreground">
-                  Acesse Configurações → Segurança para revogar consentimentos.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-            <Shield className="size-4" />
-            Dados protegidos com criptografia ponta a ponta. Conformidade com Open Finance Brasil.
-          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            A autenticação acontece no ambiente da instituição. O Axionn recebe somente os dados
+            autorizados, sincroniza todas as páginas disponíveis e permite revogar o consentimento a
+            qualquer momento.
+          </p>
         </Card>
       </div>
+      {connectToken && selectedConnector && (
+        <PluggyConnect
+          connectToken={connectToken}
+          selectedConnectorId={selectedConnector}
+          countries={["BR"]}
+          products={["ACCOUNTS", "TRANSACTIONS"]}
+          language="pt"
+          onSuccess={handleSuccess}
+          onError={(error) => {
+            toast.error(error.message || "A conexão não foi concluída.");
+            resetWidget();
+          }}
+          onClose={resetWidget}
+        />
+      )}
     </AppShell>
   );
 }

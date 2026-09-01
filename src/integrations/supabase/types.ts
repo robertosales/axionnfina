@@ -1,4 +1,10 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
@@ -231,22 +237,31 @@ export type Database = {
       }
       agent_conversations: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           created_at: string
           id: string
+          record_origin: string
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           id?: string
+          record_origin?: string
           title?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           id?: string
+          record_origin?: string
           title?: string
           updated_at?: string
           user_id?: string
@@ -736,6 +751,53 @@ export type Database = {
         }
         Relationships: []
       }
+      investment_plan_progress_snapshots: {
+        Row: {
+          actual_total: number
+          created_at: string
+          details: Json
+          id: string
+          overall_drift: number
+          plan_id: string
+          snapshot_date: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actual_total?: number
+          created_at?: string
+          details?: Json
+          id?: string
+          overall_drift?: number
+          plan_id: string
+          snapshot_date?: string
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actual_total?: number
+          created_at?: string
+          details?: Json
+          id?: string
+          overall_drift?: number
+          plan_id?: string
+          snapshot_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investment_plan_progress_snapshots_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "investment_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       investment_plans: {
         Row: {
           allocations: Json
@@ -793,53 +855,6 @@ export type Database = {
         }
         Relationships: []
       }
-      investment_plan_progress_snapshots: {
-        Row: {
-          actual_total: number
-          created_at: string
-          details: Json
-          id: string
-          overall_drift: number
-          plan_id: string
-          snapshot_date: string
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          actual_total?: number
-          created_at?: string
-          details?: Json
-          id?: string
-          overall_drift?: number
-          plan_id: string
-          snapshot_date?: string
-          status: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          actual_total?: number
-          created_at?: string
-          details?: Json
-          id?: string
-          overall_drift?: number
-          plan_id?: string
-          snapshot_date?: string
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "investment_plan_progress_snapshots_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "investment_plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       investment_positions: {
         Row: {
           account_id: string | null
@@ -847,9 +862,9 @@ export type Database = {
           archived_by: string | null
           asset_class: Database["public"]["Enums"]["asset_class"]
           average_price: number
+          conglomerate: string | null
           created_at: string
           current_price: number
-          conglomerate: string | null
           fgc_eligible: boolean | null
           id: string
           institution: string | null
@@ -868,9 +883,9 @@ export type Database = {
           archived_by?: string | null
           asset_class?: Database["public"]["Enums"]["asset_class"]
           average_price?: number
+          conglomerate?: string | null
           created_at?: string
           current_price?: number
-          conglomerate?: string | null
           fgc_eligible?: boolean | null
           id?: string
           institution?: string | null
@@ -889,9 +904,9 @@ export type Database = {
           archived_by?: string | null
           asset_class?: Database["public"]["Enums"]["asset_class"]
           average_price?: number
+          conglomerate?: string | null
           created_at?: string
           current_price?: number
-          conglomerate?: string | null
           fgc_eligible?: boolean | null
           id?: string
           institution?: string | null
@@ -973,76 +988,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
-      }
-      private_fixed_income_offers: {
-        Row: {
-          archived_at: string | null
-          archived_by: string | null
-          conglomerate: string
-          created_at: string
-          daily_liquidity: boolean
-          fgc_eligible: boolean
-          id: string
-          institution: string
-          maturity_date: string
-          minimum_investment: number
-          notes: string | null
-          product_type: string
-          rate_type: string
-          rate_value: number
-          record_origin: string
-          reference_rate: number | null
-          source_checked_at: string
-          source_url: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          archived_at?: string | null
-          archived_by?: string | null
-          conglomerate: string
-          created_at?: string
-          daily_liquidity?: boolean
-          fgc_eligible?: boolean
-          id?: string
-          institution: string
-          maturity_date: string
-          minimum_investment?: number
-          notes?: string | null
-          product_type: string
-          rate_type: string
-          rate_value: number
-          record_origin?: string
-          reference_rate?: number | null
-          source_checked_at?: string
-          source_url?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          archived_at?: string | null
-          archived_by?: string | null
-          conglomerate?: string
-          created_at?: string
-          daily_liquidity?: boolean
-          fgc_eligible?: boolean
-          id?: string
-          institution?: string
-          maturity_date?: string
-          minimum_investment?: number
-          notes?: string | null
-          product_type?: string
-          rate_type?: string
-          rate_value?: number
-          record_origin?: string
-          reference_rate?: number | null
-          source_checked_at?: string
-          source_url?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "investment_radar_runs_private_top_offer_id_fkey"
+            columns: ["private_top_offer_id"]
+            isOneToOne: false
+            referencedRelation: "private_fixed_income_offers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       journal_entries: {
         Row: {
@@ -1473,8 +1427,8 @@ export type Database = {
           due_date: string
           id: string
           pix_key: string | null
-          recurring: boolean
           record_origin: string
+          recurring: boolean
           scheduled_for: string | null
           status: Database["public"]["Enums"]["bill_status"]
           updated_at: string
@@ -1493,8 +1447,8 @@ export type Database = {
           due_date?: string
           id?: string
           pix_key?: string | null
-          recurring?: boolean
           record_origin?: string
+          recurring?: boolean
           scheduled_for?: string | null
           status?: Database["public"]["Enums"]["bill_status"]
           updated_at?: string
@@ -1513,8 +1467,8 @@ export type Database = {
           due_date?: string
           id?: string
           pix_key?: string | null
-          recurring?: boolean
           record_origin?: string
+          recurring?: boolean
           scheduled_for?: string | null
           status?: Database["public"]["Enums"]["bill_status"]
           updated_at?: string
@@ -1536,6 +1490,75 @@ export type Database = {
             referencedColumns: ["account_id"]
           },
         ]
+      }
+      private_fixed_income_offers: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          conglomerate: string
+          created_at: string
+          daily_liquidity: boolean
+          fgc_eligible: boolean
+          id: string
+          institution: string
+          maturity_date: string
+          minimum_investment: number
+          notes: string | null
+          product_type: string
+          rate_type: string
+          rate_value: number
+          record_origin: string
+          reference_rate: number | null
+          source_checked_at: string
+          source_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          conglomerate: string
+          created_at?: string
+          daily_liquidity?: boolean
+          fgc_eligible?: boolean
+          id?: string
+          institution: string
+          maturity_date: string
+          minimum_investment?: number
+          notes?: string | null
+          product_type: string
+          rate_type: string
+          rate_value: number
+          record_origin?: string
+          reference_rate?: number | null
+          source_checked_at?: string
+          source_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          conglomerate?: string
+          created_at?: string
+          daily_liquidity?: boolean
+          fgc_eligible?: boolean
+          id?: string
+          institution?: string
+          maturity_date?: string
+          minimum_investment?: number
+          notes?: string | null
+          product_type?: string
+          rate_type?: string
+          rate_value?: number
+          record_origin?: string
+          reference_rate?: number | null
+          source_checked_at?: string
+          source_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -1620,8 +1643,8 @@ export type Database = {
           due_date: string
           id: string
           payer: string
-          recurring: boolean
           record_origin: string
+          recurring: boolean
           status: Database["public"]["Enums"]["bill_status"]
           updated_at: string
           user_id: string
@@ -1636,8 +1659,8 @@ export type Database = {
           due_date?: string
           id?: string
           payer?: string
-          recurring?: boolean
           record_origin?: string
+          recurring?: boolean
           status?: Database["public"]["Enums"]["bill_status"]
           updated_at?: string
           user_id: string
@@ -1652,8 +1675,8 @@ export type Database = {
           due_date?: string
           id?: string
           payer?: string
-          recurring?: boolean
           record_origin?: string
+          recurring?: boolean
           status?: Database["public"]["Enums"]["bill_status"]
           updated_at?: string
           user_id?: string
@@ -2367,7 +2390,14 @@ export type Database = {
     }
     Enums: {
       account_type: "checking" | "savings" | "credit" | "investment"
-      asset_class: "stock" | "fii" | "fixed_income" | "crypto" | "fund" | "etf" | "cash"
+      asset_class:
+        | "stock"
+        | "fii"
+        | "fixed_income"
+        | "crypto"
+        | "fund"
+        | "etf"
+        | "cash"
       bill_status: "pending" | "paid" | "overdue" | "canceled"
       card_brand: "visa" | "mastercard" | "elo" | "amex" | "other"
       categorization_source: "mcc" | "rule" | "user" | "ml" | "llm" | "manual"
@@ -2405,9 +2435,19 @@ export type Database = {
         | "suspicious_activity"
       severity_level: "low" | "medium" | "high" | "critical"
       sync_status: "pending" | "running" | "completed" | "failed" | "cancelled"
-      transaction_status: "pending" | "settled" | "cancelled" | "failed" | "reversed"
+      transaction_status:
+        | "pending"
+        | "settled"
+        | "cancelled"
+        | "failed"
+        | "reversed"
       transaction_type: "income" | "expense" | "transfer"
-      webhook_event_status: "received" | "processing" | "processed" | "failed" | "duplicate"
+      webhook_event_status:
+        | "received"
+        | "processing"
+        | "processed"
+        | "failed"
+        | "duplicate"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2423,12 +2463,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2438,8 +2478,10 @@ export type Tables<
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -2448,12 +2490,13 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2472,12 +2515,13 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2496,12 +2540,13 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2512,12 +2557,13 @@ export type Enums<
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    keyof DefaultSchema["CompositeTypes"] | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2530,7 +2576,15 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["checking", "savings", "credit", "investment"],
-      asset_class: ["stock", "fii", "fixed_income", "crypto", "fund", "etf", "cash"],
+      asset_class: [
+        "stock",
+        "fii",
+        "fixed_income",
+        "crypto",
+        "fund",
+        "etf",
+        "cash",
+      ],
       bill_status: ["pending", "paid", "overdue", "canceled"],
       card_brand: ["visa", "mastercard", "elo", "amex", "other"],
       categorization_source: ["mcc", "rule", "user", "ml", "llm", "manual"],
@@ -2569,9 +2623,21 @@ export const Constants = {
       ],
       severity_level: ["low", "medium", "high", "critical"],
       sync_status: ["pending", "running", "completed", "failed", "cancelled"],
-      transaction_status: ["pending", "settled", "cancelled", "failed", "reversed"],
+      transaction_status: [
+        "pending",
+        "settled",
+        "cancelled",
+        "failed",
+        "reversed",
+      ],
       transaction_type: ["income", "expense", "transfer"],
-      webhook_event_status: ["received", "processing", "processed", "failed", "duplicate"],
+      webhook_event_status: [
+        "received",
+        "processing",
+        "processed",
+        "failed",
+        "duplicate",
+      ],
     },
   },
 } as const

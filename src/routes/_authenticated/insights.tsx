@@ -17,6 +17,7 @@ import { ChartCard } from "@/components/finance/ChartCard";
 import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { InvestmentRadarPanel } from "@/components/finance/InvestmentRadarPanel";
+import { InvestmentDecisionBriefing } from "@/components/finance/InvestmentDecisionBriefing";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -123,6 +124,7 @@ function InsightsPage() {
 
       {!showArchived && (
         <div className="mt-6 space-y-4">
+          <InvestmentDecisionBriefing />
           <InvestmentRadarPanel compact />
           <Card className="flex flex-wrap items-center justify-between gap-4 rounded-xl border-border/60 p-4 shadow-elevation-1">
             <div className="flex items-start gap-3">

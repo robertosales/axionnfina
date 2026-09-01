@@ -35,6 +35,8 @@ Posições de renda fixa podem guardar produto, instituição, conglomerado, ven
 
 A régua de liquidez organiza os valores atuais cadastrados em vencidos, até 30 dias, 31–90 dias, 91–180 dias e após 180 dias. A antecedência do alerta pode variar de 1 a 365 dias. O monitoramento cria no máximo um insight de vencimentos por dia e não pressupõe liquidação, rentabilidade final ou reinvestimento automático.
 
+O briefing de investimentos, exibido em Insights, combina vencimentos, concentração FGC, aderência dos planos, pendências cadastrais e oportunidades públicas e privadas. A ordenação é determinística: itens vencidos e limites excedidos vêm antes de alertas preventivos, revisões e oportunidades. O briefing apenas direciona o usuário às telas de análise; não envia ordens nem altera a carteira.
+
 ### Agendamento diário
 
 Configure `INVESTMENT_RADAR_CRON_SECRET` apenas no servidor e agende uma requisição `POST` para `/api/investment-radar-daily` com o cabeçalho `Authorization: Bearer <segredo>`. A rota também aceita o token de sessão de um usuário para o botão **Atualizar análise**, mas nesse modo processa somente o próprio usuário.

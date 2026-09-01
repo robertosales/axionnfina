@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getWalletSummary,
+  getArchivedAccounts,
   upsertAccount,
   archiveAccount,
   setPrimaryAccount,
@@ -25,6 +26,13 @@ export function useWalletSummary() {
     queryKey: ["wallet-summary"],
     queryFn: getWalletSummary,
     staleTime: 30_000,
+  });
+}
+
+export function useArchivedAccounts() {
+  return useQuery({
+    queryKey: ["accounts", "archived"],
+    queryFn: getArchivedAccounts,
   });
 }
 

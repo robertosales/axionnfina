@@ -109,9 +109,7 @@ describe("API Schemas", () => {
   describe("categorizeRequest", () => {
     it("aceita request válido", () => {
       const result = categorizeRequest.safeParse({
-        transactions: [
-          { id: "1", description: "iFood", amount: -50, merchant: "iFood" },
-        ],
+        transactions: [{ id: "1", description: "iFood", amount: -50, merchant: "iFood" }],
       });
       expect(result.success).toBe(true);
     });

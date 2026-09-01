@@ -3,14 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   CheckCircle2,
-  Edit,
   Landmark,
   LineChart,
-  MoreVertical,
   PiggyBank,
   Plus,
   Star,
-  Trash2,
   Wallet,
   CreditCard,
 } from "lucide-react";
@@ -18,6 +15,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
+import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -28,12 +27,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -45,11 +38,12 @@ import {
 } from "@/components/ui/select";
 import {
   useWalletSummary,
+  useArchivedAccounts,
   useUpsertAccount,
   useArchiveAccount,
   useSetPrimaryAccount,
 } from "@/hooks/use-wallet";
-import { useInstitutions } from "@/lib/finance-data";
+import { useEntityLifecycle, useInstitutions } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
 import type { AccountType, WalletSummary } from "@/lib/account-service";
 import { listConnectors } from "@/lib/pluggy.functions";
@@ -77,10 +71,13 @@ const TYPE_LABELS: Record<string, string> = {
 
 function AccountsPage() {
   const { data: summary, isLoading } = useWalletSummary();
+  const [showArchived, setShowArchived] = useState(false);
+  const archivedAccounts = useArchivedAccounts();
   const { data: institutions = [] } = useInstitutions();
   const upsertAccount = useUpsertAccount();
   const archiveAccount = useArchiveAccount();
   const setPrimary = useSetPrimaryAccount();
+  const lifecycle = useEntityLifecycle("account");
   const fetchConnectors = useServerFn(listConnectors);
   const connectorsQuery = useQuery({
     queryKey: ["pluggy", "connectors"],
@@ -98,10 +95,19 @@ function AccountsPage() {
     balance: "0",
     is_primary: false,
   });
+  const accounts = showArchived ? (archivedAccounts.data ?? []) : (summary?.accounts ?? []);
+  const accountsLoading = showArchived ? archivedAccounts.isLoading : isLoading;
 
   const handleOpenNew = () => {
     setEditId(null);
-    setForm({ name: "", institution: "", institution_id: "", type: "checking", balance: "0", is_primary: false });
+    setForm({
+      name: "",
+      institution: "",
+      institution_id: "",
+      type: "checking",
+      balance: "0",
+      is_primary: false,
+    });
     setDialogOpen(true);
   };
 
@@ -166,25 +172,31 @@ function AccountsPage() {
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Contas</h1>
-            <p className="text-muted-foreground">
-              Gerencie suas contas financeiras.
-            </p>
+            <p className="text-muted-foreground">Gerencie suas contas financeiras.</p>
           </div>
-          <Button onClick={handleOpenNew}>
-            <Plus className="mr-2 size-4" />
-            Nova Conta
-          </Button>
+          <div className="flex items-center gap-2">
+            <LifecycleFilter
+              showArchived={showArchived}
+              onToggle={() => setShowArchived((value) => !value)}
+            />
+            {!showArchived && (
+              <Button onClick={handleOpenNew}>
+                <Plus className="mr-2 size-4" />
+                Nova Conta
+              </Button>
+            )}
+          </div>
         </header>
 
-        {isLoading ? (
+        {accountsLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <Card key={i} className="h-20 animate-pulse bg-muted" />
             ))}
           </div>
-        ) : summary && summary.accounts.length > 0 ? (
+        ) : accounts.length > 0 ? (
           <div className="space-y-3">
-            {summary.accounts.map((account) => {
+            {accounts.map((account) => {
               const Icon = TYPE_ICONS[account.type] ?? Wallet;
               return (
                 <Card key={account.id} className="flex items-center justify-between p-4">
@@ -212,29 +224,42 @@ function AccountsPage() {
                   </div>
                   <div className="flex items-center gap-4">
                     <p className="text-lg font-semibold">{formatBRL(account.balance)}</p>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8">
-                          <MoreVertical className="size-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleOpenEdit(account)}>
-                          <Edit className="mr-2 size-4" /> Editar
-                        </DropdownMenuItem>
-                        {!account.is_primary && (
-                          <DropdownMenuItem onClick={() => handleSetPrimary(account.id)}>
-                            <CheckCircle2 className="mr-2 size-4" /> Definir como padrão
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                          onClick={() => handleArchive(account.id, account.name)}
-                          className="text-danger"
-                        >
-                          <Trash2 className="mr-2 size-4" /> Arquivar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {!showArchived && !account.is_primary && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        title="Definir como padrão"
+                        onClick={() => handleSetPrimary(account.id)}
+                      >
+                        <CheckCircle2 className="size-4" />
+                      </Button>
+                    )}
+                    <EntityActionsMenu
+                      entityLabel="conta"
+                      recordName={account.name}
+                      archived={showArchived}
+                      onEdit={() => handleOpenEdit(account)}
+                      onArchive={() => handleArchive(account.id, account.name)}
+                      onRestore={() =>
+                        lifecycle.restore.mutate(account.id, {
+                          onSuccess: () => toast.success("Conta restaurada"),
+                          onError: (error) => toast.error(error.message),
+                        })
+                      }
+                      onDelete={() =>
+                        lifecycle.remove.mutate(account.id, {
+                          onSuccess: () => toast.success("Conta excluída"),
+                          onError: (error) => toast.error(error.message),
+                        })
+                      }
+                      deleteDisabledReason={
+                        (account.record_origin ??
+                          (account.is_manual ? "manual" : "open_finance")) !== "manual"
+                          ? "Contas sincronizadas devem ser arquivadas ou removidas pelo consentimento Open Finance."
+                          : undefined
+                      }
+                    />
                   </div>
                 </Card>
               );
@@ -243,13 +268,19 @@ function AccountsPage() {
         ) : (
           <Card className="flex flex-col items-center justify-center p-12 text-center">
             <Wallet className="size-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">Nenhuma conta</h3>
+            <h3 className="mt-4 text-lg font-semibold">
+              {showArchived ? "Nenhuma conta arquivada" : "Nenhuma conta"}
+            </h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Adicione sua primeira conta financeira.
+              {showArchived
+                ? "As contas arquivadas aparecerão aqui."
+                : "Adicione sua primeira conta financeira."}
             </p>
-            <Button className="mt-4" onClick={handleOpenNew}>
-              <Plus className="mr-2 size-4" /> Criar Conta
-            </Button>
+            {!showArchived && (
+              <Button className="mt-4" onClick={handleOpenNew}>
+                <Plus className="mr-2 size-4" /> Criar Conta
+              </Button>
+            )}
           </Card>
         )}
 
@@ -283,9 +314,8 @@ function AccountsPage() {
             </div>
           ) : connectorsQuery.data?.error ? (
             <Card className="p-6 text-sm text-muted-foreground">
-              Não foi possível carregar as instituições da Pluggy (
-              {connectorsQuery.data.error}). Verifique as credenciais
-              configuradas.
+              Não foi possível carregar as instituições da Pluggy ({connectorsQuery.data.error}).
+              Verifique as credenciais configuradas.
             </Card>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

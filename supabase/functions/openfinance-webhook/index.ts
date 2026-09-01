@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { verify } from 'https://deno.land/std@0.177.0/hash/hmac.ts';
 
 const corsHeaders = {
@@ -118,7 +118,7 @@ serve(async (req) => {
   }
 });
 
-async function handleItemUpdated(supabase: any, data: Record<string, unknown>) {
+async function handleItemUpdated(supabase: SupabaseClient, data: Record<string, unknown>) {
   const itemId = data.id as string;
   const status = data.status as string;
 
@@ -156,7 +156,7 @@ async function handleItemUpdated(supabase: any, data: Record<string, unknown>) {
   return { processed: true };
 }
 
-async function handleTransactionsUpdated(supabase: any, data: Record<string, unknown>) {
+async function handleTransactionsUpdated(supabase: SupabaseClient, data: Record<string, unknown>) {
   const itemId = data.item_id as string;
 
   const { data: connection } = await supabase
@@ -174,7 +174,7 @@ async function handleTransactionsUpdated(supabase: any, data: Record<string, unk
   return { processed: true };
 }
 
-async function handleAccountsUpdated(supabase: any, data: Record<string, unknown>) {
+async function handleAccountsUpdated(supabase: SupabaseClient, data: Record<string, unknown>) {
   const itemId = data.item_id as string;
 
   const { data: connection } = await supabase
@@ -192,7 +192,7 @@ async function handleAccountsUpdated(supabase: any, data: Record<string, unknown
   return { processed: true };
 }
 
-async function handleInvestmentsUpdated(supabase: any, data: Record<string, unknown>) {
+async function handleInvestmentsUpdated(supabase: SupabaseClient, data: Record<string, unknown>) {
   const itemId = data.item_id as string;
 
   const { data: connection } = await supabase
@@ -210,7 +210,7 @@ async function handleInvestmentsUpdated(supabase: any, data: Record<string, unkn
   return { processed: true };
 }
 
-async function handleConsentRevoked(supabase: any, data: Record<string, unknown>) {
+async function handleConsentRevoked(supabase: SupabaseClient, data: Record<string, unknown>) {
   const itemId = data.item_id as string;
 
   await supabase

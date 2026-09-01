@@ -4,7 +4,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { GoalTracker } from "@/components/finance/GoalTracker";
+import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useGoals, useUpsertGoal } from "@/lib/finance-data";
+import { useEntityLifecycle, useGoals, useUpsertGoal } from "@/lib/finance-data";
 
 export const Route = createFileRoute("/_authenticated/goals")({
   head: () => ({
@@ -39,9 +41,12 @@ export const Route = createFileRoute("/_authenticated/goals")({
 });
 
 function GoalsPage() {
-  const { data: goals = [], isLoading } = useGoals();
+  const [showArchived, setShowArchived] = useState(false);
+  const { data: goals = [], isLoading } = useGoals(showArchived);
   const upsert = useUpsertGoal();
+  const lifecycle = useEntityLifecycle("goal");
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [target, setTarget] = useState("");
   const [current, setCurrent] = useState("0");
@@ -56,6 +61,7 @@ function GoalsPage() {
     }
     upsert.mutate(
       {
+        ...(editingId ? { id: editingId } : {}),
         title: title.trim(),
         targetAmount: targetValue,
         currentAmount: currentValue,
@@ -63,8 +69,9 @@ function GoalsPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Meta criada");
+          toast.success(editingId ? "Meta atualizada" : "Meta criada");
           setOpen(false);
+          setEditingId(null);
           setTitle("");
           setTarget("");
           setCurrent("0");
@@ -84,9 +91,27 @@ function GoalsPage() {
             {goals.length} metas ativas com projeção de aporte mensal
           </p>
         </div>
-        <Button size="sm" onClick={() => setOpen(true)}>
-          <Plus className="size-4" /> Nova meta
-        </Button>
+        <div className="flex items-center gap-2">
+          <LifecycleFilter
+            showArchived={showArchived}
+            onToggle={() => setShowArchived((value) => !value)}
+          />
+          {!showArchived && (
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingId(null);
+                setTitle("");
+                setTarget("");
+                setCurrent("0");
+                setDeadline("");
+                setOpen(true);
+              }}
+            >
+              <Plus className="size-4" /> Nova meta
+            </Button>
+          )}
+        </div>
       </header>
 
       {goals.length === 0 && (
@@ -97,14 +122,55 @@ function GoalsPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {goals.map((goal) => (
-          <GoalTracker key={goal.id} goal={goal} />
+          <GoalTracker
+            key={goal.id}
+            goal={goal}
+            actions={
+              <EntityActionsMenu
+                entityLabel="meta"
+                recordName={goal.name}
+                archived={Boolean(goal.archivedAt)}
+                onEdit={() => {
+                  setEditingId(goal.id);
+                  setTitle(goal.name);
+                  setTarget(String(goal.target));
+                  setCurrent(String(goal.current));
+                  setDeadline(goal.dueDate);
+                  setOpen(true);
+                }}
+                onArchive={() =>
+                  lifecycle.archive.mutate(goal.id, {
+                    onSuccess: () => toast.success("Meta arquivada"),
+                    onError: (error) => toast.error(error.message),
+                  })
+                }
+                onRestore={() =>
+                  lifecycle.restore.mutate(goal.id, {
+                    onSuccess: () => toast.success("Meta restaurada"),
+                    onError: (error) => toast.error(error.message),
+                  })
+                }
+                onDelete={() =>
+                  lifecycle.remove.mutate(goal.id, {
+                    onSuccess: () => toast.success("Meta excluída"),
+                    onError: (error) => toast.error(error.message),
+                  })
+                }
+                deleteDisabledReason={
+                  goal.recordOrigin !== "manual"
+                    ? "Registros sincronizados devem ser arquivados."
+                    : undefined
+                }
+              />
+            }
+          />
         ))}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Nova meta</DialogTitle>
+            <DialogTitle>{editingId ? "Editar meta" : "Nova meta"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
@@ -133,7 +199,7 @@ function GoalsPage() {
           </div>
           <DialogFooter>
             <Button onClick={save} disabled={upsert.isPending}>
-              {upsert.isPending ? "Salvando…" : "Criar meta"}
+              {upsert.isPending ? "Salvando…" : editingId ? "Salvar alterações" : "Criar meta"}
             </Button>
           </DialogFooter>
         </DialogContent>

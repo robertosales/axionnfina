@@ -93,6 +93,8 @@ export type WalletSummary = {
     card_brand: string | null;
     last_sync_at: string | null;
     currency: string;
+    archived_at?: string | null;
+    record_origin?: "manual" | "open_finance" | "import" | "system";
   }>;
 };
 
@@ -128,6 +130,40 @@ export async function getWalletSummary(): Promise<WalletSummary | null> {
     return null;
   }
   return data as WalletSummary;
+}
+
+/** Contas arquivadas, mantidas fora do resumo patrimonial ativo. */
+export async function getArchivedAccounts(): Promise<WalletSummary["accounts"]> {
+  const { data, error } = await supabase
+    .from("accounts")
+    .select(
+      "id, name, institution, type, balance, available_balance, is_primary, is_manual, open_finance, last_sync_at, currency, archived_at, record_origin",
+    )
+    .not("archived_at", "is", null)
+    .order("updated_at", { ascending: false });
+
+  if (error) throw new Error(`Nao foi possivel listar contas arquivadas: ${error.message}`);
+  return (data ?? []).map((account) => ({
+    id: account.id,
+    name: account.name,
+    institution_name: account.institution,
+    logo_color: null,
+    type: account.type,
+    balance: Number(account.balance),
+    available_balance:
+      account.available_balance === null ? null : Number(account.available_balance),
+    is_primary: account.is_primary,
+    is_manual: account.is_manual,
+    open_finance: account.open_finance,
+    card_last_four: null,
+    card_brand: null,
+    last_sync_at: account.last_sync_at,
+    currency: account.currency,
+    archived_at: account.archived_at,
+    record_origin: account.record_origin as NonNullable<
+      WalletSummary["accounts"][number]["record_origin"]
+    >,
+  }));
 }
 
 /**
@@ -235,10 +271,7 @@ export async function createBalanceSnapshot(
 /**
  * Busca histórico de saldos de uma conta.
  */
-export async function getAccountBalances(
-  accountId: string,
-  limit = 30,
-): Promise<AccountBalance[]> {
+export async function getAccountBalances(accountId: string, limit = 30): Promise<AccountBalance[]> {
   const { data, error } = await supabase
     .from("account_balances")
     .select("*")

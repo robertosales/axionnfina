@@ -360,7 +360,7 @@ export class PluggyAdapter implements OpenFinanceProvider {
     let balances_imported = 0;
     let transactions_imported = 0;
     let investments_imported = 0;
-    let duplicates_skipped = 0;
+    const duplicates_skipped = 0;
 
     try {
       // Sync accounts

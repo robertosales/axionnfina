@@ -8,13 +8,30 @@ import { AccountCard } from "@/components/finance/AccountCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { useAccounts, useCreateOpenFinanceConsent, useOpenFinanceInstitutions, useUpsertAccount } from "@/lib/finance-data";
+import {
+  useAccounts,
+  useCreateOpenFinanceConsent,
+  useOpenFinanceInstitutions,
+  useUpsertAccount,
+} from "@/lib/finance-data";
 import type { AccountType } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -70,10 +87,18 @@ function SettingsPage() {
       toast.error("Selecione uma instituição participante");
       return;
     }
-    createConsent.mutate({ institutionId, scopes: Object.entries(enabled).filter(([, value]) => value).map(([key]) => key) }, {
-      onSuccess: () => toast.success("Consentimento autorizado e conexão registrada"),
-      onError: (error) => toast.error(error.message),
-    });
+    createConsent.mutate(
+      {
+        institutionId,
+        scopes: Object.entries(enabled)
+          .filter(([, value]) => value)
+          .map(([key]) => key),
+      },
+      {
+        onSuccess: () => toast.success("Consentimento autorizado e conexão registrada"),
+        onError: (error) => toast.error(error.message),
+      },
+    );
   };
 
   const saveAccount = () => {
@@ -83,16 +108,24 @@ function SettingsPage() {
       return;
     }
     upsertAccount.mutate(
-      { institution: institution.trim(), name: name.trim(), type, balance: amount, branch, accountNumber, openFinance },
+      {
+        institution: institution.trim(),
+        name: name.trim(),
+        type,
+        balance: amount,
+        branch,
+        accountNumber,
+        openFinance,
+      },
       {
         onSuccess: () => {
           toast.success("Conta cadastrada com sucesso");
           setOpen(false);
           setInstitution("");
           setName("");
-           setBranch("");
-           setAccountNumber("");
-           setOpenFinance(false);
+          setBranch("");
+          setAccountNumber("");
+          setOpenFinance(false);
           setType("CHECKING");
           setBalance("0");
         },
@@ -112,14 +145,18 @@ function SettingsPage() {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-3">
-           <div className="flex items-center justify-between gap-3">
-             <h2 className="text-base font-semibold">Minhas contas</h2>
-             <Button size="sm" onClick={() => setOpen(true)}><Plus className="size-4" /> Nova conta</Button>
-           </div>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base font-semibold">Minhas contas</h2>
+            <Button size="sm" onClick={() => setOpen(true)}>
+              <Plus className="size-4" /> Nova conta
+            </Button>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
-             {isLoading && <p className="text-sm text-muted-foreground">Carregando contas…</p>}
-             {!isLoading && accounts.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma conta cadastrada.</p>}
-             {accounts.map((account) => (
+            {isLoading && <p className="text-sm text-muted-foreground">Carregando contas…</p>}
+            {!isLoading && accounts.length === 0 && (
+              <p className="text-sm text-muted-foreground">Nenhuma conta cadastrada.</p>
+            )}
+            {accounts.map((account) => (
               <AccountCard key={account.id} account={account} />
             ))}
           </div>
@@ -131,7 +168,8 @@ function SettingsPage() {
             <h2 className="text-sm font-semibold">Escopos do consentimento</h2>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Cada escopo é solicitado individualmente ao banco e pode ser revogado a qualquer momento.
+            Cada escopo é solicitado individualmente ao banco e pode ser revogado a qualquer
+            momento.
           </p>
 
           <ul className="mt-4 space-y-3">
@@ -157,15 +195,33 @@ function SettingsPage() {
               <h3 className="text-sm font-semibold">Conectar instituição</h3>
             </div>
             <Select value={institutionId} onValueChange={setInstitutionId}>
-              <SelectTrigger><SelectValue placeholder={institutionsQuery.isLoading ? "Carregando instituições…" : "Escolha seu banco"} /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={
+                    institutionsQuery.isLoading ? "Carregando instituições…" : "Escolha seu banco"
+                  }
+                />
+              </SelectTrigger>
               <SelectContent>
-                {(institutionsQuery.data ?? []).map((institution) => <SelectItem key={institution.id} value={institution.id}>{institution.name}</SelectItem>)}
+                {(institutionsQuery.data ?? []).map((institution) => (
+                  <SelectItem key={institution.id} value={institution.id}>
+                    {institution.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <Button className="w-full" onClick={connectOpenFinance} disabled={createConsent.isPending || institutionsQuery.isLoading}>
-              <CheckCircle2 className="size-4" /> {createConsent.isPending ? "Conectando…" : "Autorizar conexão"}
+            <Button
+              className="w-full"
+              onClick={connectOpenFinance}
+              disabled={createConsent.isPending || institutionsQuery.isLoading}
+            >
+              <CheckCircle2 className="size-4" />{" "}
+              {createConsent.isPending ? "Conectando…" : "Autorizar conexão"}
             </Button>
-            <p className="text-[11px] text-muted-foreground">Ambiente de teste: o consentimento é registrado com segurança para validar o fluxo completo.</p>
+            <p className="text-[11px] text-muted-foreground">
+              Ambiente de teste: o consentimento é registrado com segurança para validar o fluxo
+              completo.
+            </p>
           </div>
 
           <Separator className="my-5" />
@@ -180,19 +236,92 @@ function SettingsPage() {
         </Card>
       </div>
 
-       <Dialog open={open} onOpenChange={setOpen}>
-         <DialogContent className="rounded-2xl">
-           <DialogHeader><DialogTitle>Cadastrar nova conta</DialogTitle></DialogHeader>
-           <div className="space-y-4">
-             <div className="space-y-1.5"><Label htmlFor="institution">Instituição</Label><Input id="institution" value={institution} onChange={(event) => setInstitution(event.target.value)} placeholder="Ex.: Nubank" /></div>
-             <div className="space-y-1.5"><Label htmlFor="account-name">Nome da conta</Label><Input id="account-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Conta corrente" /></div>
-             <div className="space-y-1.5"><Label>Tipo</Label><Select value={type} onValueChange={(value) => setType(value as AccountType)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="CHECKING">Conta corrente</SelectItem><SelectItem value="SAVINGS">Poupança</SelectItem><SelectItem value="CREDIT_CARD">Cartão de crédito</SelectItem><SelectItem value="INVESTMENT">Investimentos</SelectItem></SelectContent></Select></div>
-             {type === "CHECKING" && <><div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label htmlFor="branch">Agência</Label><Input id="branch" value={branch} onChange={(event) => setBranch(event.target.value)} /></div><div className="space-y-1.5"><Label htmlFor="account-number">Número da conta</Label><Input id="account-number" value={accountNumber} onChange={(event) => setAccountNumber(event.target.value)} /></div></div><div className="flex items-center justify-between rounded-lg border border-border p-3"><Label htmlFor="open-finance">Conectar via Open Finance</Label><Switch id="open-finance" checked={openFinance} onCheckedChange={setOpenFinance} /></div></>}
-             <div className="space-y-1.5"><Label htmlFor="account-balance">Saldo atual</Label><Input id="account-balance" inputMode="decimal" value={balance} onChange={(event) => setBalance(event.target.value)} placeholder="0,00" /></div>
-           </div>
-           <DialogFooter><Button onClick={saveAccount} disabled={upsertAccount.isPending}>{upsertAccount.isPending ? "Salvando…" : "Salvar conta"}</Button></DialogFooter>
-         </DialogContent>
-       </Dialog>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Cadastrar nova conta</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="institution">Instituição</Label>
+              <Input
+                id="institution"
+                value={institution}
+                onChange={(event) => setInstitution(event.target.value)}
+                placeholder="Ex.: Nubank"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="account-name">Nome da conta</Label>
+              <Input
+                id="account-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Ex.: Conta corrente"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Tipo</Label>
+              <Select value={type} onValueChange={(value) => setType(value as AccountType)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CHECKING">Conta corrente</SelectItem>
+                  <SelectItem value="SAVINGS">Poupança</SelectItem>
+                  <SelectItem value="CREDIT_CARD">Cartão de crédito</SelectItem>
+                  <SelectItem value="INVESTMENT">Investimentos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {type === "CHECKING" && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="branch">Agência</Label>
+                    <Input
+                      id="branch"
+                      value={branch}
+                      onChange={(event) => setBranch(event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="account-number">Número da conta</Label>
+                    <Input
+                      id="account-number"
+                      value={accountNumber}
+                      onChange={(event) => setAccountNumber(event.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <Label htmlFor="open-finance">Conectar via Open Finance</Label>
+                  <Switch
+                    id="open-finance"
+                    checked={openFinance}
+                    onCheckedChange={setOpenFinance}
+                  />
+                </div>
+              </>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="account-balance">Saldo atual</Label>
+              <Input
+                id="account-balance"
+                inputMode="decimal"
+                value={balance}
+                onChange={(event) => setBalance(event.target.value)}
+                placeholder="0,00"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={saveAccount} disabled={upsertAccount.isPending}>
+              {upsertAccount.isPending ? "Salvando…" : "Salvar conta"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

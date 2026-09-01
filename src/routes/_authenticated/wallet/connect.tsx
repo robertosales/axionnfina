@@ -295,6 +295,7 @@ function ConnectPage() {
         <PluggyConnect
           connectToken={connectToken}
           selectedConnectorId={selectedConnector}
+          includeSandbox
           countries={["BR"]}
           products={["ACCOUNTS", "TRANSACTIONS"]}
           language="pt"

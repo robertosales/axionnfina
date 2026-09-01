@@ -502,7 +502,7 @@ export async function handleWebhook(provider: string, payload: unknown): Promise
     case "sync_completed":
     case "account_updated":
     case "transactions_updated":
-    case "investments_updated":
+    case "investments_updated": {
       // Trigger sync automático
       const { data: conn } = await supabase
         .from("account_connections")
@@ -514,6 +514,7 @@ export async function handleWebhook(provider: string, payload: unknown): Promise
         await syncConnection(conn.user_id, conn.id);
       }
       break;
+    }
   }
 }
 

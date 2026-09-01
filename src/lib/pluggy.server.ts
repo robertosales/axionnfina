@@ -212,7 +212,7 @@ export async function listPluggyConnectors(
   search: string | undefined,
 ): Promise<ListConnectorsResult> {
   try {
-    const params = new URLSearchParams({ countries: "BR" });
+    const params = new URLSearchParams({ countries: "BR", sandbox: "true" });
     if (search) params.set("name", search);
 
     const data = await pluggyRequest<{

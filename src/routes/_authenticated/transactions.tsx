@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { type ColumnDef } from "@tanstack/react-table";
-import { Download, Pencil, Plus, Trash2 } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
+import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { DataTable, CopyButton } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +31,7 @@ import type { Transaction } from "@/lib/mock-data";
 import {
   useAccounts,
   useCreateTransaction,
-  useDeleteTransaction,
+  useEntityLifecycle,
   useTransactions,
   useUpdateTransaction,
   useUpdateTransactionCategory,
@@ -37,10 +39,9 @@ import {
 import { formatBRL, formatShortDate, initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-
 declare module "@tanstack/react-table" {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  interface TableMeta<TData extends unknown> {
+  interface TableMeta<TData> {
     editingId?: string | null;
     setEditingId?: (id: string | null) => void;
   }
@@ -84,12 +85,13 @@ const kindColors: Record<Transaction["kind"], string> = {
 
 function TransactionsPage() {
   const [kind, setKind] = useState<(typeof filters)[number]["key"]>("all");
-  const { data: transactions = [], isLoading } = useTransactions();
+  const [showArchived, setShowArchived] = useState(false);
+  const { data: transactions = [], isLoading } = useTransactions(200, showArchived);
   const { data: accounts = [] } = useAccounts();
   const createTransaction = useCreateTransaction();
   const updateTransaction = useUpdateTransaction();
   const updateCategory = useUpdateTransactionCategory();
-  const deleteTransaction = useDeleteTransaction();
+  const lifecycle = useEntityLifecycle("transaction");
 
   const [open, setOpen] = useState(false);
   const [editTransactionId, setEditTransactionId] = useState<string | null>(null);
@@ -152,23 +154,23 @@ function TransactionsPage() {
       return;
     }
     const payload = {
-        description: form.description.trim(),
-        amount: form.type === "income" ? value : -value,
-        type: form.type,
-        category: form.category.trim() || "Outros",
-        merchant: form.merchant.trim() || form.description.trim(),
-        accountId: form.accountId || null,
-        occurredAt: form.occurredAt,
-      };
+      description: form.description.trim(),
+      amount: form.type === "income" ? value : -value,
+      type: form.type,
+      category: form.category.trim() || "Outros",
+      merchant: form.merchant.trim() || form.description.trim(),
+      accountId: form.accountId || null,
+      occurredAt: form.occurredAt,
+    };
     const options = {
-        onSuccess: () => {
-          toast.success(editTransactionId ? "Transação atualizada" : "Transação registrada");
-          setOpen(false);
-          setEditTransactionId(null);
-          setForm((prev) => ({ ...prev, description: "", amount: "", merchant: "" }));
-        },
-        onError: (error: Error) => toast.error(error.message),
-      };
+      onSuccess: () => {
+        toast.success(editTransactionId ? "Transação atualizada" : "Transação registrada");
+        setOpen(false);
+        setEditTransactionId(null);
+        setForm((prev) => ({ ...prev, description: "", amount: "", merchant: "" }));
+      },
+      onError: (error: Error) => toast.error(error.message),
+    };
 
     if (editTransactionId) {
       updateTransaction.mutate({ ...payload, id: editTransactionId }, options);
@@ -210,9 +212,7 @@ function TransactionsPage() {
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{row.original.description}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {row.original.accountName}
-              </p>
+              <p className="truncate text-xs text-muted-foreground">{row.original.accountName}</p>
             </div>
           </div>
         ),
@@ -222,9 +222,7 @@ function TransactionsPage() {
         accessorKey: "date",
         header: "Data",
         size: 100,
-        cell: ({ row }) => (
-          <span className="text-sm">{formatShortDate(row.original.date)}</span>
-        ),
+        cell: ({ row }) => <span className="text-sm">{formatShortDate(row.original.date)}</span>,
       },
       {
         id: "category",
@@ -293,7 +291,12 @@ function TransactionsPage() {
         header: "Valor",
         size: 140,
         cell: ({ row }) => (
-          <span className={cn("numeric text-right text-sm font-semibold", kindColors[row.original.kind])}>
+          <span
+            className={cn(
+              "numeric text-right text-sm font-semibold",
+              kindColors[row.original.kind],
+            )}
+          >
             {formatBRL(row.original.amount)}
           </span>
         ),
@@ -303,33 +306,41 @@ function TransactionsPage() {
         header: "",
         size: 60,
         cell: ({ row }) => (
-          <div className="flex justify-end gap-1">
-            <button
-              type="button"
-              onClick={() => openEditTransaction(row.original)}
-              className="focus-ring rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
-              title="Editar"
-            >
-              <Pencil className="size-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                deleteTransaction.mutate(row.original.id, {
+          <div className="flex justify-end">
+            <EntityActionsMenu
+              entityLabel="transação"
+              recordName={row.original.description}
+              archived={Boolean(row.original.archivedAt)}
+              onEdit={() => openEditTransaction(row.original)}
+              onArchive={() =>
+                lifecycle.archive.mutate(row.original.id, {
+                  onSuccess: () => toast.success("Transação arquivada"),
+                  onError: (error) => toast.error(error.message),
+                })
+              }
+              onRestore={() =>
+                lifecycle.restore.mutate(row.original.id, {
+                  onSuccess: () => toast.success("Transação restaurada"),
+                  onError: (error) => toast.error(error.message),
+                })
+              }
+              onDelete={() =>
+                lifecycle.remove.mutate(row.original.id, {
                   onSuccess: () => toast.success("Transação excluída"),
                   onError: (error) => toast.error(error.message),
-                });
-              }}
-              className="focus-ring rounded p-1 text-muted-foreground transition-colors hover:text-danger"
-              title="Excluir"
-            >
-              <Trash2 className="size-3.5" />
-            </button>
+                })
+              }
+              deleteDisabledReason={
+                row.original.recordOrigin !== "manual"
+                  ? "Transações importadas devem ser arquivadas para não reaparecerem na sincronização."
+                  : undefined
+              }
+            />
           </div>
         ),
       },
     ],
-    [updateCategory, deleteTransaction, openEditTransaction],
+    [updateCategory, lifecycle, openEditTransaction],
   );
 
   /* Sub-componente expandido */
@@ -367,11 +378,20 @@ function TransactionsPage() {
             <span className="numeric font-medium text-foreground">{formatBRL(total)}</span>
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportCsv} disabled={filteredTransactions.length === 0}>
+        <div className="flex flex-wrap gap-2">
+          <LifecycleFilter
+            showArchived={showArchived}
+            onToggle={() => setShowArchived((value) => !value)}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportCsv}
+            disabled={filteredTransactions.length === 0}
+          >
             <Download className="size-4" /> Exportar
           </Button>
-          <Button size="sm" onClick={openNewTransaction}>
+          <Button size="sm" onClick={openNewTransaction} disabled={showArchived}>
             <Plus className="size-4" /> Nova transação
           </Button>
         </div>
@@ -499,7 +519,10 @@ function TransactionsPage() {
             )}
           </div>
           <DialogFooter>
-            <Button onClick={submit} disabled={createTransaction.isPending || updateTransaction.isPending}>
+            <Button
+              onClick={submit}
+              disabled={createTransaction.isPending || updateTransaction.isPending}
+            >
               {createTransaction.isPending || updateTransaction.isPending
                 ? "Salvando…"
                 : editTransactionId

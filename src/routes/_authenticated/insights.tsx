@@ -1,11 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis } from "recharts";
+import { useState } from "react";
+import { toast } from "sonner";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip as RTooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { ChartCard } from "@/components/finance/ChartCard";
+import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
+import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { Card } from "@/components/ui/card";
 import { netWorthSeries } from "@/lib/mock-data";
-import { useInsights } from "@/lib/finance-data";
+import { useEntityLifecycle, useInsights } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -38,16 +50,23 @@ const tone = {
 } as const;
 
 function InsightsPage() {
-  const { data: agentInsights = [] } = useInsights();
+  const [showArchived, setShowArchived] = useState(false);
+  const { data: agentInsights = [] } = useInsights(showArchived);
+  const lifecycle = useEntityLifecycle("insight");
 
   return (
-
     <AppShell>
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Insights</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Descobertas geradas pelo agente a partir dos seus dados sincronizados
-        </p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Insights</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Descobertas geradas pelo agente a partir dos seus dados sincronizados
+          </p>
+        </div>
+        <LifecycleFilter
+          showArchived={showArchived}
+          onToggle={() => setShowArchived((value) => !value)}
+        />
       </header>
 
       <ChartCard title="Evolução do patrimônio" description="Últimos 6 meses">
@@ -80,7 +99,7 @@ function InsightsPage() {
               />
               <Area
                 type="monotone"
-                  isAnimationActive={false}
+                isAnimationActive={false}
                 dataKey="value"
                 stroke="var(--color-primary)"
                 strokeWidth={2}
@@ -95,8 +114,30 @@ function InsightsPage() {
         {agentInsights.map((insight) => (
           <Card
             key={insight.id}
-            className={cn("rounded-xl border p-5 shadow-elevation-1", tone[insight.severity])}
+            className={cn(
+              "relative rounded-xl border p-5 pr-12 shadow-elevation-1",
+              tone[insight.severity],
+            )}
           >
+            <div className="absolute right-3 top-3">
+              <EntityActionsMenu
+                entityLabel="insight"
+                recordName={insight.title}
+                archived={Boolean(insight.archivedAt)}
+                onArchive={() =>
+                  lifecycle.archive.mutate(insight.id, {
+                    onSuccess: () => toast.success("Insight arquivado"),
+                    onError: (error) => toast.error(error.message),
+                  })
+                }
+                onRestore={() =>
+                  lifecycle.restore.mutate(insight.id, {
+                    onSuccess: () => toast.success("Insight restaurado"),
+                    onError: (error) => toast.error(error.message),
+                  })
+                }
+              />
+            </div>
             <h2 className="text-sm font-semibold">{insight.title}</h2>
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{insight.body}</p>
           </Card>

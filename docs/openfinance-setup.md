@@ -25,3 +25,13 @@ da cópia bruta em `external_transactions` e adiciona o índice usado para local
 3. Todas as contas são persistidas e cada conta é paginada pelo endpoint `/v2/transactions`.
 4. Cada movimentação é armazenada em `external_transactions` e normalizada em `transactions`.
 5. Webhooks atualizam, inserem ou removem movimentações; o usuário também pode sincronizar ou revogar manualmente.
+
+## Teste em conta trial
+
+A tela inclui o conector sandbox `Pluggy Bank`. Use as credenciais oficiais de teste:
+
+- usuário: `user-ok`
+- senha: `password-ok`
+- MFA, quando solicitado: `123456`
+
+Contas Pluggy em trial não podem criar Items de instituições reais.

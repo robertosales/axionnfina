@@ -1,4 +1,5 @@
 import type { Goal } from "@/lib/mock-data";
+import type { ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { daysUntil, formatBRL, formatLongDate } from "@/lib/format";
 
@@ -6,7 +7,7 @@ import { daysUntil, formatBRL, formatLongDate } from "@/lib/format";
  * Anel de progresso SVG + projeção simplificada (P10/P50/P90).
  * A projeção real virá do RPC `get_cashflow_projection` em fase posterior.
  */
-export function GoalTracker({ goal }: { goal: Goal }) {
+export function GoalTracker({ goal, actions }: { goal: Goal; actions?: ReactNode }) {
   const ratio = Math.min(goal.current / goal.target, 1);
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
@@ -15,10 +16,18 @@ export function GoalTracker({ goal }: { goal: Goal }) {
   const requiredMonthly = (goal.target - goal.current) / monthsLeft;
 
   return (
-    <Card className="flex flex-row items-center gap-5 rounded-xl border-border/60 p-5 shadow-elevation-1">
+    <Card className="relative flex flex-row items-center gap-5 rounded-xl border-border/60 p-5 pr-12 shadow-elevation-1">
+      {actions && <div className="absolute right-3 top-3">{actions}</div>}
       <svg viewBox="0 0 100 100" className="size-24 shrink-0 -rotate-90" role="img">
         <title>{`${Math.round(ratio * 100)}% concluído`}</title>
-        <circle cx="50" cy="50" r={radius} fill="none" stroke="var(--color-muted)" strokeWidth="8" />
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          fill="none"
+          stroke="var(--color-muted)"
+          strokeWidth="8"
+        />
         <circle
           cx="50"
           cy="50"

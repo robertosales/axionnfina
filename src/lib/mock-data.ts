@@ -29,6 +29,8 @@ export type Transaction = {
   accountName: string;
   accountId?: string | null;
   pending?: boolean;
+  archivedAt?: string | null;
+  recordOrigin?: "manual" | "open_finance" | "import" | "system";
 };
 
 export type BudgetItem = {
@@ -37,6 +39,8 @@ export type BudgetItem = {
   planned: number;
   spent: number;
   rollover?: number;
+  archivedAt?: string | null;
+  recordOrigin?: "manual" | "open_finance" | "import" | "system";
 };
 
 export type Goal = {
@@ -46,6 +50,8 @@ export type Goal = {
   current: number;
   dueDate: string;
   monthlySuggestion: number;
+  archivedAt?: string | null;
+  recordOrigin?: "manual" | "open_finance" | "import" | "system";
 };
 
 export type UpcomingBill = {
@@ -54,6 +60,8 @@ export type UpcomingBill = {
   amount: number;
   dueDate: string;
   status: "SCHEDULED" | "PENDING" | "OVERDUE";
+  archivedAt?: string | null;
+  recordOrigin?: "manual" | "open_finance" | "import" | "system";
 };
 
 export type AgentInsight = {
@@ -61,6 +69,8 @@ export type AgentInsight = {
   title: string;
   body: string;
   severity: "info" | "success" | "warning" | "danger";
+  archivedAt?: string | null;
+  recordOrigin?: "manual" | "open_finance" | "import" | "system";
 };
 
 export const accounts: Account[] = [

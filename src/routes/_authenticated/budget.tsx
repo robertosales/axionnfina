@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { BudgetProgress } from "@/components/finance/BudgetProgress";
+import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
+import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -16,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useBudgets, useUpsertBudget } from "@/lib/finance-data";
+import { useBudgets, useEntityLifecycle, useUpsertBudget } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/budget")({
@@ -41,11 +43,14 @@ export const Route = createFileRoute("/_authenticated/budget")({
 });
 
 function BudgetPage() {
-  const { items: budgetItems, isLoading } = useBudgets();
+  const [showArchived, setShowArchived] = useState(false);
+  const { items: budgetItems, isLoading } = useBudgets(showArchived);
   const plannedTotal = budgetItems.reduce((s, i) => s + i.planned, 0);
   const spent = budgetItems.reduce((s, i) => s + i.spent, 0);
   const upsert = useUpsertBudget();
+  const lifecycle = useEntityLifecycle("budget");
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [category, setCategory] = useState("");
   const [planned, setPlanned] = useState("");
 
@@ -56,11 +61,12 @@ function BudgetPage() {
       return;
     }
     upsert.mutate(
-      { category: category.trim(), planned: value },
+      { ...(editingId ? { id: editingId } : {}), category: category.trim(), planned: value },
       {
         onSuccess: () => {
-          toast.success("Categoria salva");
+          toast.success(editingId ? "Orçamento atualizado" : "Categoria salva");
           setOpen(false);
+          setEditingId(null);
           setCategory("");
           setPlanned("");
         },
@@ -78,9 +84,25 @@ function BudgetPage() {
             {formatBRL(spent)} gastos de {formatBRL(plannedTotal)} planejados neste mês
           </p>
         </div>
-        <Button size="sm" onClick={() => setOpen(true)}>
-          <Plus className="size-4" /> Nova categoria
-        </Button>
+        <div className="flex items-center gap-2">
+          <LifecycleFilter
+            showArchived={showArchived}
+            onToggle={() => setShowArchived((value) => !value)}
+          />
+          {!showArchived && (
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingId(null);
+                setCategory("");
+                setPlanned("");
+                setOpen(true);
+              }}
+            >
+              <Plus className="size-4" /> Nova categoria
+            </Button>
+          )}
+        </div>
       </header>
 
       {budgetItems.length === 0 && (
@@ -91,8 +113,47 @@ function BudgetPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {budgetItems.map((item) => (
-          <Card key={item.id} className="rounded-xl border-border/60 p-5 shadow-elevation-1">
-            <BudgetProgress item={item} />
+          <Card
+            key={item.id}
+            className="flex items-start gap-2 rounded-xl border-border/60 p-5 shadow-elevation-1"
+          >
+            <div className="min-w-0 flex-1">
+              <BudgetProgress item={item} />
+            </div>
+            <EntityActionsMenu
+              entityLabel="orçamento"
+              recordName={item.category}
+              archived={Boolean(item.archivedAt)}
+              onEdit={() => {
+                setEditingId(item.id);
+                setCategory(item.category);
+                setPlanned(String(item.planned));
+                setOpen(true);
+              }}
+              onArchive={() =>
+                lifecycle.archive.mutate(item.id, {
+                  onSuccess: () => toast.success("Orçamento arquivado"),
+                  onError: (error) => toast.error(error.message),
+                })
+              }
+              onRestore={() =>
+                lifecycle.restore.mutate(item.id, {
+                  onSuccess: () => toast.success("Orçamento restaurado"),
+                  onError: (error) => toast.error(error.message),
+                })
+              }
+              onDelete={() =>
+                lifecycle.remove.mutate(item.id, {
+                  onSuccess: () => toast.success("Orçamento excluído"),
+                  onError: (error) => toast.error(error.message),
+                })
+              }
+              deleteDisabledReason={
+                item.recordOrigin !== "manual"
+                  ? "Registros sincronizados devem ser arquivados."
+                  : undefined
+              }
+            />
           </Card>
         ))}
       </div>
@@ -100,7 +161,9 @@ function BudgetPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Nova categoria de orçamento</DialogTitle>
+            <DialogTitle>
+              {editingId ? "Editar orçamento" : "Nova categoria de orçamento"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">

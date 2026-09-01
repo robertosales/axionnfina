@@ -44,22 +44,15 @@ describe("formatPercent", () => {
 
 describe("daysUntil", () => {
   it("retorna dias até data futura", () => {
-    const future = new Date();
-    future.setDate(future.getDate() + 10);
-    const result = daysUntil(future.toISOString().slice(0, 10));
-    expect(result).toBe(10);
+    expect(daysUntil("2026-09-10", new Date(2026, 7, 31, 23, 30))).toBe(10);
   });
 
   it("retorna negativo para data passada", () => {
-    const past = new Date();
-    past.setDate(past.getDate() - 5);
-    const result = daysUntil(past.toISOString().slice(0, 10));
-    expect(result).toBe(-5);
+    expect(daysUntil("2026-08-26", new Date(2026, 7, 31, 0, 30))).toBe(-5);
   });
 
   it("retorna zero para hoje", () => {
-    const today = new Date().toISOString().slice(0, 10);
-    expect(daysUntil(today)).toBe(0);
+    expect(daysUntil("2026-08-31", new Date(2026, 7, 31, 23, 59))).toBe(0);
   });
 });
 

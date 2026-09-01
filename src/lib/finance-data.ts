@@ -1,7 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
-import type { Account, AccountType, AgentInsight, BudgetItem, Goal, Transaction, UpcomingBill } from "@/lib/mock-data";
+import type {
+  Account,
+  AccountType,
+  AgentInsight,
+  BudgetItem,
+  Goal,
+  Transaction,
+  UpcomingBill,
+} from "@/lib/mock-data";
 import {
   accounts as demoAccounts,
   agentInsights as demoInsights,
@@ -38,7 +46,20 @@ const severityToUi = {
   critical: "danger",
 } as const;
 
-const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"] as const;
+const MONTH_LABELS = [
+  "Jan",
+  "Fev",
+  "Mar",
+  "Abr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Set",
+  "Out",
+  "Nov",
+  "Dez",
+] as const;
 
 export function monthStart(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
@@ -57,7 +78,9 @@ export function useAccounts() {
     queryFn: async (): Promise<Account[]> => {
       const { data, error } = await supabase
         .from("accounts")
-        .select("id, name, institution, type, balance, open_finance, last_sync_at, branch, account_number")
+        .select(
+          "id, name, institution, type, balance, open_finance, last_sync_at, branch, account_number",
+        )
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []).map((row) => ({
@@ -165,15 +188,21 @@ export function useCreateOpenFinanceConsent() {
 }
 
 /** Transações mais recentes do usuário logado. */
-export function useTransactions(limit = 200) {
+export function useTransactions(limit = 200, showArchived = false) {
   return useQuery({
-    queryKey: ["transactions", limit],
+    queryKey: ["transactions", limit, showArchived],
     queryFn: async (): Promise<Transaction[]> => {
-      const { data, error } = await supabase
+      let request = supabase
         .from("transactions")
-        .select("id, account_id, description, merchant, category, type, amount, occurred_at, accounts(name)")
+        .select(
+          "id, account_id, description, merchant, category, type, amount, occurred_at, archived_at, record_origin, accounts(name)",
+        )
         .order("occurred_at", { ascending: false })
         .limit(limit);
+      request = showArchived
+        ? request.not("archived_at", "is", null)
+        : request.is("archived_at", null);
+      const { data, error } = await request;
       if (error) throw error;
       return (data ?? []).map((row) => ({
         id: row.id,
@@ -185,23 +214,29 @@ export function useTransactions(limit = 200) {
         date: row.occurred_at,
         accountName: row.accounts?.name ?? "—",
         accountId: row.account_id,
+        archivedAt: row.archived_at,
+        recordOrigin: row.record_origin as NonNullable<Transaction["recordOrigin"]>,
       }));
     },
   });
 }
 
 /** Orçamento do mês corrente, com o gasto calculado a partir das transações. */
-export function useBudgets() {
+export function useBudgets(showArchived = false) {
   const transactions = useTransactions();
 
   const query = useQuery({
-    queryKey: ["budgets", monthStart()],
+    queryKey: ["budgets", monthStart(), showArchived],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let request = supabase
         .from("budgets")
-        .select("id, category, planned, month")
+        .select("id, category, planned, month, archived_at, record_origin")
         .eq("month", monthStart())
         .order("category", { ascending: true });
+      request = showArchived
+        ? request.not("archived_at", "is", null)
+        : request.is("archived_at", null);
+      const { data, error } = await request;
       if (error) throw error;
       return data ?? [];
     },
@@ -212,21 +247,32 @@ export function useBudgets() {
     const spent = (transactions.data ?? [])
       .filter((tx) => tx.category === row.category && tx.date.startsWith(month) && tx.amount < 0)
       .reduce((total, tx) => total + Math.abs(tx.amount), 0);
-    return { id: row.id, category: row.category, planned: Number(row.planned), spent };
+    return {
+      id: row.id,
+      category: row.category,
+      planned: Number(row.planned),
+      spent,
+      archivedAt: row.archived_at,
+      recordOrigin: row.record_origin as NonNullable<BudgetItem["recordOrigin"]>,
+    };
   });
 
   return { ...query, items };
 }
 
 /** Metas financeiras com sugestão mensal derivada do prazo. */
-export function useGoals() {
+export function useGoals(showArchived = false) {
   return useQuery({
-    queryKey: ["goals"],
+    queryKey: ["goals", showArchived],
     queryFn: async (): Promise<Goal[]> => {
-      const { data, error } = await supabase
+      let request = supabase
         .from("goals")
-        .select("id, title, target_amount, current_amount, deadline")
+        .select("id, title, target_amount, current_amount, deadline, archived_at, record_origin")
         .order("created_at", { ascending: true });
+      request = showArchived
+        ? request.not("archived_at", "is", null)
+        : request.is("archived_at", null);
+      const { data, error } = await request;
       if (error) throw error;
       return (data ?? []).map((row) => {
         const target = Number(row.target_amount);
@@ -245,6 +291,8 @@ export function useGoals() {
           current,
           dueDate: deadline,
           monthlySuggestion: Math.max(0, Math.round((target - current) / months)),
+          archivedAt: row.archived_at,
+          recordOrigin: row.record_origin as NonNullable<Goal["recordOrigin"]>,
         };
       });
     },
@@ -252,20 +300,26 @@ export function useGoals() {
 }
 
 /** Insights gerados pelo agente. */
-export function useInsights() {
+export function useInsights(showArchived = false) {
   return useQuery({
-    queryKey: ["insights"],
+    queryKey: ["insights", showArchived],
     queryFn: async (): Promise<AgentInsight[]> => {
-      const { data, error } = await supabase
+      let request = supabase
         .from("agent_insights")
-        .select("id, title, description, severity")
+        .select("id, title, description, severity, archived_at, record_origin")
         .order("created_at", { ascending: false });
+      request = showArchived
+        ? request.not("archived_at", "is", null)
+        : request.is("archived_at", null);
+      const { data, error } = await request;
       if (error) throw error;
       return (data ?? []).map((row) => ({
         id: row.id,
         title: row.title,
         body: row.description,
         severity: severityToUi[row.severity as DbSeverity],
+        archivedAt: row.archived_at,
+        recordOrigin: row.record_origin as NonNullable<AgentInsight["recordOrigin"]>,
       }));
     },
   });
@@ -285,16 +339,24 @@ export type Position = {
   currentPrice: number;
   marketValue: number;
   profit: number;
+  archivedAt: string | null;
+  recordOrigin: "manual" | "open_finance" | "import" | "system";
 };
 
-export function useInvestments() {
+export function useInvestments(showArchived = false) {
   const query = useQuery({
-    queryKey: ["investments"],
+    queryKey: ["investments", showArchived],
     queryFn: async (): Promise<Position[]> => {
-      const { data, error } = await supabase
+      let request = supabase
         .from("investment_positions")
-        .select("id, ticker, name, asset_class, quantity, average_price, current_price")
+        .select(
+          "id, ticker, name, asset_class, quantity, average_price, current_price, archived_at, record_origin",
+        )
         .order("ticker", { ascending: true });
+      request = showArchived
+        ? request.not("archived_at", "is", null)
+        : request.is("archived_at", null);
+      const { data, error } = await request;
       if (error) throw error;
       return (data ?? []).map((row) => {
         const quantity = Number(row.quantity);
@@ -310,6 +372,8 @@ export function useInvestments() {
           currentPrice,
           marketValue: quantity * currentPrice,
           profit: quantity * (currentPrice - averagePrice),
+          archivedAt: row.archived_at,
+          recordOrigin: row.record_origin as Position["recordOrigin"],
         };
       });
     },
@@ -319,7 +383,8 @@ export function useInvestments() {
   const total = positions.reduce((sum, p) => sum + p.marketValue, 0);
 
   const byClass = new Map<AssetClass, number>();
-  for (const p of positions) byClass.set(p.assetClass, (byClass.get(p.assetClass) ?? 0) + p.marketValue);
+  for (const p of positions)
+    byClass.set(p.assetClass, (byClass.get(p.assetClass) ?? 0) + p.marketValue);
 
   const allocation = [...byClass.entries()].map(([assetClass, value]) => ({
     name: ASSET_CLASS_LABEL[assetClass],
@@ -343,14 +408,20 @@ const statusToUi = {
 
 export type Payable = UpcomingBill & { category: string; scheduled: boolean; dbStatus: BillStatus };
 
-export function usePayables() {
+export function usePayables(showArchived = false) {
   return useQuery({
-    queryKey: ["payables"],
+    queryKey: ["payables", showArchived],
     queryFn: async (): Promise<Payable[]> => {
-      const { data, error } = await supabase
+      let request = supabase
         .from("payables")
-        .select("id, description, amount, due_date, status, category, scheduled_for")
+        .select(
+          "id, description, amount, due_date, status, category, scheduled_for, archived_at, record_origin",
+        )
         .order("due_date", { ascending: true });
+      request = showArchived
+        ? request.not("archived_at", "is", null)
+        : request.is("archived_at", null);
+      const { data, error } = await request;
       if (error) throw error;
       const today = new Date().toISOString().slice(0, 10);
       return (data ?? []).map((row) => {
@@ -365,20 +436,26 @@ export function usePayables() {
           category: row.category,
           scheduled: Boolean(row.scheduled_for),
           dbStatus: status,
+          archivedAt: row.archived_at,
+          recordOrigin: row.record_origin as NonNullable<Payable["recordOrigin"]>,
         };
       });
     },
   });
 }
 
-export function useReceivables() {
+export function useReceivables(showArchived = false) {
   return useQuery({
-    queryKey: ["receivables"],
+    queryKey: ["receivables", showArchived],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let request = supabase
         .from("receivables")
-        .select("id, description, amount, due_date, status, payer")
+        .select("id, description, amount, due_date, status, payer, archived_at, record_origin")
         .order("due_date", { ascending: true });
+      request = showArchived
+        ? request.not("archived_at", "is", null)
+        : request.is("archived_at", null);
+      const { data, error } = await request;
       if (error) throw error;
       return (data ?? []).map((row) => ({
         id: row.id,
@@ -387,6 +464,8 @@ export function useReceivables() {
         dueDate: row.due_date,
         status: row.status as BillStatus,
         payer: row.payer,
+        archivedAt: row.archived_at,
+        recordOrigin: row.record_origin,
       }));
     },
   });
@@ -400,12 +479,20 @@ export function useReceivables() {
 export function useCashflow(months = 6) {
   const transactions = useTransactions(1000);
 
-  const buckets = new Map<string, { month: string; receitas: number; despesas: number; saldo: number }>();
+  const buckets = new Map<
+    string,
+    { month: string; receitas: number; despesas: number; saldo: number }
+  >();
   const now = new Date();
   for (let i = months - 1; i >= 0; i -= 1) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    buckets.set(key, { month: MONTH_LABELS[d.getMonth()] ?? key, receitas: 0, despesas: 0, saldo: 0 });
+    buckets.set(key, {
+      month: MONTH_LABELS[d.getMonth()] ?? key,
+      receitas: 0,
+      despesas: 0,
+      saldo: 0,
+    });
   }
 
   for (const tx of transactions.data ?? []) {
@@ -654,23 +741,337 @@ export function useSettlePayable() {
   });
 }
 
+export type LifecycleEntity =
+  | "account"
+  | "transaction"
+  | "budget"
+  | "goal"
+  | "investment"
+  | "payable"
+  | "receivable"
+  | "tax_event"
+  | "insight";
+
+const lifecycleQueryKey: Record<LifecycleEntity, string> = {
+  account: "accounts",
+  transaction: "transactions",
+  budget: "budgets",
+  goal: "goals",
+  investment: "investments",
+  payable: "payables",
+  receivable: "receivables",
+  tax_event: "tax-events",
+  insight: "insights",
+};
+
+export type TaxEvent = {
+  id: string;
+  kind: string;
+  assetClass: AssetClass;
+  ticker: string;
+  grossAmount: number;
+  profit: number;
+  withheld: number;
+  occurredAt: string;
+  archivedAt: string | null;
+  recordOrigin: "manual" | "open_finance" | "import" | "system";
+};
+
+export function useTaxEvents(showArchived = false) {
+  return useQuery({
+    queryKey: ["tax-events", showArchived],
+    queryFn: async (): Promise<TaxEvent[]> => {
+      let request = supabase
+        .from("tax_events")
+        .select(
+          "id, kind, asset_class, ticker, gross_amount, profit, withheld, occurred_at, archived_at, record_origin",
+        )
+        .order("occurred_at", { ascending: false });
+      request = showArchived
+        ? request.not("archived_at", "is", null)
+        : request.is("archived_at", null);
+      const { data, error } = await request;
+      if (error) throw error;
+      return (data ?? []).map((event) => ({
+        id: event.id,
+        kind: event.kind,
+        assetClass: event.asset_class,
+        ticker: event.ticker,
+        grossAmount: Number(event.gross_amount),
+        profit: Number(event.profit),
+        withheld: Number(event.withheld),
+        occurredAt: event.occurred_at,
+        archivedAt: event.archived_at,
+        recordOrigin: event.record_origin as TaxEvent["recordOrigin"],
+      }));
+    },
+  });
+}
+
+async function setArchived(entity: LifecycleEntity, id: string, archived: boolean) {
+  const archivedAt = archived ? new Date().toISOString() : null;
+  const run = async () => {
+    switch (entity) {
+      case "account":
+        return supabase
+          .from("accounts")
+          .update({ archived_at: archivedAt, is_archived: archived })
+          .eq("id", id);
+      case "transaction":
+        return supabase.from("transactions").update({ archived_at: archivedAt }).eq("id", id);
+      case "budget":
+        return supabase.from("budgets").update({ archived_at: archivedAt }).eq("id", id);
+      case "goal":
+        return supabase.from("goals").update({ archived_at: archivedAt }).eq("id", id);
+      case "investment":
+        return supabase
+          .from("investment_positions")
+          .update({ archived_at: archivedAt })
+          .eq("id", id);
+      case "payable":
+        return supabase.from("payables").update({ archived_at: archivedAt }).eq("id", id);
+      case "receivable":
+        return supabase.from("receivables").update({ archived_at: archivedAt }).eq("id", id);
+      case "tax_event":
+        return supabase.from("tax_events").update({ archived_at: archivedAt }).eq("id", id);
+      case "insight":
+        return supabase.from("agent_insights").update({ archived_at: archivedAt }).eq("id", id);
+    }
+  };
+  const { error } = await run();
+  if (error) throw error;
+}
+
+async function deleteEntity(entity: LifecycleEntity, id: string) {
+  const run = async () => {
+    switch (entity) {
+      case "account":
+        return supabase.from("accounts").delete().eq("id", id);
+      case "transaction":
+        return supabase.from("transactions").delete().eq("id", id);
+      case "budget":
+        return supabase.from("budgets").delete().eq("id", id);
+      case "goal":
+        return supabase.from("goals").delete().eq("id", id);
+      case "investment":
+        return supabase.from("investment_positions").delete().eq("id", id);
+      case "payable":
+        return supabase.from("payables").delete().eq("id", id);
+      case "receivable":
+        return supabase.from("receivables").delete().eq("id", id);
+      case "tax_event":
+        return supabase.from("tax_events").delete().eq("id", id);
+      case "insight":
+        return supabase.from("agent_insights").delete().eq("id", id);
+    }
+  };
+  const { error } = await run();
+  if (error) throw error;
+}
+
+/** Mutations uniformes de arquivamento, restauração e exclusão auditável. */
+export function useEntityLifecycle(entity: LifecycleEntity) {
+  const queryClient = useQueryClient();
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: [lifecycleQueryKey[entity]] });
+    if (entity === "account") void queryClient.invalidateQueries({ queryKey: ["wallet-summary"] });
+    if (entity === "transaction") void queryClient.invalidateQueries({ queryKey: ["budgets"] });
+    if (entity === "tax_event") void queryClient.invalidateQueries({ queryKey: ["taxes"] });
+  };
+
+  const archive = useMutation({
+    mutationFn: (id: string) => setArchived(entity, id, true),
+    onSuccess: invalidate,
+  });
+  const restore = useMutation({
+    mutationFn: (id: string) => setArchived(entity, id, false),
+    onSuccess: invalidate,
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) => deleteEntity(entity, id),
+    onSuccess: invalidate,
+  });
+
+  return { archive, restore, remove };
+}
+
+export function useUpsertInvestmentPosition() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id?: string;
+      ticker: string;
+      name: string;
+      assetClass: AssetClass;
+      quantity: number;
+      averagePrice: number;
+      currentPrice: number;
+    }) => {
+      const userId = await requireUserId();
+      const payload = {
+        user_id: userId,
+        ticker: input.ticker.toUpperCase(),
+        name: input.name,
+        asset_class: input.assetClass,
+        quantity: input.quantity,
+        average_price: input.averagePrice,
+        current_price: input.currentPrice,
+        record_origin: "manual",
+      } as const;
+      const { error } = input.id
+        ? await supabase.from("investment_positions").update(payload).eq("id", input.id)
+        : await supabase.from("investment_positions").insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["investments"] }),
+  });
+}
+
+export function useUpsertReceivable() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id?: string;
+      description: string;
+      amount: number;
+      dueDate: string;
+      payer: string;
+    }) => {
+      const userId = await requireUserId();
+      const payload = {
+        user_id: userId,
+        description: input.description,
+        amount: input.amount,
+        due_date: input.dueDate,
+        payer: input.payer,
+        record_origin: "manual",
+      } as const;
+      const { error } = input.id
+        ? await supabase.from("receivables").update(payload).eq("id", input.id)
+        : await supabase.from("receivables").insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["receivables"] }),
+  });
+}
+
+export function useUpsertTaxEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id?: string;
+      kind: string;
+      assetClass: AssetClass;
+      ticker: string;
+      grossAmount: number;
+      profit: number;
+      withheld: number;
+      occurredAt: string;
+    }) => {
+      const userId = await requireUserId();
+      const payload = {
+        user_id: userId,
+        kind: input.kind,
+        asset_class: input.assetClass,
+        ticker: input.ticker.toUpperCase(),
+        gross_amount: input.grossAmount,
+        profit: input.profit,
+        withheld: input.withheld,
+        occurred_at: input.occurredAt,
+        record_origin: "manual",
+      } as const;
+      const { error } = input.id
+        ? await supabase.from("tax_events").update(payload).eq("id", input.id)
+        : await supabase.from("tax_events").insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["tax-events"] });
+      void queryClient.invalidateQueries({ queryKey: ["taxes"] });
+    },
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /* Dados de exemplo                                                    */
 /* ------------------------------------------------------------------ */
 
 const demoPositions = [
-  { ticker: "PETR4", name: "Petrobras PN", asset_class: "stock", quantity: 400, average_price: 34.2, current_price: 38.9 },
-  { ticker: "ITSA4", name: "Itaúsa PN", asset_class: "stock", quantity: 900, average_price: 9.4, current_price: 10.8 },
-  { ticker: "HGLG11", name: "CSHG Logística", asset_class: "fii", quantity: 120, average_price: 158.0, current_price: 171.2 },
-  { ticker: "MXRF11", name: "Maxi Renda", asset_class: "fii", quantity: 1500, average_price: 10.1, current_price: 10.6 },
-  { ticker: "TESOURO-IPCA-2029", name: "Tesouro IPCA+ 2029", asset_class: "fixed_income", quantity: 1, average_price: 92400, current_price: 98400 },
-  { ticker: "IVVB11", name: "iShares S&P 500", asset_class: "etf", quantity: 190, average_price: 142.0, current_price: 158.9 },
+  {
+    ticker: "PETR4",
+    name: "Petrobras PN",
+    asset_class: "stock",
+    quantity: 400,
+    average_price: 34.2,
+    current_price: 38.9,
+  },
+  {
+    ticker: "ITSA4",
+    name: "Itaúsa PN",
+    asset_class: "stock",
+    quantity: 900,
+    average_price: 9.4,
+    current_price: 10.8,
+  },
+  {
+    ticker: "HGLG11",
+    name: "CSHG Logística",
+    asset_class: "fii",
+    quantity: 120,
+    average_price: 158.0,
+    current_price: 171.2,
+  },
+  {
+    ticker: "MXRF11",
+    name: "Maxi Renda",
+    asset_class: "fii",
+    quantity: 1500,
+    average_price: 10.1,
+    current_price: 10.6,
+  },
+  {
+    ticker: "TESOURO-IPCA-2029",
+    name: "Tesouro IPCA+ 2029",
+    asset_class: "fixed_income",
+    quantity: 1,
+    average_price: 92400,
+    current_price: 98400,
+  },
+  {
+    ticker: "IVVB11",
+    name: "iShares S&P 500",
+    asset_class: "etf",
+    quantity: 190,
+    average_price: 142.0,
+    current_price: 158.9,
+  },
 ] as const;
 
 const demoTaxEvents = [
-  { kind: "swing", asset_class: "stock", ticker: "PETR4", gross_amount: 12400, profit: 1240, withheld: 6.2 },
-  { kind: "dividend", asset_class: "stock", ticker: "ITSA4", gross_amount: 860, profit: 0, withheld: 0 },
-  { kind: "swing", asset_class: "fii", ticker: "MXRF11", gross_amount: 3200, profit: 240, withheld: 0 },
+  {
+    kind: "swing",
+    asset_class: "stock",
+    ticker: "PETR4",
+    gross_amount: 12400,
+    profit: 1240,
+    withheld: 6.2,
+  },
+  {
+    kind: "dividend",
+    asset_class: "stock",
+    ticker: "ITSA4",
+    gross_amount: 860,
+    profit: 0,
+    withheld: 0,
+  },
+  {
+    kind: "swing",
+    asset_class: "fii",
+    ticker: "MXRF11",
+    gross_amount: 3200,
+    profit: 240,
+    withheld: 0,
+  },
 ] as const;
 
 /**
@@ -717,11 +1118,11 @@ export function useSeedDemoData() {
             description: tx.description,
             merchant: tx.merchant,
             category: tx.category,
-            type: ((tx.kind === "income"
+            type: (tx.kind === "income"
               ? "income"
               : tx.kind === "transfer"
                 ? "transfer"
-                : "expense") satisfies DbTransactionType) as DbTransactionType,
+                : "expense") satisfies DbTransactionType as DbTransactionType,
             amount: Math.round(tx.amount * jitter * 100) / 100,
             occurred_at: date.toISOString().slice(0, 10),
           };
@@ -756,11 +1157,11 @@ export function useSeedDemoData() {
           user_id: userId,
           title: insight.title,
           description: insight.body,
-          severity: ((insight.severity === "warning"
+          severity: (insight.severity === "warning"
             ? "warning"
             : insight.severity === "danger"
               ? "critical"
-              : "info") satisfies DbSeverity) as DbSeverity,
+              : "info") satisfies DbSeverity as DbSeverity,
         })),
       );
       if (insightError) throw insightError;

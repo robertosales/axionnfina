@@ -109,7 +109,9 @@ export const Route = createFileRoute("/api/chat")({
               description:
                 "Busca transações do usuário por texto, categoria e período. Use para perguntas do tipo 'quanto gastei com X'.",
               inputSchema: z.object({
-                termo: z.string().describe("Texto livre para buscar em descrição/merchant/categoria"),
+                termo: z
+                  .string()
+                  .describe("Texto livre para buscar em descrição/merchant/categoria"),
                 dataInicio: z.string().describe("Data inicial YYYY-MM-DD"),
                 dataFim: z.string().describe("Data final YYYY-MM-DD"),
               }),
@@ -126,7 +128,9 @@ export const Route = createFileRoute("/api/chat")({
                 const rows = (data ?? []).filter(
                   (t) =>
                     term.length === 0 ||
-                    `${t.description} ${t.merchant ?? ""} ${t.category}`.toLowerCase().includes(term),
+                    `${t.description} ${t.merchant ?? ""} ${t.category}`
+                      .toLowerCase()
+                      .includes(term),
                 );
                 return {
                   quantidade: rows.length,
@@ -164,7 +168,8 @@ export const Route = createFileRoute("/api/chat")({
                     categoria: budget.category,
                     planejado: Number(budget.planned),
                     gasto: spent,
-                    percentual: Number(budget.planned) > 0 ? (spent / Number(budget.planned)) * 100 : 0,
+                    percentual:
+                      Number(budget.planned) > 0 ? (spent / Number(budget.planned)) * 100 : 0,
                   };
                 });
               },
@@ -176,7 +181,9 @@ export const Route = createFileRoute("/api/chat")({
             projecao_fluxo_caixa: tool({
               description:
                 "Projeta o fluxo de caixa dos próximos meses com base em contas a pagar/receber e média histórica.",
-              inputSchema: z.object({ meses: z.number().describe("Quantidade de meses a projetar") }),
+              inputSchema: z.object({
+                meses: z.number().describe("Quantidade de meses a projetar"),
+              }),
               execute: async ({ meses }) => {
                 const { data, error } = await supabase.rpc("get_cashflow_projection", {
                   horizon_days: Math.max(30, Math.min(365, Math.round(meses) * 30)),
@@ -304,8 +311,13 @@ export const Route = createFileRoute("/api/chat")({
               description:
                 "Salva uma preferência, padrão ou informação importante do usuário na memória do agente.",
               inputSchema: z.object({
-                conteudo: z.string().describe("Conteúdo da memória (ex: 'Usuário prefere reserva de 6 meses')"),
-                tipo: z.string().optional().describe("Tipo: preference, pattern, insight (padrão: preference)"),
+                conteudo: z
+                  .string()
+                  .describe("Conteúdo da memória (ex: 'Usuário prefere reserva de 6 meses')"),
+                tipo: z
+                  .string()
+                  .optional()
+                  .describe("Tipo: preference, pattern, insight (padrão: preference)"),
                 importancia: z.number().optional().describe("Importância de 0 a 1 (padrão: 0.5)"),
               }),
               execute: async ({ conteudo, tipo, importancia }) => {

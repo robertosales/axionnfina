@@ -14,7 +14,15 @@ import { z } from "zod";
 export const ACCOUNT_TYPES = ["checking", "savings", "credit", "investment"] as const;
 export const TRANSACTION_TYPES = ["income", "expense", "transfer"] as const;
 export const INSIGHT_SEVERITIES = ["info", "warning", "critical"] as const;
-export const ASSET_CLASSES = ["stock", "fii", "fixed_income", "crypto", "fund", "etf", "cash"] as const;
+export const ASSET_CLASSES = [
+  "stock",
+  "fii",
+  "fixed_income",
+  "crypto",
+  "fund",
+  "etf",
+  "cash",
+] as const;
 export const BILL_STATUSES = ["pending", "paid", "overdue", "canceled"] as const;
 export const CONSENT_STATUSES = ["pending", "authorised", "revoked", "expired"] as const;
 export const OPEN_FINANCE_SCOPES = [

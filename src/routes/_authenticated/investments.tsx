@@ -1,12 +1,39 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip as RTooltip } from "recharts";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { ChartCard } from "@/components/finance/ChartCard";
+import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
+import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useInvestments } from "@/lib/finance-data";
-import { ASSET_CLASS_LABEL } from "@/shared/domain";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  useEntityLifecycle,
+  useInvestments,
+  useUpsertInvestmentPosition,
+  type Position,
+} from "@/lib/finance-data";
+import { ASSET_CLASSES, ASSET_CLASS_LABEL, type AssetClass } from "@/shared/domain";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -32,15 +59,84 @@ export const Route = createFileRoute("/_authenticated/investments")({
 });
 
 function InvestmentsPage() {
-  const { positions, allocation, total, isLoading } = useInvestments();
+  const [showArchived, setShowArchived] = useState(false);
+  const { positions, allocation, total, isLoading } = useInvestments(showArchived);
+  const lifecycle = useEntityLifecycle("investment");
+  const upsert = useUpsertInvestmentPosition();
+  const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [ticker, setTicker] = useState("");
+  const [name, setName] = useState("");
+  const [assetClass, setAssetClass] = useState<AssetClass>("stock");
+  const [quantity, setQuantity] = useState("");
+  const [averagePrice, setAveragePrice] = useState("");
+  const [currentPrice, setCurrentPrice] = useState("");
+
+  const openForm = (position?: Position) => {
+    setEditingId(position?.id ?? null);
+    setTicker(position?.ticker ?? "");
+    setName(position?.name ?? "");
+    setAssetClass(position?.assetClass ?? "stock");
+    setQuantity(position ? String(position.quantity) : "");
+    setAveragePrice(position ? String(position.averagePrice) : "");
+    setCurrentPrice(position ? String(position.currentPrice) : "");
+    setOpen(true);
+  };
+
+  const save = () => {
+    const parsedQuantity = Number(quantity.replace(",", "."));
+    const parsedAverage = Number(averagePrice.replace(",", "."));
+    const parsedCurrent = Number(currentPrice.replace(",", "."));
+    if (
+      !ticker.trim() ||
+      !name.trim() ||
+      parsedQuantity <= 0 ||
+      parsedAverage < 0 ||
+      parsedCurrent < 0
+    ) {
+      toast.error("Preencha ativo, nome, quantidade e preços válidos");
+      return;
+    }
+    upsert.mutate(
+      {
+        ...(editingId ? { id: editingId } : {}),
+        ticker: ticker.trim(),
+        name: name.trim(),
+        assetClass,
+        quantity: parsedQuantity,
+        averagePrice: parsedAverage,
+        currentPrice: parsedCurrent,
+      },
+      {
+        onSuccess: () => {
+          toast.success(editingId ? "Posição atualizada" : "Posição incluída");
+          setOpen(false);
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  };
 
   return (
     <AppShell>
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Investimentos</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Carteira consolidada de {formatBRL(total)}
-        </p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Investimentos</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Carteira consolidada de {formatBRL(total)}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <LifecycleFilter
+            showArchived={showArchived}
+            onToggle={() => setShowArchived((value) => !value)}
+          />
+          {!showArchived && (
+            <Button size="sm" onClick={() => openForm()}>
+              <Plus className="size-4" /> Nova posição
+            </Button>
+          )}
+        </div>
       </header>
 
       {isLoading && <p className="text-sm text-muted-foreground">Carregando carteira…</p>}
@@ -96,7 +192,7 @@ function InvestmentsPage() {
                       {ASSET_CLASS_LABEL[position.assetClass]} · {position.name}
                     </span>
                   </span>
-                  <span className="text-right">
+                  <span className="ml-auto text-right">
                     <span className="numeric block text-sm font-semibold">
                       {formatBRL(position.marketValue)}
                     </span>
@@ -113,12 +209,118 @@ function InvestmentsPage() {
                       {formatBRL(position.profit)}
                     </Badge>
                   </span>
+                  <EntityActionsMenu
+                    entityLabel="posição"
+                    recordName={position.ticker}
+                    archived={Boolean(position.archivedAt)}
+                    onEdit={() => openForm(position)}
+                    onArchive={() =>
+                      lifecycle.archive.mutate(position.id, {
+                        onSuccess: () => toast.success("Posição arquivada"),
+                        onError: (error) => toast.error(error.message),
+                      })
+                    }
+                    onRestore={() =>
+                      lifecycle.restore.mutate(position.id, {
+                        onSuccess: () => toast.success("Posição restaurada"),
+                        onError: (error) => toast.error(error.message),
+                      })
+                    }
+                    onDelete={() =>
+                      lifecycle.remove.mutate(position.id, {
+                        onSuccess: () => toast.success("Posição excluída"),
+                        onError: (error) => toast.error(error.message),
+                      })
+                    }
+                    deleteDisabledReason={
+                      position.recordOrigin !== "manual"
+                        ? "Posições sincronizadas devem ser arquivadas."
+                        : undefined
+                    }
+                  />
                 </li>
               ))}
             </ul>
           </Card>
         </div>
       )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingId ? "Editar posição" : "Nova posição"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="ticker">Ativo</Label>
+              <Input
+                id="ticker"
+                value={ticker}
+                onChange={(event) => setTicker(event.target.value.toUpperCase())}
+                placeholder="PETR4"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="asset-name">Nome</Label>
+              <Input
+                id="asset-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Classe</Label>
+              <Select
+                value={assetClass}
+                onValueChange={(value) => setAssetClass(value as AssetClass)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASSET_CLASSES.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {ASSET_CLASS_LABEL[value]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="quantity">Quantidade</Label>
+              <Input
+                id="quantity"
+                inputMode="decimal"
+                value={quantity}
+                onChange={(event) => setQuantity(event.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="average-price">Preço médio</Label>
+              <Input
+                id="average-price"
+                inputMode="decimal"
+                value={averagePrice}
+                onChange={(event) => setAveragePrice(event.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="current-price">Preço atual</Label>
+              <Input
+                id="current-price"
+                inputMode="decimal"
+                value={currentPrice}
+                onChange={(event) => setCurrentPrice(event.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={save} disabled={upsert.isPending}>
+              {upsert.isPending ? "Salvando…" : "Salvar posição"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

@@ -1,10 +1,4 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
@@ -143,6 +137,8 @@ export type Database = {
       accounts: {
         Row: {
           account_number: string | null
+          archived_at: string | null
+          archived_by: string | null
           available_balance: number | null
           balance: number
           branch: string | null
@@ -161,6 +157,7 @@ export type Database = {
           metadata: Json | null
           name: string
           open_finance: boolean
+          record_origin: string
           subtype: string | null
           type: Database["public"]["Enums"]["account_type"]
           updated_at: string
@@ -168,6 +165,8 @@ export type Database = {
         }
         Insert: {
           account_number?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           available_balance?: number | null
           balance?: number
           branch?: string | null
@@ -186,6 +185,7 @@ export type Database = {
           metadata?: Json | null
           name: string
           open_finance?: boolean
+          record_origin?: string
           subtype?: string | null
           type?: Database["public"]["Enums"]["account_type"]
           updated_at?: string
@@ -193,6 +193,8 @@ export type Database = {
         }
         Update: {
           account_number?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           available_balance?: number | null
           balance?: number
           branch?: string | null
@@ -211,6 +213,7 @@ export type Database = {
           metadata?: Json | null
           name?: string
           open_finance?: boolean
+          record_origin?: string
           subtype?: string | null
           type?: Database["public"]["Enums"]["account_type"]
           updated_at?: string
@@ -252,30 +255,39 @@ export type Database = {
       }
       agent_insights: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           created_at: string
           description: string
           id: string
           read: boolean
+          record_origin: string
           severity: Database["public"]["Enums"]["insight_severity"]
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           description?: string
           id?: string
           read?: boolean
+          record_origin?: string
           severity?: Database["public"]["Enums"]["insight_severity"]
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           description?: string
           id?: string
           read?: boolean
+          record_origin?: string
           severity?: Database["public"]["Enums"]["insight_severity"]
           title?: string
           updated_at?: string
@@ -407,29 +419,38 @@ export type Database = {
       }
       budgets: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           category: string
           created_at: string
           id: string
           month: string
           planned: number
+          record_origin: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           category: string
           created_at?: string
           id?: string
           month?: string
           planned?: number
+          record_origin?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           category?: string
           created_at?: string
           id?: string
           month?: string
           planned?: number
+          record_origin?: string
           updated_at?: string
           user_id?: string
         }
@@ -588,33 +609,42 @@ export type Database = {
       }
       goals: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           color: string
           created_at: string
           current_amount: number
           deadline: string | null
           id: string
+          record_origin: string
           target_amount: number
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           color?: string
           created_at?: string
           current_amount?: number
           deadline?: string | null
           id?: string
+          record_origin?: string
           target_amount?: number
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           color?: string
           created_at?: string
           current_amount?: number
           deadline?: string | null
           id?: string
+          record_origin?: string
           target_amount?: number
           title?: string
           updated_at?: string
@@ -658,6 +688,8 @@ export type Database = {
       investment_positions: {
         Row: {
           account_id: string | null
+          archived_at: string | null
+          archived_by: string | null
           asset_class: Database["public"]["Enums"]["asset_class"]
           average_price: number
           created_at: string
@@ -665,12 +697,15 @@ export type Database = {
           id: string
           name: string
           quantity: number
+          record_origin: string
           ticker: string
           updated_at: string
           user_id: string
         }
         Insert: {
           account_id?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           asset_class?: Database["public"]["Enums"]["asset_class"]
           average_price?: number
           created_at?: string
@@ -678,12 +713,15 @@ export type Database = {
           id?: string
           name?: string
           quantity?: number
+          record_origin?: string
           ticker: string
           updated_at?: string
           user_id: string
         }
         Update: {
           account_id?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           asset_class?: Database["public"]["Enums"]["asset_class"]
           average_price?: number
           created_at?: string
@@ -691,6 +729,7 @@ export type Database = {
           id?: string
           name?: string
           quantity?: number
+          record_origin?: string
           ticker?: string
           updated_at?: string
           user_id?: string
@@ -1131,6 +1170,8 @@ export type Database = {
         Row: {
           account_id: string | null
           amount: number
+          archived_at: string | null
+          archived_by: string | null
           barcode: string | null
           category: string
           confirmation_token: string | null
@@ -1140,6 +1181,7 @@ export type Database = {
           id: string
           pix_key: string | null
           recurring: boolean
+          record_origin: string
           scheduled_for: string | null
           status: Database["public"]["Enums"]["bill_status"]
           updated_at: string
@@ -1148,6 +1190,8 @@ export type Database = {
         Insert: {
           account_id?: string | null
           amount?: number
+          archived_at?: string | null
+          archived_by?: string | null
           barcode?: string | null
           category?: string
           confirmation_token?: string | null
@@ -1157,6 +1201,7 @@ export type Database = {
           id?: string
           pix_key?: string | null
           recurring?: boolean
+          record_origin?: string
           scheduled_for?: string | null
           status?: Database["public"]["Enums"]["bill_status"]
           updated_at?: string
@@ -1165,6 +1210,8 @@ export type Database = {
         Update: {
           account_id?: string | null
           amount?: number
+          archived_at?: string | null
+          archived_by?: string | null
           barcode?: string | null
           category?: string
           confirmation_token?: string | null
@@ -1174,6 +1221,7 @@ export type Database = {
           id?: string
           pix_key?: string | null
           recurring?: boolean
+          record_origin?: string
           scheduled_for?: string | null
           status?: Database["public"]["Enums"]["bill_status"]
           updated_at?: string
@@ -1260,12 +1308,15 @@ export type Database = {
         Row: {
           account_id: string | null
           amount: number
+          archived_at: string | null
+          archived_by: string | null
           created_at: string
           description: string
           due_date: string
           id: string
           payer: string
           recurring: boolean
+          record_origin: string
           status: Database["public"]["Enums"]["bill_status"]
           updated_at: string
           user_id: string
@@ -1273,12 +1324,15 @@ export type Database = {
         Insert: {
           account_id?: string | null
           amount?: number
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           description: string
           due_date?: string
           id?: string
           payer?: string
           recurring?: boolean
+          record_origin?: string
           status?: Database["public"]["Enums"]["bill_status"]
           updated_at?: string
           user_id: string
@@ -1286,12 +1340,15 @@ export type Database = {
         Update: {
           account_id?: string | null
           amount?: number
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           description?: string
           due_date?: string
           id?: string
           payer?: string
           recurring?: boolean
+          record_origin?: string
           status?: Database["public"]["Enums"]["bill_status"]
           updated_at?: string
           user_id?: string
@@ -1354,6 +1411,8 @@ export type Database = {
       }
       tax_events: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           asset_class: Database["public"]["Enums"]["asset_class"]
           created_at: string
           gross_amount: number
@@ -1361,12 +1420,15 @@ export type Database = {
           kind: string
           occurred_at: string
           profit: number
+          record_origin: string
           ticker: string
           updated_at: string
           user_id: string
           withheld: number
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           asset_class?: Database["public"]["Enums"]["asset_class"]
           created_at?: string
           gross_amount?: number
@@ -1374,12 +1436,15 @@ export type Database = {
           kind?: string
           occurred_at?: string
           profit?: number
+          record_origin?: string
           ticker?: string
           updated_at?: string
           user_id: string
           withheld?: number
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           asset_class?: Database["public"]["Enums"]["asset_class"]
           created_at?: string
           gross_amount?: number
@@ -1387,6 +1452,7 @@ export type Database = {
           kind?: string
           occurred_at?: string
           profit?: number
+          record_origin?: string
           ticker?: string
           updated_at?: string
           user_id?: string
@@ -1590,6 +1656,8 @@ export type Database = {
         Row: {
           account_id: string | null
           amount: number
+          archived_at: string | null
+          archived_by: string | null
           authorized_at: string | null
           category: string
           category_id: string | null
@@ -1607,6 +1675,7 @@ export type Database = {
           method: string | null
           occurred_at: string
           posted_at: string | null
+          record_origin: string
           status: Database["public"]["Enums"]["transaction_status"]
           subcategory_id: string | null
           transfer_pair_id: string | null
@@ -1617,6 +1686,8 @@ export type Database = {
         Insert: {
           account_id?: string | null
           amount: number
+          archived_at?: string | null
+          archived_by?: string | null
           authorized_at?: string | null
           category?: string
           category_id?: string | null
@@ -1634,6 +1705,7 @@ export type Database = {
           method?: string | null
           occurred_at?: string
           posted_at?: string | null
+          record_origin?: string
           status?: Database["public"]["Enums"]["transaction_status"]
           subcategory_id?: string | null
           transfer_pair_id?: string | null
@@ -1644,6 +1716,8 @@ export type Database = {
         Update: {
           account_id?: string | null
           amount?: number
+          archived_at?: string | null
+          archived_by?: string | null
           authorized_at?: string | null
           category?: string
           category_id?: string | null
@@ -1661,6 +1735,7 @@ export type Database = {
           method?: string | null
           occurred_at?: string
           posted_at?: string | null
+          record_origin?: string
           status?: Database["public"]["Enums"]["transaction_status"]
           subcategory_id?: string | null
           transfer_pair_id?: string | null
@@ -1987,14 +2062,7 @@ export type Database = {
     }
     Enums: {
       account_type: "checking" | "savings" | "credit" | "investment"
-      asset_class:
-        | "stock"
-        | "fii"
-        | "fixed_income"
-        | "crypto"
-        | "fund"
-        | "etf"
-        | "cash"
+      asset_class: "stock" | "fii" | "fixed_income" | "crypto" | "fund" | "etf" | "cash"
       bill_status: "pending" | "paid" | "overdue" | "canceled"
       card_brand: "visa" | "mastercard" | "elo" | "amex" | "other"
       categorization_source: "mcc" | "rule" | "user" | "ml" | "llm" | "manual"
@@ -2032,19 +2100,9 @@ export type Database = {
         | "suspicious_activity"
       severity_level: "low" | "medium" | "high" | "critical"
       sync_status: "pending" | "running" | "completed" | "failed" | "cancelled"
-      transaction_status:
-        | "pending"
-        | "settled"
-        | "cancelled"
-        | "failed"
-        | "reversed"
+      transaction_status: "pending" | "settled" | "cancelled" | "failed" | "reversed"
       transaction_type: "income" | "expense" | "transfer"
-      webhook_event_status:
-        | "received"
-        | "processing"
-        | "processed"
-        | "failed"
-        | "duplicate"
+      webhook_event_status: "received" | "processing" | "processed" | "failed" | "duplicate"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2060,12 +2118,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2075,10 +2133,8 @@ export type Tables<
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -2087,13 +2143,12 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2112,13 +2167,12 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2137,13 +2191,12 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2154,13 +2207,12 @@ export type Enums<
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    keyof DefaultSchema["CompositeTypes"] | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2173,15 +2225,7 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["checking", "savings", "credit", "investment"],
-      asset_class: [
-        "stock",
-        "fii",
-        "fixed_income",
-        "crypto",
-        "fund",
-        "etf",
-        "cash",
-      ],
+      asset_class: ["stock", "fii", "fixed_income", "crypto", "fund", "etf", "cash"],
       bill_status: ["pending", "paid", "overdue", "canceled"],
       card_brand: ["visa", "mastercard", "elo", "amex", "other"],
       categorization_source: ["mcc", "rule", "user", "ml", "llm", "manual"],
@@ -2220,21 +2264,9 @@ export const Constants = {
       ],
       severity_level: ["low", "medium", "high", "critical"],
       sync_status: ["pending", "running", "completed", "failed", "cancelled"],
-      transaction_status: [
-        "pending",
-        "settled",
-        "cancelled",
-        "failed",
-        "reversed",
-      ],
+      transaction_status: ["pending", "settled", "cancelled", "failed", "reversed"],
       transaction_type: ["income", "expense", "transfer"],
-      webhook_event_status: [
-        "received",
-        "processing",
-        "processed",
-        "failed",
-        "duplicate",
-      ],
+      webhook_event_status: ["received", "processing", "processed", "failed", "duplicate"],
     },
   },
 } as const

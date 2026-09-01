@@ -116,6 +116,7 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
         driftThreshold: preferences.data.driftThreshold,
         privateComparisonAmount: parsedAmount,
         privateOfferMaxAgeDays: days,
+        maturityAlertDays: preferences.data.maturityAlertDays,
       },
       {
         onSuccess: () => toast.success("Critérios da comparação salvos"),

@@ -1140,6 +1140,7 @@ export type InvestmentAlertPreferences = {
   driftThreshold: number;
   privateComparisonAmount: number;
   privateOfferMaxAgeDays: number;
+  maturityAlertDays: number;
   lastEvaluatedAt: string | null;
 };
 
@@ -1151,6 +1152,7 @@ export const DEFAULT_INVESTMENT_ALERT_PREFERENCES: InvestmentAlertPreferences = 
   driftThreshold: 10,
   privateComparisonAmount: 10_000,
   privateOfferMaxAgeDays: 7,
+  maturityAlertDays: 30,
   lastEvaluatedAt: null,
 };
 
@@ -1161,7 +1163,7 @@ export function useInvestmentAlertPreferences() {
       const { data, error } = await supabase
         .from("investment_alert_preferences")
         .select(
-          "enabled, in_app_enabled, minimum_score, score_change_threshold, drift_threshold, private_comparison_amount, private_offer_max_age_days, last_evaluated_at",
+          "enabled, in_app_enabled, minimum_score, score_change_threshold, drift_threshold, private_comparison_amount, private_offer_max_age_days, maturity_alert_days, last_evaluated_at",
         )
         .maybeSingle();
       if (error) throw error;
@@ -1174,6 +1176,7 @@ export function useInvestmentAlertPreferences() {
         driftThreshold: Number(data.drift_threshold),
         privateComparisonAmount: Number(data.private_comparison_amount),
         privateOfferMaxAgeDays: data.private_offer_max_age_days,
+        maturityAlertDays: data.maturity_alert_days,
         lastEvaluatedAt: data.last_evaluated_at,
       };
     },
@@ -1194,6 +1197,7 @@ export function useUpdateInvestmentAlertPreferences() {
         drift_threshold: preferences.driftThreshold,
         private_comparison_amount: preferences.privateComparisonAmount,
         private_offer_max_age_days: preferences.privateOfferMaxAgeDays,
+        maturity_alert_days: preferences.maturityAlertDays,
       });
       if (error) throw error;
     },

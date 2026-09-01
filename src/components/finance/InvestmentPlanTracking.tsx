@@ -92,7 +92,9 @@ export function InvestmentPlanTracking() {
       draft.scoreChangeThreshold < 1 ||
       draft.scoreChangeThreshold > 50 ||
       draft.driftThreshold < 1 ||
-      draft.driftThreshold > 100
+      draft.driftThreshold > 100 ||
+      draft.maturityAlertDays < 1 ||
+      draft.maturityAlertDays > 365
     ) {
       toast.error("Revise os limites: nota 0–100, variação 1–50 e desvio 1–100.");
       return;
@@ -106,6 +108,7 @@ export function InvestmentPlanTracking() {
         driftThreshold: draft.driftThreshold,
         privateComparisonAmount: draft.privateComparisonAmount,
         privateOfferMaxAgeDays: draft.privateOfferMaxAgeDays,
+        maturityAlertDays: draft.maturityAlertDays,
       },
       {
         onSuccess: () => {
@@ -354,7 +357,7 @@ export function InvestmentPlanTracking() {
                 }
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="minimum-score">Nota mínima</Label>
                 <Input
@@ -396,6 +399,23 @@ export function InvestmentPlanTracking() {
                     setDraft((value) => ({ ...value, driftThreshold: Number(event.target.value) }))
                   }
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="maturity-alert-days">Avisar vencimento</Label>
+                <Input
+                  id="maturity-alert-days"
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={draft.maturityAlertDays}
+                  onChange={(event) =>
+                    setDraft((value) => ({
+                      ...value,
+                      maturityAlertDays: Number(event.target.value),
+                    }))
+                  }
+                />
+                <p className="text-[11px] text-muted-foreground">Antecedência em dias</p>
               </div>
             </div>
             {draft.lastEvaluatedAt && (

@@ -13,6 +13,7 @@ import { InvestmentPlanSimulator } from "@/components/finance/InvestmentPlanSimu
 import { InvestmentPlanTracking } from "@/components/finance/InvestmentPlanTracking";
 import { PrivateFixedIncomeDesk } from "@/components/finance/PrivateFixedIncomeDesk";
 import { FgcExposurePanel } from "@/components/finance/FgcExposurePanel";
+import { InvestmentMaturityLadder } from "@/components/finance/InvestmentMaturityLadder";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -183,8 +184,9 @@ function InvestmentsPage() {
       </div>
 
       {!showArchived && (
-        <div className="mb-6">
+        <div className="mb-6 space-y-6">
           <FgcExposurePanel positions={positions} />
+          <InvestmentMaturityLadder positions={positions} />
         </div>
       )}
 

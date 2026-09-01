@@ -9,6 +9,7 @@ import type {
 } from "@/lib/investment-plan";
 import { shouldCreateRadarAlert } from "@/lib/investment-alerts";
 import { calculateInvestmentPlanProgress } from "@/lib/investment-progress";
+import { buildMaturityLadder } from "@/lib/investment-maturity";
 import { buildUserInvestmentRadar } from "@/lib/investment-radar-user.server";
 import { calculateFgcExposure, FGC_ORDINARY_LIMIT } from "@/lib/fgc-exposure";
 import {
@@ -29,6 +30,7 @@ type AlertPreferences = {
   driftThreshold: number;
   privateComparisonAmount: number;
   privateOfferMaxAgeDays: number;
+  maturityAlertDays: number;
 };
 
 export type MonitoringResult = {
@@ -49,6 +51,7 @@ const defaultPreferences: AlertPreferences = {
   driftThreshold: 10,
   privateComparisonAmount: 10_000,
   privateOfferMaxAgeDays: 7,
+  maturityAlertDays: 30,
 };
 
 async function loadPreferences(
@@ -58,7 +61,7 @@ async function loadPreferences(
   const { data, error } = await supabase
     .from("investment_alert_preferences")
     .select(
-      "enabled, in_app_enabled, minimum_score, score_change_threshold, drift_threshold, private_comparison_amount, private_offer_max_age_days",
+      "enabled, in_app_enabled, minimum_score, score_change_threshold, drift_threshold, private_comparison_amount, private_offer_max_age_days, maturity_alert_days",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -72,6 +75,7 @@ async function loadPreferences(
     driftThreshold: Number(data.drift_threshold),
     privateComparisonAmount: Number(data.private_comparison_amount),
     privateOfferMaxAgeDays: data.private_offer_max_age_days,
+    maturityAlertDays: data.maturity_alert_days,
   };
 }
 
@@ -286,7 +290,9 @@ export async function processInvestmentMonitoringForUser(
       supabase.from("investment_plans").select("*").eq("user_id", userId).is("archived_at", null),
       supabase
         .from("investment_positions")
-        .select("id, ticker, name, quantity, current_price, conglomerate, fgc_eligible")
+        .select(
+          "id, ticker, name, quantity, current_price, conglomerate, fgc_eligible, maturity_date",
+        )
         .eq("user_id", userId)
         .is("archived_at", null),
     ]);
@@ -329,6 +335,43 @@ export async function processInvestmentMonitoringForUser(
         conglomerate: topFgcExposure.conglomerate,
         current_exposure: topFgcExposure.currentExposure,
         uncovered_amount: topFgcExposure.uncoveredAmount,
+      },
+    });
+    if (created) insightsCreated += 1;
+  }
+  const maturityLadder = buildMaturityLadder(
+    (positionRows ?? []).map((position) => ({
+      id: position.id,
+      ticker: position.ticker,
+      name: position.name,
+      marketValue: Number(position.quantity) * Number(position.current_price),
+      maturityDate: position.maturity_date,
+    })),
+    runDate,
+    preferences.maturityAlertDays,
+  );
+  const maturityAlerts = maturityLadder.items.filter(
+    (item) => item.status === "overdue" || item.status === "upcoming",
+  );
+  if (preferences.enabled && preferences.inAppEnabled && maturityAlerts.length > 0) {
+    const next = maturityAlerts[0]!;
+    const total = maturityAlerts.reduce((sum, item) => sum + item.marketValue, 0);
+    const created = await upsertInsight(supabase, {
+      userId,
+      key: `investment-maturity:${runDate}`,
+      title:
+        next.status === "overdue"
+          ? `Vencimento pendente: ${next.ticker}`
+          : `Vencimento próximo: ${next.ticker}`,
+      description: `${maturityAlerts.length} posição(ões), somando ${total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} pelo valor atual cadastrado, exigem revisão. O evento mais próximo é ${next.name}, em ${next.maturityDate}. Confirme liquidação e condições na instituição; não há reinvestimento automático.`,
+      severity: next.status === "overdue" ? "warning" : "info",
+      metadata: {
+        kind: "investment_maturity",
+        position_id: next.id,
+        maturity_date: next.maturityDate,
+        days_until_maturity: next.daysUntilMaturity,
+        positions_count: maturityAlerts.length,
+        current_value_total: total,
       },
     });
     if (created) insightsCreated += 1;

@@ -698,6 +698,7 @@ export type Database = {
           enabled: boolean
           in_app_enabled: boolean
           last_evaluated_at: string | null
+          maturity_alert_days: number
           minimum_score: number
           private_comparison_amount: number
           private_offer_max_age_days: number
@@ -711,6 +712,7 @@ export type Database = {
           enabled?: boolean
           in_app_enabled?: boolean
           last_evaluated_at?: string | null
+          maturity_alert_days?: number
           minimum_score?: number
           private_comparison_amount?: number
           private_offer_max_age_days?: number
@@ -724,6 +726,7 @@ export type Database = {
           enabled?: boolean
           in_app_enabled?: boolean
           last_evaluated_at?: string | null
+          maturity_alert_days?: number
           minimum_score?: number
           private_comparison_amount?: number
           private_offer_max_age_days?: number

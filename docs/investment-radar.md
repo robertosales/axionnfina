@@ -33,6 +33,8 @@ O valor usado na mesa privada e a validade da conferência também ficam salvos 
 
 Posições de renda fixa podem guardar produto, instituição, conglomerado, vencimento e elegibilidade ao FGC. A faixa de cobertura soma o valor atual dos produtos elegíveis por conglomerado e pode acrescentar o aporte simulado da mesa privada. O estado muda para atenção a partir de 80% de R$ 250 mil e para excedido acima da referência. Posições sem conglomerado ficam fora da soma e são apresentadas como pendência cadastral.
 
+A régua de liquidez organiza os valores atuais cadastrados em vencidos, até 30 dias, 31–90 dias, 91–180 dias e após 180 dias. A antecedência do alerta pode variar de 1 a 365 dias. O monitoramento cria no máximo um insight de vencimentos por dia e não pressupõe liquidação, rentabilidade final ou reinvestimento automático.
+
 ### Agendamento diário
 
 Configure `INVESTMENT_RADAR_CRON_SECRET` apenas no servidor e agende uma requisição `POST` para `/api/investment-radar-daily` com o cabeçalho `Authorization: Bearer <segredo>`. A rota também aceita o token de sessão de um usuário para o botão **Atualizar análise**, mas nesse modo processa somente o próprio usuário.
@@ -54,7 +56,7 @@ A mesa comparadora aceita ofertas de CDB, LCI e LCA conferidas pelo usuário. Ca
 
 Fontes de referência: [Receita Federal — Perguntas e respostas IRPF 2026](https://www.gov.br/receitafederal/pt-br/centrais-de-conteudo/publicacoes/perguntas-e-respostas/dirpf/p-r-irpf-2026-v1-00-2026-04-23.pdf) e [FGC — Sobre a garantia](https://fgc.org.br/sobre-garantia-fgc).
 
-Os schemas dessa área estão em `20260901010000_private_fixed_income_offers.sql`, `20260901020000_private_offer_monitoring.sql` e `20260901030000_investment_position_fgc_metadata.sql`; devem ser aplicados nessa ordem pelo Lovable. Não executar alterações remotas com a CLI do Supabase neste projeto.
+Os schemas dessa área estão em `20260901010000_private_fixed_income_offers.sql`, `20260901020000_private_offer_monitoring.sql`, `20260901030000_investment_position_fgc_metadata.sql` e `20260901040000_investment_maturity_alerts.sql`; devem ser aplicados nessa ordem pelo Lovable. Não executar alterações remotas com a CLI do Supabase neste projeto.
 
 ## Limites atuais
 

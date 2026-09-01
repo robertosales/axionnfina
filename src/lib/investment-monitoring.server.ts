@@ -10,6 +10,12 @@ import type {
 import { shouldCreateRadarAlert } from "@/lib/investment-alerts";
 import { calculateInvestmentPlanProgress } from "@/lib/investment-progress";
 import { buildUserInvestmentRadar } from "@/lib/investment-radar-user.server";
+import {
+  rankPrivateOffers,
+  type PrivateFixedIncomeOffer,
+  type PrivateProductType,
+  type PrivateRateType,
+} from "@/lib/private-fixed-income";
 
 type DatabaseClient = SupabaseClient<Database>;
 type DbJson = Database["public"]["Tables"]["investment_radar_runs"]["Row"]["snapshot"];
@@ -20,6 +26,8 @@ type AlertPreferences = {
   minimumScore: number;
   scoreChangeThreshold: number;
   driftThreshold: number;
+  privateComparisonAmount: number;
+  privateOfferMaxAgeDays: number;
 };
 
 export type MonitoringResult = {
@@ -38,6 +46,8 @@ const defaultPreferences: AlertPreferences = {
   minimumScore: 70,
   scoreChangeThreshold: 5,
   driftThreshold: 10,
+  privateComparisonAmount: 10_000,
+  privateOfferMaxAgeDays: 7,
 };
 
 async function loadPreferences(
@@ -46,7 +56,9 @@ async function loadPreferences(
 ): Promise<AlertPreferences> {
   const { data, error } = await supabase
     .from("investment_alert_preferences")
-    .select("enabled, in_app_enabled, minimum_score, score_change_threshold, drift_threshold")
+    .select(
+      "enabled, in_app_enabled, minimum_score, score_change_threshold, drift_threshold, private_comparison_amount, private_offer_max_age_days",
+    )
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
@@ -57,6 +69,31 @@ async function loadPreferences(
     minimumScore: data.minimum_score,
     scoreChangeThreshold: data.score_change_threshold,
     driftThreshold: Number(data.drift_threshold),
+    privateComparisonAmount: Number(data.private_comparison_amount),
+    privateOfferMaxAgeDays: data.private_offer_max_age_days,
+  };
+}
+
+function mapPrivateOffer(
+  offer: Database["public"]["Tables"]["private_fixed_income_offers"]["Row"],
+): PrivateFixedIncomeOffer {
+  return {
+    id: offer.id,
+    institution: offer.institution,
+    conglomerate: offer.conglomerate,
+    productType: offer.product_type as PrivateProductType,
+    rateType: offer.rate_type as PrivateRateType,
+    rateValue: Number(offer.rate_value),
+    referenceRate: offer.reference_rate == null ? null : Number(offer.reference_rate),
+    minimumInvestment: Number(offer.minimum_investment),
+    maturityDate: offer.maturity_date,
+    dailyLiquidity: offer.daily_liquidity,
+    fgcEligible: offer.fgc_eligible,
+    sourceUrl: offer.source_url,
+    sourceCheckedAt: offer.source_checked_at,
+    notes: offer.notes,
+    archivedAt: offer.archived_at,
+    recordOrigin: offer.record_origin as PrivateFixedIncomeOffer["recordOrigin"],
   };
 }
 
@@ -92,19 +129,24 @@ async function upsertInsight(
     metadata: DbJson;
   },
 ) {
-  const { error } = await supabase.from("agent_insights").upsert(
-    {
-      user_id: input.userId,
-      insight_key: input.key,
-      title: input.title,
-      description: input.description,
-      severity: input.severity,
-      metadata: input.metadata,
-      record_origin: "system",
-    },
-    { onConflict: "user_id,insight_key" },
-  );
+  const { data, error } = await supabase
+    .from("agent_insights")
+    .upsert(
+      {
+        user_id: input.userId,
+        insight_key: input.key,
+        title: input.title,
+        description: input.description,
+        severity: input.severity,
+        metadata: input.metadata,
+        record_origin: "system",
+      },
+      { onConflict: "user_id,insight_key", ignoreDuplicates: true },
+    )
+    .select("id")
+    .maybeSingle();
   if (error) throw error;
+  return Boolean(data);
 }
 
 export async function processInvestmentMonitoringForUser(
@@ -127,15 +169,31 @@ export async function processInvestmentMonitoringForUser(
   }
   const radar = await buildUserInvestmentRadar(supabase, userId);
   const top = radar.opportunities[0];
-  const { data: previousRun, error: previousError } = await supabase
-    .from("investment_radar_runs")
-    .select("top_opportunity_id, top_score")
-    .eq("user_id", userId)
-    .lt("run_date", runDate)
-    .order("run_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const [previousResult, privateOffersResult] = await Promise.all([
+    supabase
+      .from("investment_radar_runs")
+      .select("top_opportunity_id, top_score, private_top_offer_id, private_top_score")
+      .eq("user_id", userId)
+      .lt("run_date", runDate)
+      .order("run_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("private_fixed_income_offers")
+      .select("*")
+      .eq("user_id", userId)
+      .is("archived_at", null),
+  ]);
+  const { data: previousRun, error: previousError } = previousResult;
   if (previousError) throw previousError;
+  if (privateOffersResult.error) throw privateOffersResult.error;
+  const topPrivate = rankPrivateOffers(
+    (privateOffersResult.data ?? []).map(mapPrivateOffer),
+    radar.profile,
+    preferences.privateComparisonAmount,
+    runDate,
+    preferences.privateOfferMaxAgeDays,
+  ).find((offer) => offer.eligible);
 
   const { error: runError } = await supabase.from("investment_radar_runs").upsert(
     {
@@ -145,6 +203,11 @@ export async function processInvestmentMonitoringForUser(
       top_opportunity_id: top?.id ?? null,
       top_opportunity_name: top?.name ?? null,
       top_score: top?.score ?? null,
+      private_top_offer_id: topPrivate?.id ?? null,
+      private_top_offer_name: topPrivate
+        ? `${topPrivate.productType.toUpperCase()} ${topPrivate.institution}`
+        : null,
+      private_top_score: topPrivate?.score ?? null,
       snapshot: radar as unknown as DbJson,
       status: top
         ? radar.sourceHealth.some((source) => source.status === "unavailable")
@@ -171,7 +234,7 @@ export async function processInvestmentMonitoringForUser(
     ) &&
     top
   ) {
-    await upsertInsight(supabase, {
+    const created = await upsertInsight(supabase, {
       userId,
       key: `investment-radar:${runDate}`,
       title: `Radar do dia: ${top.name}`,
@@ -184,7 +247,37 @@ export async function processInvestmentMonitoringForUser(
         reference_date: radar.referenceDate,
       },
     });
-    insightsCreated += 1;
+    if (created) insightsCreated += 1;
+  }
+
+  if (
+    shouldCreateRadarAlert(
+      preferences,
+      topPrivate,
+      previousRun
+        ? {
+            topOpportunityId: previousRun.private_top_offer_id,
+            topScore: previousRun.private_top_score,
+          }
+        : null,
+    ) &&
+    topPrivate
+  ) {
+    const created = await upsertInsight(supabase, {
+      userId,
+      key: `private-fixed-income:${runDate}`,
+      title: `Oferta privada em destaque: ${topPrivate.productType.toUpperCase()} ${topPrivate.institution}`,
+      description: `Para ${preferences.privateComparisonAmount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}, o retorno líquido anual estimado é ${(topPrivate.netAnnualRate * 100).toFixed(2)}%. Taxa conferida há ${topPrivate.sourceAgeDays} dia(s); confirme disponibilidade, conglomerado e condições antes de investir.`,
+      severity: "info",
+      metadata: {
+        kind: "private_fixed_income",
+        offer_id: topPrivate.id,
+        score: topPrivate.score,
+        net_annual_rate: topPrivate.netAnnualRate,
+        source_checked_at: topPrivate.sourceCheckedAt,
+      },
+    });
+    if (created) insightsCreated += 1;
   }
 
   const [{ data: planRows, error: plansError }, { data: positionRows, error: positionsError }] =
@@ -228,7 +321,7 @@ export async function processInvestmentMonitoringForUser(
       preferences.inAppEnabled &&
       progress.overallDrift >= preferences.driftThreshold
     ) {
-      await upsertInsight(supabase, {
+      const created = await upsertInsight(supabase, {
         userId,
         key: `investment-drift:${runDate}:${progress.planId}`,
         title: `Plano fora do alvo: ${progress.planName}`,
@@ -240,7 +333,7 @@ export async function processInvestmentMonitoringForUser(
           drift: progress.overallDrift,
         },
       });
-      insightsCreated += 1;
+      if (created) insightsCreated += 1;
     }
   }
 

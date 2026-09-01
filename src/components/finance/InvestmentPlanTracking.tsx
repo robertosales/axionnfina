@@ -104,6 +104,8 @@ export function InvestmentPlanTracking() {
         minimumScore: draft.minimumScore,
         scoreChangeThreshold: draft.scoreChangeThreshold,
         driftThreshold: draft.driftThreshold,
+        privateComparisonAmount: draft.privateComparisonAmount,
+        privateOfferMaxAgeDays: draft.privateOfferMaxAgeDays,
       },
       {
         onSuccess: () => {

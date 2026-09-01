@@ -29,6 +29,8 @@ Um plano salvo pode ser comparado com as posições atuais da carteira. O motor 
 
 As preferências controlam a nota mínima do Radar, a variação relevante de pontuação e o desvio mínimo do plano. Cada avaliação cria no máximo um registro por usuário, plano e dia, evitando alertas duplicados. Os alertas aparecem em Insights e seguem o mesmo ciclo de arquivamento dos demais registros.
 
+O valor usado na mesa privada e a validade da conferência também ficam salvos nas preferências. Uma oferta vencida continua visível para revisão, mas perde a elegibilidade e não gera insight diário. O histórico registra separadamente o primeiro título público e a primeira oferta privada, permitindo detectar mudança de líder sem repetir o mesmo alerta.
+
 ### Agendamento diário
 
 Configure `INVESTMENT_RADAR_CRON_SECRET` apenas no servidor e agende uma requisição `POST` para `/api/investment-radar-daily` com o cabeçalho `Authorization: Bearer <segredo>`. A rota também aceita o token de sessão de um usuário para o botão **Atualizar análise**, mas nesse modo processa somente o próprio usuário.
@@ -40,6 +42,18 @@ Authorization: Bearer $INVESTMENT_RADAR_CRON_SECRET
 
 O agendador precisa ter tempo suficiente para consultar as fontes oficiais e processar a base em lotes. A resposta informa quantos usuários foram processados e quais falharam, sem interromper o lote por uma falha individual.
 
+## Ofertas privadas
+
+A mesa comparadora aceita ofertas de CDB, LCI e LCA conferidas pelo usuário. Cada registro guarda instituição, conglomerado, taxa, índice de referência, liquidez, vencimento, aplicação mínima, origem e data da conferência. O ranking compara retorno líquido estimado, compatibilidade de prazo, liquidez e proteção, sem tratar taxas digitadas como cotações oficiais.
+
+- CDB usa a tabela regressiva de IR sobre o rendimento: 22,5% até 180 dias, 20% de 181 a 360, 17,5% de 361 a 720 e 15% acima de 720 dias.
+- LCI e LCA são tratadas como isentas para pessoa física conforme as regras consultadas para o exercício de 2026.
+- A interface alerta quando o valor comparado supera R$ 250 mil. O limite deve considerar o total de produtos elegíveis por instituição ou conglomerado, além do teto global vigente do FGC.
+
+Fontes de referência: [Receita Federal — Perguntas e respostas IRPF 2026](https://www.gov.br/receitafederal/pt-br/centrais-de-conteudo/publicacoes/perguntas-e-respostas/dirpf/p-r-irpf-2026-v1-00-2026-04-23.pdf) e [FGC — Sobre a garantia](https://fgc.org.br/sobre-garantia-fgc).
+
+Os schemas dessa área estão em `20260901010000_private_fixed_income_offers.sql` e `20260901020000_private_offer_monitoring.sql`; devem ser aplicados nessa ordem pelo Lovable. Não executar alterações remotas com a CLI do Supabase neste projeto.
+
 ## Limites atuais
 
-O primeiro provedor contém apenas títulos públicos. CDBs, LCIs, LCAs e fundos só devem entrar quando houver uma fonte autorizada que forneça taxa, vencimento, liquidez, custos e emissor de forma verificável.
+O provedor automático contém apenas títulos públicos. CDBs, LCIs e LCAs entram somente como ofertas conferidas e datadas pelo usuário; não existe coleta automática dessas taxas nesta fase. Fundos só devem entrar quando houver fonte autorizada que forneça carteira, taxa, liquidez, custos e administrador de forma verificável.

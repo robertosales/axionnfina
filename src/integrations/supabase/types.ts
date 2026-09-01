@@ -699,6 +699,8 @@ export type Database = {
           in_app_enabled: boolean
           last_evaluated_at: string | null
           minimum_score: number
+          private_comparison_amount: number
+          private_offer_max_age_days: number
           score_change_threshold: number
           updated_at: string
           user_id: string
@@ -710,6 +712,8 @@ export type Database = {
           in_app_enabled?: boolean
           last_evaluated_at?: string | null
           minimum_score?: number
+          private_comparison_amount?: number
+          private_offer_max_age_days?: number
           score_change_threshold?: number
           updated_at?: string
           user_id: string
@@ -721,6 +725,8 @@ export type Database = {
           in_app_enabled?: boolean
           last_evaluated_at?: string | null
           minimum_score?: number
+          private_comparison_amount?: number
+          private_offer_max_age_days?: number
           score_change_threshold?: number
           updated_at?: string
           user_id?: string
@@ -903,6 +909,9 @@ export type Database = {
           error_message: string | null
           id: string
           market_reference_date: string
+          private_top_offer_id: string | null
+          private_top_offer_name: string | null
+          private_top_score: number | null
           run_date: string
           snapshot: Json
           status: string
@@ -917,6 +926,9 @@ export type Database = {
           error_message?: string | null
           id?: string
           market_reference_date: string
+          private_top_offer_id?: string | null
+          private_top_offer_name?: string | null
+          private_top_score?: number | null
           run_date?: string
           snapshot?: Json
           status?: string
@@ -931,12 +943,84 @@ export type Database = {
           error_message?: string | null
           id?: string
           market_reference_date?: string
+          private_top_offer_id?: string | null
+          private_top_offer_name?: string | null
+          private_top_score?: number | null
           run_date?: string
           snapshot?: Json
           status?: string
           top_opportunity_id?: string | null
           top_opportunity_name?: string | null
           top_score?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      private_fixed_income_offers: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          conglomerate: string
+          created_at: string
+          daily_liquidity: boolean
+          fgc_eligible: boolean
+          id: string
+          institution: string
+          maturity_date: string
+          minimum_investment: number
+          notes: string | null
+          product_type: string
+          rate_type: string
+          rate_value: number
+          record_origin: string
+          reference_rate: number | null
+          source_checked_at: string
+          source_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          conglomerate: string
+          created_at?: string
+          daily_liquidity?: boolean
+          fgc_eligible?: boolean
+          id?: string
+          institution: string
+          maturity_date: string
+          minimum_investment?: number
+          notes?: string | null
+          product_type: string
+          rate_type: string
+          rate_value: number
+          record_origin?: string
+          reference_rate?: number | null
+          source_checked_at?: string
+          source_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          conglomerate?: string
+          created_at?: string
+          daily_liquidity?: boolean
+          fgc_eligible?: boolean
+          id?: string
+          institution?: string
+          maturity_date?: string
+          minimum_investment?: number
+          notes?: string | null
+          product_type?: string
+          rate_type?: string
+          rate_value?: number
+          record_origin?: string
+          reference_rate?: number | null
+          source_checked_at?: string
+          source_url?: string | null
           updated_at?: string
           user_id?: string
         }

@@ -34,6 +34,11 @@ import type {
   InvestmentPlanSimulation,
   SavedInvestmentPlan,
 } from "@/lib/investment-plan";
+import type {
+  PrivateFixedIncomeOffer,
+  PrivateProductType,
+  PrivateRateType,
+} from "@/lib/private-fixed-income";
 
 type DbJson = Database["public"]["Tables"]["investment_plans"]["Row"]["allocations"];
 
@@ -764,6 +769,7 @@ export type LifecycleEntity =
   | "goal"
   | "investment"
   | "investment_plan"
+  | "private_offer"
   | "payable"
   | "receivable"
   | "tax_event"
@@ -776,6 +782,7 @@ const lifecycleQueryKey: Record<LifecycleEntity, string> = {
   goal: "goals",
   investment: "investments",
   investment_plan: "investment-plans",
+  private_offer: "private-fixed-income-offers",
   payable: "payables",
   receivable: "receivables",
   tax_event: "tax-events",
@@ -848,6 +855,11 @@ async function setArchived(entity: LifecycleEntity, id: string, archived: boolea
           .eq("id", id);
       case "investment_plan":
         return supabase.from("investment_plans").update({ archived_at: archivedAt }).eq("id", id);
+      case "private_offer":
+        return supabase
+          .from("private_fixed_income_offers")
+          .update({ archived_at: archivedAt })
+          .eq("id", id);
       case "payable":
         return supabase.from("payables").update({ archived_at: archivedAt }).eq("id", id);
       case "receivable":
@@ -877,6 +889,8 @@ async function deleteEntity(entity: LifecycleEntity, id: string) {
         return supabase.from("investment_positions").delete().eq("id", id);
       case "investment_plan":
         return supabase.from("investment_plans").delete().eq("id", id);
+      case "private_offer":
+        return supabase.from("private_fixed_income_offers").delete().eq("id", id);
       case "payable":
         return supabase.from("payables").delete().eq("id", id);
       case "receivable":
@@ -1027,12 +1041,85 @@ export function useInvestmentPlans(showArchived = false) {
   });
 }
 
+export function usePrivateFixedIncomeOffers(showArchived = false) {
+  return useQuery({
+    queryKey: ["private-fixed-income-offers", showArchived],
+    queryFn: async (): Promise<PrivateFixedIncomeOffer[]> => {
+      let request = supabase
+        .from("private_fixed_income_offers")
+        .select("*")
+        .order("maturity_date", { ascending: true });
+      request = showArchived
+        ? request.not("archived_at", "is", null)
+        : request.is("archived_at", null);
+      const { data, error } = await request;
+      if (error) throw error;
+      return (data ?? []).map((offer) => ({
+        id: offer.id,
+        institution: offer.institution,
+        conglomerate: offer.conglomerate,
+        productType: offer.product_type as PrivateProductType,
+        rateType: offer.rate_type as PrivateRateType,
+        rateValue: Number(offer.rate_value),
+        referenceRate: offer.reference_rate == null ? null : Number(offer.reference_rate),
+        minimumInvestment: Number(offer.minimum_investment),
+        maturityDate: offer.maturity_date,
+        dailyLiquidity: offer.daily_liquidity,
+        fgcEligible: offer.fgc_eligible,
+        sourceUrl: offer.source_url,
+        sourceCheckedAt: offer.source_checked_at,
+        notes: offer.notes,
+        archivedAt: offer.archived_at,
+        recordOrigin: offer.record_origin as PrivateFixedIncomeOffer["recordOrigin"],
+      }));
+    },
+  });
+}
+
+export function useUpsertPrivateFixedIncomeOffer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      input: Omit<PrivateFixedIncomeOffer, "id" | "archivedAt" | "recordOrigin"> & {
+        id?: string;
+      },
+    ) => {
+      const userId = await requireUserId();
+      const payload = {
+        user_id: userId,
+        institution: input.institution.trim(),
+        conglomerate: input.conglomerate.trim(),
+        product_type: input.productType,
+        rate_type: input.rateType,
+        rate_value: input.rateValue,
+        reference_rate: input.rateType === "fixed" ? null : input.referenceRate,
+        minimum_investment: input.minimumInvestment,
+        maturity_date: input.maturityDate,
+        daily_liquidity: input.dailyLiquidity,
+        fgc_eligible: input.fgcEligible,
+        source_url: input.sourceUrl?.trim() || null,
+        source_checked_at: input.sourceCheckedAt,
+        notes: input.notes?.trim() || null,
+        record_origin: "manual",
+      } as const;
+      const { error } = input.id
+        ? await supabase.from("private_fixed_income_offers").update(payload).eq("id", input.id)
+        : await supabase.from("private_fixed_income_offers").insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["private-fixed-income-offers"] }),
+  });
+}
+
 export type InvestmentAlertPreferences = {
   enabled: boolean;
   inAppEnabled: boolean;
   minimumScore: number;
   scoreChangeThreshold: number;
   driftThreshold: number;
+  privateComparisonAmount: number;
+  privateOfferMaxAgeDays: number;
   lastEvaluatedAt: string | null;
 };
 
@@ -1042,6 +1129,8 @@ export const DEFAULT_INVESTMENT_ALERT_PREFERENCES: InvestmentAlertPreferences = 
   minimumScore: 70,
   scoreChangeThreshold: 5,
   driftThreshold: 10,
+  privateComparisonAmount: 10_000,
+  privateOfferMaxAgeDays: 7,
   lastEvaluatedAt: null,
 };
 
@@ -1052,7 +1141,7 @@ export function useInvestmentAlertPreferences() {
       const { data, error } = await supabase
         .from("investment_alert_preferences")
         .select(
-          "enabled, in_app_enabled, minimum_score, score_change_threshold, drift_threshold, last_evaluated_at",
+          "enabled, in_app_enabled, minimum_score, score_change_threshold, drift_threshold, private_comparison_amount, private_offer_max_age_days, last_evaluated_at",
         )
         .maybeSingle();
       if (error) throw error;
@@ -1063,6 +1152,8 @@ export function useInvestmentAlertPreferences() {
         minimumScore: data.minimum_score,
         scoreChangeThreshold: data.score_change_threshold,
         driftThreshold: Number(data.drift_threshold),
+        privateComparisonAmount: Number(data.private_comparison_amount),
+        privateOfferMaxAgeDays: data.private_offer_max_age_days,
         lastEvaluatedAt: data.last_evaluated_at,
       };
     },
@@ -1081,6 +1172,8 @@ export function useUpdateInvestmentAlertPreferences() {
         minimum_score: preferences.minimumScore,
         score_change_threshold: preferences.scoreChangeThreshold,
         drift_threshold: preferences.driftThreshold,
+        private_comparison_amount: preferences.privateComparisonAmount,
+        private_offer_max_age_days: preferences.privateOfferMaxAgeDays,
       });
       if (error) throw error;
     },

@@ -260,6 +260,8 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          insight_key: string | null
+          metadata: Json
           read: boolean
           record_origin: string
           severity: Database["public"]["Enums"]["insight_severity"]
@@ -273,6 +275,8 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          insight_key?: string | null
+          metadata?: Json
           read?: boolean
           record_origin?: string
           severity?: Database["public"]["Enums"]["insight_severity"]
@@ -286,6 +290,8 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          insight_key?: string | null
+          metadata?: Json
           read?: boolean
           record_origin?: string
           severity?: Database["public"]["Enums"]["insight_severity"]
@@ -685,6 +691,42 @@ export type Database = {
         }
         Relationships: []
       }
+      investment_alert_preferences: {
+        Row: {
+          created_at: string
+          drift_threshold: number
+          enabled: boolean
+          in_app_enabled: boolean
+          last_evaluated_at: string | null
+          minimum_score: number
+          score_change_threshold: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          drift_threshold?: number
+          enabled?: boolean
+          in_app_enabled?: boolean
+          last_evaluated_at?: string | null
+          minimum_score?: number
+          score_change_threshold?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          drift_threshold?: number
+          enabled?: boolean
+          in_app_enabled?: boolean
+          last_evaluated_at?: string | null
+          minimum_score?: number
+          score_change_threshold?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       investment_plans: {
         Row: {
           allocations: Json
@@ -741,6 +783,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      investment_plan_progress_snapshots: {
+        Row: {
+          actual_total: number
+          created_at: string
+          details: Json
+          id: string
+          overall_drift: number
+          plan_id: string
+          snapshot_date: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actual_total?: number
+          created_at?: string
+          details?: Json
+          id?: string
+          overall_drift?: number
+          plan_id: string
+          snapshot_date?: string
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actual_total?: number
+          created_at?: string
+          details?: Json
+          id?: string
+          overall_drift?: number
+          plan_id?: string
+          snapshot_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investment_plan_progress_snapshots_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "investment_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       investment_positions: {
         Row: {
@@ -807,6 +896,51 @@ export type Database = {
             referencedColumns: ["account_id"]
           },
         ]
+      }
+      investment_radar_runs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          market_reference_date: string
+          run_date: string
+          snapshot: Json
+          status: string
+          top_opportunity_id: string | null
+          top_opportunity_name: string | null
+          top_score: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          market_reference_date: string
+          run_date?: string
+          snapshot?: Json
+          status?: string
+          top_opportunity_id?: string | null
+          top_opportunity_name?: string | null
+          top_score?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          market_reference_date?: string
+          run_date?: string
+          snapshot?: Json
+          status?: string
+          top_opportunity_id?: string | null
+          top_opportunity_name?: string | null
+          top_score?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       journal_entries: {
         Row: {

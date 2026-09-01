@@ -1027,6 +1027,122 @@ export function useInvestmentPlans(showArchived = false) {
   });
 }
 
+export type InvestmentAlertPreferences = {
+  enabled: boolean;
+  inAppEnabled: boolean;
+  minimumScore: number;
+  scoreChangeThreshold: number;
+  driftThreshold: number;
+  lastEvaluatedAt: string | null;
+};
+
+export const DEFAULT_INVESTMENT_ALERT_PREFERENCES: InvestmentAlertPreferences = {
+  enabled: true,
+  inAppEnabled: true,
+  minimumScore: 70,
+  scoreChangeThreshold: 5,
+  driftThreshold: 10,
+  lastEvaluatedAt: null,
+};
+
+export function useInvestmentAlertPreferences() {
+  return useQuery({
+    queryKey: ["investment-alert-preferences"],
+    queryFn: async (): Promise<InvestmentAlertPreferences> => {
+      const { data, error } = await supabase
+        .from("investment_alert_preferences")
+        .select(
+          "enabled, in_app_enabled, minimum_score, score_change_threshold, drift_threshold, last_evaluated_at",
+        )
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return DEFAULT_INVESTMENT_ALERT_PREFERENCES;
+      return {
+        enabled: data.enabled,
+        inAppEnabled: data.in_app_enabled,
+        minimumScore: data.minimum_score,
+        scoreChangeThreshold: data.score_change_threshold,
+        driftThreshold: Number(data.drift_threshold),
+        lastEvaluatedAt: data.last_evaluated_at,
+      };
+    },
+  });
+}
+
+export function useUpdateInvestmentAlertPreferences() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (preferences: Omit<InvestmentAlertPreferences, "lastEvaluatedAt">) => {
+      const userId = await requireUserId();
+      const { error } = await supabase.from("investment_alert_preferences").upsert({
+        user_id: userId,
+        enabled: preferences.enabled,
+        in_app_enabled: preferences.inAppEnabled,
+        minimum_score: preferences.minimumScore,
+        score_change_threshold: preferences.scoreChangeThreshold,
+        drift_threshold: preferences.driftThreshold,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["investment-alert-preferences"] }),
+  });
+}
+
+export function useRunInvestmentMonitoring() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error("Sessão expirada. Entre novamente.");
+      const response = await fetch("/api/investment-radar-daily", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        result?: { insightsCreated: number; plansEvaluated: number };
+      };
+      if (!response.ok) throw new Error(payload.error ?? "Não foi possível atualizar a análise.");
+      return payload.result;
+    },
+    onSuccess: () => {
+      for (const queryKey of [
+        "investment-radar",
+        "investment-radar-runs",
+        "investment-plan-progress",
+        "investment-alert-preferences",
+        "insights",
+      ]) {
+        void queryClient.invalidateQueries({ queryKey: [queryKey] });
+      }
+    },
+  });
+}
+
+export function useInvestmentProgressHistory(planId?: string) {
+  return useQuery({
+    queryKey: ["investment-plan-progress", planId],
+    enabled: Boolean(planId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("investment_plan_progress_snapshots")
+        .select("snapshot_date, overall_drift, status, actual_total")
+        .eq("plan_id", planId!)
+        .order("snapshot_date", { ascending: true })
+        .limit(30);
+      if (error) throw error;
+      return (data ?? []).map((snapshot) => ({
+        date: snapshot.snapshot_date,
+        drift: Number(snapshot.overall_drift),
+        status: snapshot.status,
+        actualTotal: Number(snapshot.actual_total),
+      }));
+    },
+  });
+}
+
 export function useUpsertInvestmentPlan() {
   const queryClient = useQueryClient();
   return useMutation({

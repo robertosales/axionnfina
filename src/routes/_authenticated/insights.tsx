@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { BellRing, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   Area,
@@ -17,8 +18,15 @@ import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { InvestmentRadarPanel } from "@/components/finance/InvestmentRadarPanel";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { netWorthSeries } from "@/lib/mock-data";
-import { useEntityLifecycle, useInsights } from "@/lib/finance-data";
+import {
+  useEntityLifecycle,
+  useInsights,
+  useInvestmentAlertPreferences,
+  useRunInvestmentMonitoring,
+} from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +62,8 @@ function InsightsPage() {
   const [showArchived, setShowArchived] = useState(false);
   const { data: agentInsights = [] } = useInsights(showArchived);
   const lifecycle = useEntityLifecycle("insight");
+  const alertPreferences = useInvestmentAlertPreferences();
+  const runMonitoring = useRunInvestmentMonitoring();
 
   return (
     <AppShell>
@@ -112,8 +122,46 @@ function InsightsPage() {
       </ChartCard>
 
       {!showArchived && (
-        <div className="mt-6">
+        <div className="mt-6 space-y-4">
           <InvestmentRadarPanel compact />
+          <Card className="flex flex-wrap items-center justify-between gap-4 rounded-xl border-border/60 p-4 shadow-elevation-1">
+            <div className="flex items-start gap-3">
+              <span className="rounded-lg bg-primary/10 p-2 text-primary">
+                <BellRing className="size-4" />
+              </span>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-sm font-semibold">Monitoramento de investimentos</h2>
+                  <Badge variant="outline" className="rounded-full text-[10px]">
+                    {alertPreferences.data?.enabled === false ? "Pausado" : "Ativo"}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {alertPreferences.data?.lastEvaluatedAt
+                    ? `Última avaliação em ${new Date(alertPreferences.data.lastEvaluatedAt).toLocaleString("pt-BR")}`
+                    : "Aguardando a primeira avaliação diária."}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/investments">Ver plano × carteira</Link>
+              </Button>
+              <Button
+                size="sm"
+                onClick={() =>
+                  runMonitoring.mutate(undefined, {
+                    onSuccess: () => toast.success("Monitoramento atualizado"),
+                    onError: (error) => toast.error(error.message),
+                  })
+                }
+                disabled={runMonitoring.isPending}
+              >
+                <RefreshCw className={cn("size-4", runMonitoring.isPending && "animate-spin")} />
+                {runMonitoring.isPending ? "Analisando…" : "Atualizar agora"}
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
 
@@ -150,6 +198,11 @@ function InsightsPage() {
           </Card>
         ))}
       </div>
+      {agentInsights.length === 0 && (
+        <p className="mt-4 text-sm text-muted-foreground">
+          Nenhum insight {showArchived ? "arquivado" : "ativo"} no momento.
+        </p>
+      )}
     </AppShell>
   );
 }

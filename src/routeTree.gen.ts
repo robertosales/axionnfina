@@ -25,6 +25,7 @@ import { Route as AuthenticatedTaxesRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated/transactions'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiInvestmentRadarRouteImport } from './routes/api/investment-radar'
+import { Route as ApiInvestmentRadarDailyRouteImport } from './routes/api/investment-radar-daily'
 import { Route as AuthenticatedWalletIndexRouteImport } from './routes/_authenticated/wallet/index'
 import { Route as AuthenticatedWalletAccountsRouteImport } from './routes/_authenticated/wallet/accounts'
 import { Route as AuthenticatedWalletConnectRouteImport } from './routes/_authenticated/wallet/connect'
@@ -111,6 +112,11 @@ const ApiInvestmentRadarRoute = ApiInvestmentRadarRouteImport.update({
   path: '/api/investment-radar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInvestmentRadarDailyRoute = ApiInvestmentRadarDailyRouteImport.update({
+  id: '/api/investment-radar-daily',
+  path: '/api/investment-radar-daily',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedWalletIndexRoute =
   AuthenticatedWalletIndexRouteImport.update({
     id: '/wallet/',
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/investment-radar': typeof ApiInvestmentRadarRoute
+  '/api/investment-radar-daily': typeof ApiInvestmentRadarDailyRoute
   '/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/wallet/': typeof AuthenticatedWalletIndexRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/investment-radar': typeof ApiInvestmentRadarRoute
+  '/api/investment-radar-daily': typeof ApiInvestmentRadarDailyRoute
   '/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/wallet': typeof AuthenticatedWalletIndexRoute
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/investment-radar': typeof ApiInvestmentRadarRoute
+  '/api/investment-radar-daily': typeof ApiInvestmentRadarDailyRoute
   '/_authenticated/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/_authenticated/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/_authenticated/wallet/': typeof AuthenticatedWalletIndexRoute
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/transactions'
     | '/api/chat'
     | '/api/investment-radar'
+    | '/api/investment-radar-daily'
     | '/wallet/accounts'
     | '/wallet/connect'
     | '/wallet/'
@@ -240,6 +250,7 @@ export interface FileRouteTypes {
     | '/transactions'
     | '/api/chat'
     | '/api/investment-radar'
+    | '/api/investment-radar-daily'
     | '/wallet/accounts'
     | '/wallet/connect'
     | '/wallet'
@@ -262,6 +273,7 @@ export interface FileRouteTypes {
     | '/_authenticated/transactions'
     | '/api/chat'
     | '/api/investment-radar'
+    | '/api/investment-radar-daily'
     | '/_authenticated/wallet/accounts'
     | '/_authenticated/wallet/connect'
     | '/_authenticated/wallet/'
@@ -274,6 +286,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiInvestmentRadarRoute: typeof ApiInvestmentRadarRoute
+  ApiInvestmentRadarDailyRoute: typeof ApiInvestmentRadarDailyRoute
   ApiWebhooksOpenfinanceProviderRoute: typeof ApiWebhooksOpenfinanceProviderRoute
 }
 
@@ -391,6 +404,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInvestmentRadarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/investment-radar-daily': {
+      id: '/api/investment-radar-daily'
+      path: '/api/investment-radar-daily'
+      fullPath: '/api/investment-radar-daily'
+      preLoaderRoute: typeof ApiInvestmentRadarDailyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/wallet/': {
       id: '/_authenticated/wallet/'
       path: '/wallet'
@@ -465,6 +485,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
   ApiInvestmentRadarRoute: ApiInvestmentRadarRoute,
+  ApiInvestmentRadarDailyRoute: ApiInvestmentRadarDailyRoute,
   ApiWebhooksOpenfinanceProviderRoute: ApiWebhooksOpenfinanceProviderRoute,
 }
 export const routeTree = rootRouteImport

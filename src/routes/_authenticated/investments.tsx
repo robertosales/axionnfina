@@ -10,6 +10,7 @@ import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { InvestmentRadarPanel } from "@/components/finance/InvestmentRadarPanel";
 import { InvestmentPlanSimulator } from "@/components/finance/InvestmentPlanSimulator";
+import { InvestmentPlanTracking } from "@/components/finance/InvestmentPlanTracking";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -145,6 +146,7 @@ function InvestmentsPage() {
         <div className="mb-6 space-y-6">
           <InvestmentRadarPanel />
           <InvestmentPlanSimulator />
+          <InvestmentPlanTracking />
         </div>
       )}
 

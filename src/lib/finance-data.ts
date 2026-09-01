@@ -360,6 +360,11 @@ export type Position = {
   currentPrice: number;
   marketValue: number;
   profit: number;
+  privateProductType: PrivateProductType | null;
+  institution: string | null;
+  conglomerate: string | null;
+  maturityDate: string | null;
+  fgcEligible: boolean | null;
   archivedAt: string | null;
   recordOrigin: "manual" | "open_finance" | "import" | "system";
 };
@@ -371,7 +376,7 @@ export function useInvestments(showArchived = false) {
       let request = supabase
         .from("investment_positions")
         .select(
-          "id, ticker, name, asset_class, quantity, average_price, current_price, archived_at, record_origin",
+          "id, ticker, name, asset_class, quantity, average_price, current_price, private_product_type, institution, conglomerate, maturity_date, fgc_eligible, archived_at, record_origin",
         )
         .order("ticker", { ascending: true });
       request = showArchived
@@ -393,6 +398,11 @@ export function useInvestments(showArchived = false) {
           currentPrice,
           marketValue: quantity * currentPrice,
           profit: quantity * (currentPrice - averagePrice),
+          privateProductType: row.private_product_type as PrivateProductType | null,
+          institution: row.institution,
+          conglomerate: row.conglomerate,
+          maturityDate: row.maturity_date,
+          fgcEligible: row.fgc_eligible,
           archivedAt: row.archived_at,
           recordOrigin: row.record_origin as Position["recordOrigin"],
         };
@@ -942,6 +952,11 @@ export function useUpsertInvestmentPosition() {
       quantity: number;
       averagePrice: number;
       currentPrice: number;
+      privateProductType?: PrivateProductType | null;
+      institution?: string | null;
+      conglomerate?: string | null;
+      maturityDate?: string | null;
+      fgcEligible?: boolean | null;
     }) => {
       const userId = await requireUserId();
       const payload = {
@@ -952,6 +967,11 @@ export function useUpsertInvestmentPosition() {
         quantity: input.quantity,
         average_price: input.averagePrice,
         current_price: input.currentPrice,
+        private_product_type: input.privateProductType ?? null,
+        institution: input.institution?.trim() || null,
+        conglomerate: input.conglomerate?.trim() || null,
+        maturity_date: input.maturityDate || null,
+        fgc_eligible: input.fgcEligible ?? null,
         record_origin: "manual",
       } as const;
       const { error } = input.id

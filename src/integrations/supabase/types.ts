@@ -846,8 +846,13 @@ export type Database = {
           average_price: number
           created_at: string
           current_price: number
+          conglomerate: string | null
+          fgc_eligible: boolean | null
           id: string
+          institution: string | null
+          maturity_date: string | null
           name: string
+          private_product_type: string | null
           quantity: number
           record_origin: string
           ticker: string
@@ -862,8 +867,13 @@ export type Database = {
           average_price?: number
           created_at?: string
           current_price?: number
+          conglomerate?: string | null
+          fgc_eligible?: boolean | null
           id?: string
+          institution?: string | null
+          maturity_date?: string | null
           name?: string
+          private_product_type?: string | null
           quantity?: number
           record_origin?: string
           ticker: string
@@ -878,8 +888,13 @@ export type Database = {
           average_price?: number
           created_at?: string
           current_price?: number
+          conglomerate?: string | null
+          fgc_eligible?: boolean | null
           id?: string
+          institution?: string | null
+          maturity_date?: string | null
           name?: string
+          private_product_type?: string | null
           quantity?: number
           record_origin?: string
           ticker?: string

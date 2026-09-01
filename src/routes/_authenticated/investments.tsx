@@ -12,6 +12,7 @@ import { InvestmentRadarPanel } from "@/components/finance/InvestmentRadarPanel"
 import { InvestmentPlanSimulator } from "@/components/finance/InvestmentPlanSimulator";
 import { InvestmentPlanTracking } from "@/components/finance/InvestmentPlanTracking";
 import { PrivateFixedIncomeDesk } from "@/components/finance/PrivateFixedIncomeDesk";
+import { FgcExposurePanel } from "@/components/finance/FgcExposurePanel";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -40,6 +42,7 @@ import {
 import { ASSET_CLASSES, ASSET_CLASS_LABEL, type AssetClass } from "@/shared/domain";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { PrivateProductType } from "@/lib/private-fixed-income";
 
 export const Route = createFileRoute("/_authenticated/investments")({
   head: () => ({
@@ -75,6 +78,11 @@ function InvestmentsPage() {
   const [quantity, setQuantity] = useState("");
   const [averagePrice, setAveragePrice] = useState("");
   const [currentPrice, setCurrentPrice] = useState("");
+  const [privateProductType, setPrivateProductType] = useState<PrivateProductType>("cdb");
+  const [institution, setInstitution] = useState("");
+  const [conglomerate, setConglomerate] = useState("");
+  const [maturityDate, setMaturityDate] = useState("");
+  const [fgcEligible, setFgcEligible] = useState(false);
 
   const openForm = (position?: Position) => {
     setEditingId(position?.id ?? null);
@@ -84,6 +92,11 @@ function InvestmentsPage() {
     setQuantity(position ? String(position.quantity) : "");
     setAveragePrice(position ? String(position.averagePrice) : "");
     setCurrentPrice(position ? String(position.currentPrice) : "");
+    setPrivateProductType(position?.privateProductType ?? "cdb");
+    setInstitution(position?.institution ?? "");
+    setConglomerate(position?.conglomerate ?? "");
+    setMaturityDate(position?.maturityDate ?? "");
+    setFgcEligible(position?.fgcEligible ?? false);
     setOpen(true);
   };
 
@@ -101,6 +114,14 @@ function InvestmentsPage() {
       toast.error("Preencha ativo, nome, quantidade e preços válidos");
       return;
     }
+    if (
+      assetClass === "fixed_income" &&
+      fgcEligible &&
+      (!institution.trim() || !conglomerate.trim() || !maturityDate)
+    ) {
+      toast.error("Informe instituição, conglomerado e vencimento para controlar o FGC");
+      return;
+    }
     upsert.mutate(
       {
         ...(editingId ? { id: editingId } : {}),
@@ -110,6 +131,12 @@ function InvestmentsPage() {
         quantity: parsedQuantity,
         averagePrice: parsedAverage,
         currentPrice: parsedCurrent,
+        privateProductType:
+          assetClass === "fixed_income" && fgcEligible ? privateProductType : null,
+        institution: assetClass === "fixed_income" && fgcEligible ? institution : null,
+        conglomerate: assetClass === "fixed_income" && fgcEligible ? conglomerate : null,
+        maturityDate: assetClass === "fixed_income" && fgcEligible ? maturityDate : null,
+        fgcEligible: assetClass === "fixed_income" ? fgcEligible : null,
       },
       {
         onSuccess: () => {
@@ -154,6 +181,12 @@ function InvestmentsPage() {
       <div className="mb-6">
         <PrivateFixedIncomeDesk showArchived={showArchived} />
       </div>
+
+      {!showArchived && (
+        <div className="mb-6">
+          <FgcExposurePanel positions={positions} />
+        </div>
+      )}
 
       {isLoading && <p className="text-sm text-muted-foreground">Carregando carteira…</p>}
       {!isLoading && positions.length === 0 && (
@@ -206,6 +239,7 @@ function InvestmentsPage() {
                     <span className="block truncate text-sm font-medium">{position.ticker}</span>
                     <span className="text-xs text-muted-foreground">
                       {ASSET_CLASS_LABEL[position.assetClass]} · {position.name}
+                      {position.conglomerate && ` · ${position.conglomerate}`}
                     </span>
                   </span>
                   <span className="ml-auto text-right">
@@ -262,7 +296,7 @@ function InvestmentsPage() {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="rounded-2xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle>{editingId ? "Editar posição" : "Nova posição"}</DialogTitle>
           </DialogHeader>
@@ -288,7 +322,10 @@ function InvestmentsPage() {
               <Label>Classe</Label>
               <Select
                 value={assetClass}
-                onValueChange={(value) => setAssetClass(value as AssetClass)}
+                onValueChange={(value) => {
+                  setAssetClass(value as AssetClass);
+                  if (value !== "fixed_income") setFgcEligible(false);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -329,6 +366,70 @@ function InvestmentsPage() {
                 onChange={(event) => setCurrentPrice(event.target.value)}
               />
             </div>
+            {assetClass === "fixed_income" && (
+              <div className="space-y-4 rounded-xl border p-4 sm:col-span-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <Label htmlFor="position-fgc">Produto elegível ao FGC</Label>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Ative para CDB, LCI ou LCA e informe o conglomerado emissor.
+                    </p>
+                  </div>
+                  <Switch
+                    id="position-fgc"
+                    checked={fgcEligible}
+                    onCheckedChange={setFgcEligible}
+                  />
+                </div>
+                {fgcEligible && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>Produto</Label>
+                      <Select
+                        value={privateProductType}
+                        onValueChange={(value) =>
+                          setPrivateProductType(value as PrivateProductType)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cdb">CDB</SelectItem>
+                          <SelectItem value="lci">LCI</SelectItem>
+                          <SelectItem value="lca">LCA</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="position-institution">Instituição</Label>
+                      <Input
+                        id="position-institution"
+                        value={institution}
+                        onChange={(event) => setInstitution(event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="position-conglomerate">Conglomerado</Label>
+                      <Input
+                        id="position-conglomerate"
+                        value={conglomerate}
+                        onChange={(event) => setConglomerate(event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="position-maturity">Vencimento</Label>
+                      <Input
+                        id="position-maturity"
+                        type="date"
+                        value={maturityDate}
+                        onChange={(event) => setMaturityDate(event.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button onClick={save} disabled={upsert.isPending}>

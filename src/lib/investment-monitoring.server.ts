@@ -10,6 +10,7 @@ import type {
 import { shouldCreateRadarAlert } from "@/lib/investment-alerts";
 import { calculateInvestmentPlanProgress } from "@/lib/investment-progress";
 import { buildUserInvestmentRadar } from "@/lib/investment-radar-user.server";
+import { calculateFgcExposure, FGC_ORDINARY_LIMIT } from "@/lib/fgc-exposure";
 import {
   rankPrivateOffers,
   type PrivateFixedIncomeOffer,
@@ -285,7 +286,7 @@ export async function processInvestmentMonitoringForUser(
       supabase.from("investment_plans").select("*").eq("user_id", userId).is("archived_at", null),
       supabase
         .from("investment_positions")
-        .select("id, ticker, name, quantity, current_price")
+        .select("id, ticker, name, quantity, current_price, conglomerate, fgc_eligible")
         .eq("user_id", userId)
         .is("archived_at", null),
     ]);
@@ -298,6 +299,40 @@ export async function processInvestmentMonitoringForUser(
     name: position.name,
     marketValue: Number(position.quantity) * Number(position.current_price),
   }));
+  const fgcSummary = calculateFgcExposure(
+    (positionRows ?? []).map((position) => ({
+      id: position.id,
+      name: position.name,
+      marketValue: Number(position.quantity) * Number(position.current_price),
+      conglomerate: position.conglomerate,
+      fgcEligible: position.fgc_eligible,
+    })),
+  );
+  const topFgcExposure = fgcSummary.groups[0];
+  if (
+    preferences.enabled &&
+    preferences.inAppEnabled &&
+    topFgcExposure &&
+    topFgcExposure.status !== "safe"
+  ) {
+    const created = await upsertInsight(supabase, {
+      userId,
+      key: `fgc-exposure:${runDate}:${topFgcExposure.conglomerate.toLowerCase()}`,
+      title: `Concentração FGC: ${topFgcExposure.conglomerate}`,
+      description:
+        topFgcExposure.uncoveredAmount > 0
+          ? `A exposição registrada é ${topFgcExposure.projectedExposure.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}, ficando ${topFgcExposure.uncoveredAmount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} acima da referência ordinária de ${FGC_ORDINARY_LIMIT.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} por conglomerado.`
+          : `A exposição registrada atingiu ${(topFgcExposure.utilization * 100).toFixed(0)}% da referência ordinária do FGC por conglomerado. Revise o saldo total antes do próximo aporte.`,
+      severity: "warning",
+      metadata: {
+        kind: "fgc_exposure",
+        conglomerate: topFgcExposure.conglomerate,
+        current_exposure: topFgcExposure.currentExposure,
+        uncovered_amount: topFgcExposure.uncoveredAmount,
+      },
+    });
+    if (created) insightsCreated += 1;
+  }
   for (const row of planRows ?? []) {
     const progress = calculateInvestmentPlanProgress(mapPlan(row), positions);
     const { error: progressError } = await supabase

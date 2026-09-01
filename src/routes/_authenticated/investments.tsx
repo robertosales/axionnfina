@@ -9,6 +9,7 @@ import { ChartCard } from "@/components/finance/ChartCard";
 import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { InvestmentRadarPanel } from "@/components/finance/InvestmentRadarPanel";
+import { InvestmentPlanSimulator } from "@/components/finance/InvestmentPlanSimulator";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -141,8 +142,9 @@ function InvestmentsPage() {
       </header>
 
       {!showArchived && (
-        <div className="mb-6">
+        <div className="mb-6 space-y-6">
           <InvestmentRadarPanel />
+          <InvestmentPlanSimulator />
         </div>
       )}
 

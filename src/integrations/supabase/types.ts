@@ -685,6 +685,63 @@ export type Database = {
         }
         Relationships: []
       }
+      investment_plans: {
+        Row: {
+          allocations: Json
+          archived_at: string | null
+          archived_by: string | null
+          assumptions: Json
+          created_at: string
+          horizon_months: number
+          id: string
+          initial_amount: number
+          market_reference_date: string
+          monthly_contribution: number
+          name: string
+          profile_snapshot: Json
+          record_origin: string
+          scenarios: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allocations?: Json
+          archived_at?: string | null
+          archived_by?: string | null
+          assumptions?: Json
+          created_at?: string
+          horizon_months: number
+          id?: string
+          initial_amount?: number
+          market_reference_date: string
+          monthly_contribution?: number
+          name: string
+          profile_snapshot?: Json
+          record_origin?: string
+          scenarios?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allocations?: Json
+          archived_at?: string | null
+          archived_by?: string | null
+          assumptions?: Json
+          created_at?: string
+          horizon_months?: number
+          id?: string
+          initial_amount?: number
+          market_reference_date?: string
+          monthly_contribution?: number
+          name?: string
+          profile_snapshot?: Json
+          record_origin?: string
+          scenarios?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       investment_positions: {
         Row: {
           account_id: string | null

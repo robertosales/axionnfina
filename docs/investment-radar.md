@@ -19,6 +19,10 @@ O perfil considera tolerância a risco, horizonte, liquidez e objetivo. O contex
 
 Cada título recebe pontos separados por risco, prazo, liquidez, objetivo, estrutura de pagamentos e, quando aplicável, cobertura da reserva. A interface expõe todas essas evidências e alertas de marcação a mercado.
 
+## Simulador de aporte
+
+O simulador transforma as oportunidades elegíveis em uma distribuição de até três títulos. As projeções usam cenários cauteloso, de referência e favorável, com IR regressivo aproximado e custódia ponderada. A estimativa considera a isenção geral de custódia do Tesouro Selic até R$ 10 mil e as regras de vencimento de RendA+ e Educa+, mas não substitui o cálculo da instituição. Cada versão pode ser salva, editada, arquivada, restaurada ou excluída.
+
 ## Limites atuais
 
 O primeiro provedor contém apenas títulos públicos. CDBs, LCIs, LCAs e fundos só devem entrar quando houver uma fonte autorizada que forneça taxa, vencimento, liquidez, custos e emissor de forma verificável.

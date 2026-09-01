@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import type {
   Account,
   AccountType,
@@ -27,6 +28,14 @@ import type {
   LiquidityPreference,
   RiskProfile,
 } from "@/lib/investment-radar";
+import type {
+  InvestmentPlanAllocation,
+  InvestmentPlanScenario,
+  InvestmentPlanSimulation,
+  SavedInvestmentPlan,
+} from "@/lib/investment-plan";
+
+type DbJson = Database["public"]["Tables"]["investment_plans"]["Row"]["allocations"];
 
 /** Mapa entre o enum do banco e o tipo usado na UI. */
 const dbToUiAccountType = {
@@ -754,6 +763,7 @@ export type LifecycleEntity =
   | "budget"
   | "goal"
   | "investment"
+  | "investment_plan"
   | "payable"
   | "receivable"
   | "tax_event"
@@ -765,6 +775,7 @@ const lifecycleQueryKey: Record<LifecycleEntity, string> = {
   budget: "budgets",
   goal: "goals",
   investment: "investments",
+  investment_plan: "investment-plans",
   payable: "payables",
   receivable: "receivables",
   tax_event: "tax-events",
@@ -835,6 +846,8 @@ async function setArchived(entity: LifecycleEntity, id: string, archived: boolea
           .from("investment_positions")
           .update({ archived_at: archivedAt })
           .eq("id", id);
+      case "investment_plan":
+        return supabase.from("investment_plans").update({ archived_at: archivedAt }).eq("id", id);
       case "payable":
         return supabase.from("payables").update({ archived_at: archivedAt }).eq("id", id);
       case "receivable":
@@ -862,6 +875,8 @@ async function deleteEntity(entity: LifecycleEntity, id: string) {
         return supabase.from("goals").delete().eq("id", id);
       case "investment":
         return supabase.from("investment_positions").delete().eq("id", id);
+      case "investment_plan":
+        return supabase.from("investment_plans").delete().eq("id", id);
       case "payable":
         return supabase.from("payables").delete().eq("id", id);
       case "receivable":
@@ -974,6 +989,74 @@ export function useUpdateInvestmentProfile() {
       if (error) throw error;
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["investment-radar"] }),
+  });
+}
+
+export function useInvestmentPlans(showArchived = false) {
+  return useQuery({
+    queryKey: ["investment-plans", showArchived],
+    queryFn: async (): Promise<SavedInvestmentPlan[]> => {
+      let request = supabase
+        .from("investment_plans")
+        .select(
+          "id, name, initial_amount, monthly_contribution, horizon_months, market_reference_date, profile_snapshot, allocations, scenarios, archived_at, created_at, updated_at",
+        )
+        .order("updated_at", { ascending: false });
+      request = showArchived
+        ? request.not("archived_at", "is", null)
+        : request.is("archived_at", null);
+      const { data, error } = await request;
+      if (error) throw error;
+      return (data ?? []).map((plan) => ({
+        id: plan.id,
+        name: plan.name,
+        input: {
+          initialAmount: Number(plan.initial_amount),
+          monthlyContribution: Number(plan.monthly_contribution),
+          horizonMonths: plan.horizon_months,
+        },
+        allocations: plan.allocations as unknown as InvestmentPlanAllocation[],
+        scenarios: plan.scenarios as unknown as InvestmentPlanScenario[],
+        marketReferenceDate: plan.market_reference_date,
+        profileSnapshot: plan.profile_snapshot as unknown as InvestmentProfile,
+        archivedAt: plan.archived_at,
+        createdAt: plan.created_at,
+        updatedAt: plan.updated_at,
+      }));
+    },
+  });
+}
+
+export function useUpsertInvestmentPlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id?: string;
+      name: string;
+      simulation: InvestmentPlanSimulation;
+      marketReferenceDate: string;
+      profileSnapshot: InvestmentProfile;
+    }) => {
+      const userId = await requireUserId();
+      const payload = {
+        user_id: userId,
+        name: input.name.trim(),
+        initial_amount: input.simulation.input.initialAmount,
+        monthly_contribution: input.simulation.input.monthlyContribution,
+        horizon_months: input.simulation.input.horizonMonths,
+        market_reference_date: input.marketReferenceDate,
+        profile_snapshot: input.profileSnapshot as unknown as DbJson,
+        allocations: input.simulation.allocations as unknown as DbJson,
+        scenarios: input.simulation.scenarios as unknown as DbJson,
+        assumptions: input.simulation.assumptions as unknown as DbJson,
+        record_origin: "manual",
+      } as const;
+      const { error } = input.id
+        ? await supabase.from("investment_plans").update(payload).eq("id", input.id)
+        : await supabase.from("investment_plans").insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["investment-plans"] }),
   });
 }
 

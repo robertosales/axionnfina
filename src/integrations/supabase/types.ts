@@ -1250,6 +1250,10 @@ export type Database = {
           currency: string
           display_name: string | null
           id: string
+          investment_horizon_months: number
+          investment_objective: string
+          liquidity_preference: string
+          risk_profile: string
           updated_at: string
         }
         Insert: {
@@ -1257,6 +1261,10 @@ export type Database = {
           currency?: string
           display_name?: string | null
           id: string
+          investment_horizon_months?: number
+          investment_objective?: string
+          liquidity_preference?: string
+          risk_profile?: string
           updated_at?: string
         }
         Update: {
@@ -1264,6 +1272,10 @@ export type Database = {
           currency?: string
           display_name?: string | null
           id?: string
+          investment_horizon_months?: number
+          investment_objective?: string
+          liquidity_preference?: string
+          risk_profile?: string
           updated_at?: string
         }
         Relationships: []

@@ -15,6 +15,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ChartCard } from "@/components/finance/ChartCard";
 import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
+import { InvestmentRadarPanel } from "@/components/finance/InvestmentRadarPanel";
 import { Card } from "@/components/ui/card";
 import { netWorthSeries } from "@/lib/mock-data";
 import { useEntityLifecycle, useInsights } from "@/lib/finance-data";
@@ -109,6 +110,12 @@ function InsightsPage() {
           </ResponsiveContainer>
         </div>
       </ChartCard>
+
+      {!showArchived && (
+        <div className="mt-6">
+          <InvestmentRadarPanel compact />
+        </div>
+      )}
 
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         {agentInsights.map((insight) => (

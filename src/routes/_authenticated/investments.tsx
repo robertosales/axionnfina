@@ -8,6 +8,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ChartCard } from "@/components/finance/ChartCard";
 import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
+import { InvestmentRadarPanel } from "@/components/finance/InvestmentRadarPanel";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -138,6 +139,12 @@ function InvestmentsPage() {
           )}
         </div>
       </header>
+
+      {!showArchived && (
+        <div className="mb-6">
+          <InvestmentRadarPanel />
+        </div>
+      )}
 
       {isLoading && <p className="text-sm text-muted-foreground">Carregando carteira…</p>}
       {!isLoading && positions.length === 0 && (

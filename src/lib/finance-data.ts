@@ -20,6 +20,13 @@ import {
 } from "@/lib/mock-data";
 import type { AssetClass, BillStatus } from "@/shared/domain";
 import { ASSET_CLASS_COLOR, ASSET_CLASS_LABEL } from "@/shared/domain";
+import type {
+  InvestmentObjective,
+  InvestmentProfile,
+  InvestmentRadarResponse,
+  LiquidityPreference,
+  RiskProfile,
+} from "@/lib/investment-radar";
 
 /** Mapa entre o enum do banco e o tipo usado na UI. */
 const dbToUiAccountType = {
@@ -924,6 +931,49 @@ export function useUpsertInvestmentPosition() {
       if (error) throw error;
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["investments"] }),
+  });
+}
+
+export function useInvestmentRadar() {
+  return useQuery({
+    queryKey: ["investment-radar"],
+    queryFn: async (): Promise<InvestmentRadarResponse> => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error("Sessão expirada. Entre novamente.");
+
+      const response = await fetch("/api/investment-radar", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = (await response.json()) as InvestmentRadarResponse & { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Não foi possível carregar o Radar.");
+      return payload;
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useUpdateInvestmentProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (profile: InvestmentProfile) => {
+      const userId = await requireUserId();
+      const payload: {
+        risk_profile: RiskProfile;
+        investment_horizon_months: number;
+        liquidity_preference: LiquidityPreference;
+        investment_objective: InvestmentObjective;
+      } = {
+        risk_profile: profile.riskProfile,
+        investment_horizon_months: profile.horizonMonths,
+        liquidity_preference: profile.liquidityPreference,
+        investment_objective: profile.objective,
+      };
+      const { error } = await supabase.from("profiles").upsert({ id: userId, ...payload });
+      if (error) throw error;
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["investment-radar"] }),
   });
 }
 

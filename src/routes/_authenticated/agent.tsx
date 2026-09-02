@@ -193,6 +193,7 @@ function AgentPage() {
               <Input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
+                maxLength={2000}
                 placeholder="Pergunte sobre gastos, metas, impostos…"
                 aria-label="Mensagem para o agente"
               />
@@ -200,6 +201,10 @@ function AgentPage() {
                 <Send className="size-4" />
               </Button>
             </form>
+            <div className="mt-2 flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
+              <p>Os cálculos são feitos pelo AxionnFina; a IA ajuda a explicar os resultados.</p>
+              <span className="numeric shrink-0">{draft.length}/2.000</span>
+            </div>
           </div>
         </Card>
 

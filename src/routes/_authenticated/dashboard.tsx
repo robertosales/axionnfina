@@ -20,6 +20,7 @@ import { BudgetProgress } from "@/components/finance/BudgetProgress";
 import { ChartCard } from "@/components/finance/ChartCard";
 import { KPICard } from "@/components/finance/KPICard";
 import { HealthScore, calculateHealthScore } from "@/components/finance/HealthScore";
+import { FinancialNextStepCard } from "@/components/finance/FinancialNextStepCard";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -31,6 +32,7 @@ import {
   useAccounts,
   useBudgets,
   useCashflow,
+  useGoals,
   useInsights,
   useInvestments,
   useNetWorthSeries,
@@ -38,6 +40,7 @@ import {
   useSeedDemoData,
   useTransactions,
 } from "@/lib/finance-data";
+import { analyzeFinancialReadiness } from "@/lib/financial-next-step";
 import { daysUntil, formatBRL, formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -81,14 +84,24 @@ function Dashboard() {
   const { anomalies } = useAnomalyDetection();
   const { daysSinceLastIncome } = useMoneyAge();
 
-  const { data: accounts = [], isLoading: loadingAccounts } = useAccounts();
+  const { data: accounts = [], isLoading: loadingAccounts, isError: accountsError } = useAccounts();
   const { data: agentInsights = [] } = useInsights();
   const { items: budgetItems } = useBudgets();
   const { data: cashflow } = useCashflow();
   const { data: netWorthSeries = [] } = useNetWorthSeries();
-  const { allocation, total: totalInvestments } = useInvestments();
-  const { data: upcomingBills = [] } = usePayables();
-  const { data: transactions = [] } = useTransactions(1000);
+  const {
+    allocation,
+    total: totalInvestments,
+    isLoading: loadingInvestments,
+    isError: investmentsError,
+  } = useInvestments();
+  const { data: upcomingBills = [], isLoading: loadingBills, isError: billsError } = usePayables();
+  const {
+    data: transactions = [],
+    isLoading: loadingTransactions,
+    isError: transactionsError,
+  } = useTransactions(1000);
+  const { data: goals = [], isLoading: loadingGoals, isError: goalsError } = useGoals();
   const seed = useSeedDemoData();
 
   const netWorth = accounts.reduce((total, account) => total + account.balance, 0);
@@ -118,6 +131,17 @@ function Dashboard() {
       : 0;
   const openBills = upcomingBills.filter((bill) => bill.dbStatus !== "paid");
   const nextBill = openBills[0];
+  const nextStep = analyzeFinancialReadiness({
+    accounts,
+    transactions,
+    bills: openBills,
+    goals,
+    investmentTotal: totalInvestments,
+  });
+  const loadingNextStep =
+    loadingAccounts || loadingTransactions || loadingBills || loadingGoals || loadingInvestments;
+  const nextStepError =
+    accountsError || transactionsError || billsError || goalsError || investmentsError;
 
   // Health score calculation
   const uniqueCategories = new Set(
@@ -150,8 +174,14 @@ function Dashboard() {
         )}
       </header>
 
+      <FinancialNextStepCard
+        analysis={nextStep}
+        isLoading={loadingNextStep}
+        hasError={nextStepError}
+      />
+
       {/* KPIs */}
-      <section aria-label="Indicadores" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Indicadores" className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KPICard
           label="Patrimônio líquido"
           value={formatBRL(netWorth)}
@@ -162,7 +192,13 @@ function Dashboard() {
         <KPICard
           label="Liquidez imediata"
           value={formatBRL(liquidity)}
-          change={Math.round((currentMonth?.saldo ?? 0) > 0 ? 100 * (currentMonth!.saldo / Math.max(currentMonth!.receitas, 1)) : 0) / 10}
+          change={
+            Math.round(
+              (currentMonth?.saldo ?? 0) > 0
+                ? 100 * (currentMonth!.saldo / Math.max(currentMonth!.receitas, 1))
+                : 0,
+            ) / 10
+          }
           icon={Wallet}
           sparkline={cashflow.map((p) => ({ value: p.saldo }))}
         />
@@ -177,7 +213,9 @@ function Dashboard() {
           label="Próximo vencimento"
           value={formatBRL(nextBill?.amount ?? 0)}
           hint={
-            nextBill ? `${nextBill.name} · ${formatShortDate(nextBill.dueDate)}` : "Sem contas abertas"
+            nextBill
+              ? `${nextBill.name} · ${formatShortDate(nextBill.dueDate)}`
+              : "Sem contas abertas"
           }
           icon={CalendarClock}
           tone="danger"
@@ -240,9 +278,12 @@ function Dashboard() {
             ))}
             {daysSinceLastIncome !== null && daysSinceLastIncome > 45 && (
               <article className="rounded-lg border border-warning/40 bg-warning/5 p-3">
-                <h3 className="text-sm font-medium">Última receita há {daysSinceLastIncome} dias</h3>
+                <h3 className="text-sm font-medium">
+                  Última receita há {daysSinceLastIncome} dias
+                </h3>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  Considere verificar se há receitas pendentes ou se o fluxo de renda está consistente.
+                  Considere verificar se há receitas pendentes ou se o fluxo de renda está
+                  consistente.
                 </p>
               </article>
             )}
@@ -270,7 +311,11 @@ function Dashboard() {
                     <stop offset="100%" stopColor="var(--color-expense)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--color-border)"
+                  vertical={false}
+                />
                 <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
                 <YAxis
                   tickFormatter={(v: number) => formatBRL(v, true)}
@@ -354,7 +399,11 @@ function Dashboard() {
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={budgetItems} margin={{ left: -18, right: 8, top: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--color-border)"
+                  vertical={false}
+                />
                 <XAxis dataKey="category" tickLine={false} axisLine={false} fontSize={11} />
                 <YAxis
                   tickFormatter={(v: number) => formatBRL(v, true)}
@@ -373,8 +422,24 @@ function Dashboard() {
                   }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                <Area type="monotone" isAnimationActive={false} dataKey="planned" name="Planejado" stroke="var(--color-chart-1)" fill="var(--color-chart-1)" fillOpacity={0.2} />
-                <Area type="monotone" isAnimationActive={false} dataKey="spent" name="Realizado" stroke="var(--color-chart-3)" fill="var(--color-chart-3)" fillOpacity={0.2} />
+                <Area
+                  type="monotone"
+                  isAnimationActive={false}
+                  dataKey="planned"
+                  name="Planejado"
+                  stroke="var(--color-chart-1)"
+                  fill="var(--color-chart-1)"
+                  fillOpacity={0.2}
+                />
+                <Area
+                  type="monotone"
+                  isAnimationActive={false}
+                  dataKey="spent"
+                  name="Realizado"
+                  stroke="var(--color-chart-3)"
+                  fill="var(--color-chart-3)"
+                  fillOpacity={0.2}
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>

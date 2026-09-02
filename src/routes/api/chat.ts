@@ -3,10 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 import { convertToModelMessages, stepCountIs, streamText, tool, type UIMessage } from "ai";
 import { z } from "zod";
 
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import type { Database } from "@/integrations/supabase/types";
+import { AiConfigurationError, createAiRuntime } from "@/lib/ai-provider.server";
+import { getRateLimitHeaders, RATE_LIMITS } from "@/lib/security";
 
-const MODEL = "google/gemini-2.5-flash";
+const MAX_CHAT_HISTORY = 12;
+const MAX_USER_MESSAGE_CHARS = 2_000;
 
 const SYSTEM_PROMPT = `Você é o Axionn, um agente financeiro pessoal brasileiro.
 Arquitetura: você atua como Planner + Specialists — planeje a resposta, chame as ferramentas
@@ -14,6 +16,8 @@ necessárias para obter dados REAIS do usuário e só então responda.
 
 Regras rígidas (guardrails):
 - Nunca invente números. Se não houver dado, diga que não há registros.
+- Os cálculos vêm das ferramentas do AxionnFina. Não recalcule nem estime valores ausentes.
+- Evite repetir identificadores, nomes de contas ou dados pessoais que não sejam necessários.
 - Valores sempre em Real (R$) com duas casas decimais.
 - Nunca execute pagamentos ou transferências sem confirmação explícita do usuário.
 - Para agendar Pix, use a tool schedule_pix_payment e deixe que o usuário confirme no card.
@@ -41,13 +45,19 @@ function userClient(token: string) {
   });
 }
 
+function textFromMessage(message: UIMessage) {
+  return message.parts
+    .filter((part): part is Extract<(typeof message.parts)[number], { type: "text" }> =>
+      part.type === "text",
+    )
+    .map((part) => part.text)
+    .join("\n");
+}
+
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey = process.env["LOVABLE_API_KEY"];
-        if (!apiKey) return new Response("AI indisponível", { status: 500 });
-
         const authorization = request.headers.get("authorization") ?? "";
         const token = authorization.replace(/^Bearer\s+/i, "");
         if (!token) return new Response("Unauthorized", { status: 401 });
@@ -57,15 +67,48 @@ export const Route = createFileRoute("/api/chat")({
         if (userError || !userData.user) return new Response("Unauthorized", { status: 401 });
         const userId = userData.user.id;
 
-        const body = (await request.json()) as { messages: UIMessage[] };
+        const rateLimit = getRateLimitHeaders(`agent-chat:${userId}`, RATE_LIMITS.agentChat);
+        if (!rateLimit.allowed) {
+          return new Response("Limite de mensagens atingido. Aguarde um minuto e tente novamente.", {
+            status: 429,
+            headers: rateLimit.headers,
+          });
+        }
 
-        const gateway = createLovableAiGatewayProvider(apiKey);
+        const body = (await request.json().catch(() => null)) as { messages?: UIMessage[] } | null;
+        if (!body || !Array.isArray(body.messages) || body.messages.length === 0) {
+          return new Response("Envie ao menos uma mensagem.", { status: 400 });
+        }
+        const lastUserMessage = [...body.messages]
+          .reverse()
+          .find((message) => message.role === "user");
+        if (!lastUserMessage) return new Response("Mensagem do usuário ausente.", { status: 400 });
+        if (textFromMessage(lastUserMessage).length > MAX_USER_MESSAGE_CHARS) {
+          return new Response(
+            `A mensagem pode ter no máximo ${MAX_USER_MESSAGE_CHARS.toLocaleString("pt-BR")} caracteres.`,
+            { status: 413 },
+          );
+        }
+
+        const messages = body.messages.slice(-MAX_CHAT_HISTORY);
+        let aiRuntime: ReturnType<typeof createAiRuntime>;
+        try {
+          aiRuntime = createAiRuntime();
+        } catch (error) {
+          const message =
+            error instanceof AiConfigurationError
+              ? error.message
+              : "O agente está temporariamente indisponível.";
+          console.error("[AgentAI:configuration]", message);
+          return new Response(message, { status: 503 });
+        }
 
         const result = streamText({
-          model: gateway(MODEL),
+          model: aiRuntime.model,
           system: SYSTEM_PROMPT,
-          messages: await convertToModelMessages(body.messages),
-          stopWhen: stepCountIs(50),
+          messages: await convertToModelMessages(messages),
+          maxOutputTokens: 1_200,
+          stopWhen: stepCountIs(8),
           tools: {
             /* ---------------------------------------------------------- */
             /* Tool: resumo_financeiro                                     */
@@ -77,7 +120,7 @@ export const Route = createFileRoute("/api/chat")({
               execute: async () => {
                 const { data: accounts } = await supabase
                   .from("accounts")
-                  .select("name, institution, type, balance")
+                  .select("type, balance")
                   .eq("user_id", userId);
                 const start = new Date();
                 start.setDate(1);
@@ -92,8 +135,19 @@ export const Route = createFileRoute("/api/chat")({
                 const expense = (txs ?? [])
                   .filter((t) => t.type === "expense")
                   .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
+                const balancesByType = new Map<string, { count: number; balance: number }>();
+                for (const account of accounts ?? []) {
+                  const current = balancesByType.get(account.type) ?? { count: 0, balance: 0 };
+                  current.count += 1;
+                  current.balance += Number(account.balance);
+                  balancesByType.set(account.type, current);
+                }
                 return {
-                  contas: accounts ?? [],
+                  saldosPorTipo: [...balancesByType].map(([type, summary]) => ({
+                    tipo: type,
+                    quantidade: summary.count,
+                    saldo: summary.balance,
+                  })),
                   patrimonio: (accounts ?? []).reduce((sum, a) => sum + Number(a.balance), 0),
                   receitasMes: income,
                   despesasMes: expense,
@@ -132,10 +186,39 @@ export const Route = createFileRoute("/api/chat")({
                       .toLowerCase()
                       .includes(term),
                 );
+                const totalByCategory = new Map<string, number>();
+                const totalByMerchant = new Map<string, number>();
+                for (const transaction of rows) {
+                  if (transaction.type !== "expense") continue;
+                  const amount = Math.abs(Number(transaction.amount));
+                  totalByCategory.set(
+                    transaction.category,
+                    (totalByCategory.get(transaction.category) ?? 0) + amount,
+                  );
+                  const merchant = transaction.merchant?.trim();
+                  if (merchant) {
+                    totalByMerchant.set(merchant, (totalByMerchant.get(merchant) ?? 0) + amount);
+                  }
+                }
+                const topEntries = (entries: Map<string, number>) =>
+                  [...entries]
+                    .sort((left, right) => right[1] - left[1])
+                    .slice(0, 8)
+                    .map(([nome, total]) => ({ nome, total }));
+                const income = rows
+                  .filter((transaction) => transaction.type === "income")
+                  .reduce((sum, transaction) => sum + Math.abs(Number(transaction.amount)), 0);
+                const expenses = rows
+                  .filter((transaction) => transaction.type === "expense")
+                  .reduce((sum, transaction) => sum + Math.abs(Number(transaction.amount)), 0);
                 return {
+                  periodo: { inicio: dataInicio, fim: dataFim },
                   quantidade: rows.length,
-                  total: rows.reduce((sum, t) => sum + Number(t.amount), 0),
-                  transacoes: rows.slice(0, 40),
+                  receitas: income,
+                  despesas: expenses,
+                  saldo: income - expenses,
+                  porCategoria: topEntries(totalByCategory),
+                  porEstabelecimento: topEntries(totalByMerchant),
                 };
               },
             }),
@@ -359,7 +442,12 @@ export const Route = createFileRoute("/api/chat")({
           },
         });
 
-        return result.toUIMessageStreamResponse();
+        return result.toUIMessageStreamResponse({
+          headers: {
+            ...rateLimit.headers,
+            "X-Axionn-AI-Provider": aiRuntime.provider,
+          },
+        });
       },
     },
   },

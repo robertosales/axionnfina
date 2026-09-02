@@ -10,7 +10,7 @@ export const CSP_HEADER = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' https://fonts.gstatic.com",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openfinancebrasil.org.br https://ai.gateway.lovable.dev",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openfinancebrasil.org.br",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

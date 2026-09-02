@@ -76,7 +76,7 @@ Critério de saída: o usuário consegue sair de um insight para uma ação e ac
 
 ## Fase 3 — Carteira automática
 
-Status: primeira entrega implementada no código; a migration `20260901060000_automatic_investment_portfolio.sql` precisa ser aplicada.
+Status: primeira entrega implementada; migration aplicada no Supabase em 01/09/2026.
 
 - Conectar o suporte de investimentos do provedor ao fluxo Open Finance realmente usado pelo app.
 - Normalizar e persistir posições, saldos, vencimentos e movimentações com idempotência.
@@ -102,11 +102,28 @@ Critério de saída: uma carteira conectada aparece sem exigir ticker, preço m�
 
 ## Fase 4 — Primeiro investimento guiado
 
+Status: primeira entrega implementada no código; a migration `20260901070000_first_investment_guidance.sql` precisa ser aplicada.
+
 - Coletar objetivo, prazo, necessidade de liquidez, tolerância a oscilações e conhecimento.
 - Verificar reserva e compromissos antes de apresentar produtos.
 - Mostrar no máximo três caminhos educacionais com motivo, risco, liquidez, custos e fonte.
 - Manter detalhes técnicos em uma segunda camada da interface.
 - Usar linguagem de adequação educacional, sujeita a revisão regulatória, sem prometer o “melhor investimento”.
+
+Entregue na primeira versão:
+
+- Semáforo determinístico que impede a exibição de caminhos enquanto houver organização, dívida, reserva ou objetivo pendente.
+- Avaliação guiada de cinco perguntas sobre objetivo, prazo, liquidez, tolerância a oscilação e conhecimento.
+- Perfil derivado de forma conservadora, limitando o risco quando a pessoa ainda não conhece os produtos.
+- Até três caminhos educacionais, sem indicar ativo específico, com motivo, risco, liquidez, custos, falhas possíveis e próxima verificação.
+- Fontes oficiais do Portal do Investidor em cada caminho e aviso explícito de que o fluxo não substitui o suitability da instituição.
+- Histórico imutável da avaliação com fotografia financeira e caminhos exibidos, protegido por RLS.
+- Jornada responsiva com detalhes técnicos recolhidos e possibilidade de refazer as respostas.
+
+Próximo incremento:
+
+- Revisão jurídica/regulatória da linguagem antes de converter caminhos educacionais em ofertas individualizadas.
+- Permitir ajuste fino do prazo em meses e registrar quando o usuário acessa a fonte ou inicia uma comparação.
 
 Critério de saída: um iniciante entende por que uma opção apareceu e o que pode dar errado antes de decidir.
 

@@ -1589,8 +1589,11 @@ export type Database = {
           created_at: string
           currency: string
           display_name: string | null
+          fluctuation_tolerance: string | null
           id: string
+          investment_guidance_completed_at: string | null
           investment_horizon_months: number
+          investment_knowledge: string | null
           investment_objective: string
           liquidity_preference: string
           risk_profile: string
@@ -1600,8 +1603,11 @@ export type Database = {
           created_at?: string
           currency?: string
           display_name?: string | null
+          fluctuation_tolerance?: string | null
           id: string
+          investment_guidance_completed_at?: string | null
           investment_horizon_months?: number
+          investment_knowledge?: string | null
           investment_objective?: string
           liquidity_preference?: string
           risk_profile?: string
@@ -1611,8 +1617,11 @@ export type Database = {
           created_at?: string
           currency?: string
           display_name?: string | null
+          fluctuation_tolerance?: string | null
           id?: string
+          investment_guidance_completed_at?: string | null
           investment_horizon_months?: number
+          investment_knowledge?: string | null
           investment_objective?: string
           liquidity_preference?: string
           risk_profile?: string
@@ -1780,6 +1789,12 @@ export type Database = {
         Row: { id: string; user_id: string; file_name: string; file_type: string; status: string; rows_found: number; rows_imported: number; rows_rejected: number; errors: Json; created_at: string; completed_at: string | null }
         Insert: { id?: string; user_id: string; file_name: string; file_type: string; status?: string; rows_found?: number; rows_imported?: number; rows_rejected?: number; errors?: Json; created_at?: string; completed_at?: string | null }
         Update: { id?: string; user_id?: string; file_name?: string; file_type?: string; status?: string; rows_found?: number; rows_imported?: number; rows_rejected?: number; errors?: Json; created_at?: string; completed_at?: string | null }
+        Relationships: []
+      }
+      investment_guidance_assessments: {
+        Row: { id: string; user_id: string; objective: string; horizon_months: number; liquidity_preference: string; fluctuation_tolerance: string; knowledge_level: string; derived_risk_profile: string; readiness: string; financial_snapshot: Json; educational_paths: Json; created_at: string }
+        Insert: { id?: string; user_id: string; objective: string; horizon_months: number; liquidity_preference: string; fluctuation_tolerance: string; knowledge_level: string; derived_risk_profile: string; readiness: string; financial_snapshot?: Json; educational_paths?: Json; created_at?: string }
+        Update: { id?: string; user_id?: string; objective?: string; horizon_months?: number; liquidity_preference?: string; fluctuation_tolerance?: string; knowledge_level?: string; derived_risk_profile?: string; readiness?: string; financial_snapshot?: Json; educational_paths?: Json; created_at?: string }
         Relationships: []
       }
       investment_transactions: {

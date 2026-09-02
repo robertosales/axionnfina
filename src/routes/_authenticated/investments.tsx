@@ -15,6 +15,7 @@ import { PrivateFixedIncomeDesk } from "@/components/finance/PrivateFixedIncomeD
 import { FgcExposurePanel } from "@/components/finance/FgcExposurePanel";
 import { InvestmentMaturityLadder } from "@/components/finance/InvestmentMaturityLadder";
 import { PortfolioOnboardingCard } from "@/components/finance/PortfolioOnboardingCard";
+import { FirstInvestmentGuide } from "@/components/finance/FirstInvestmentGuide";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -178,7 +179,12 @@ function InvestmentsPage() {
         </div>
       </header>
 
-      {!showArchived && <PortfolioOnboardingCard onManual={() => openForm()} />}
+      {!showArchived && (
+        <div className="space-y-6">
+          <FirstInvestmentGuide />
+          <PortfolioOnboardingCard onManual={() => openForm()} />
+        </div>
+      )}
 
       {!showArchived && (
         <div className="mb-6 mt-6 space-y-6">

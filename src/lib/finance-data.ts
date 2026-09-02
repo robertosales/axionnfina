@@ -45,6 +45,10 @@ import type {
   SavingsPlanStatus,
 } from "@/lib/savings-opportunities";
 import type { CsvInvestmentRow } from "@/lib/investment-import";
+import type {
+  FirstInvestmentAnswers,
+  FirstInvestmentGuidance,
+} from "@/lib/first-investment-guide";
 
 type DbJson = Database["public"]["Tables"]["investment_plans"]["Row"]["allocations"];
 
@@ -1260,6 +1264,87 @@ export function useUpdateInvestmentProfile() {
       if (error) throw error;
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["investment-radar"] }),
+  });
+}
+
+export type SavedInvestmentGuidance = {
+  answers: FirstInvestmentAnswers;
+  createdAt: string;
+};
+
+export function useLatestInvestmentGuidance() {
+  return useQuery({
+    queryKey: ["investment-guidance", "latest"],
+    queryFn: async (): Promise<SavedInvestmentGuidance | null> => {
+      const { data, error } = await supabase
+        .from("investment_guidance_assessments")
+        .select(
+          "objective, horizon_months, liquidity_preference, fluctuation_tolerance, knowledge_level, created_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        answers: {
+          objective: data.objective as InvestmentObjective,
+          horizonMonths: data.horizon_months,
+          liquidityPreference: data.liquidity_preference as LiquidityPreference,
+          fluctuationTolerance:
+            data.fluctuation_tolerance as FirstInvestmentAnswers["fluctuationTolerance"],
+          knowledgeLevel: data.knowledge_level as FirstInvestmentAnswers["knowledgeLevel"],
+        },
+        createdAt: data.created_at,
+      };
+    },
+    retry: false,
+  });
+}
+
+export function useSaveInvestmentGuidance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      answers: FirstInvestmentAnswers;
+      guidance: FirstInvestmentGuidance;
+      financial: { stage: string; confidence: number; metrics: Record<string, number> };
+    }) => {
+      const userId = await requireUserId();
+      const completedAt = new Date().toISOString();
+      const { error: assessmentError } = await supabase
+        .from("investment_guidance_assessments")
+        .insert({
+          user_id: userId,
+          objective: input.answers.objective,
+          horizon_months: input.answers.horizonMonths,
+          liquidity_preference: input.answers.liquidityPreference,
+          fluctuation_tolerance: input.answers.fluctuationTolerance,
+          knowledge_level: input.answers.knowledgeLevel,
+          derived_risk_profile: input.guidance.profile.riskProfile,
+          readiness: input.guidance.readiness,
+          financial_snapshot: input.financial as unknown as DbJson,
+          educational_paths: input.guidance.paths as unknown as DbJson,
+          created_at: completedAt,
+        });
+      if (assessmentError) throw assessmentError;
+
+      const { error: profileError } = await supabase.from("profiles").upsert({
+        id: userId,
+        risk_profile: input.guidance.profile.riskProfile,
+        investment_horizon_months: input.answers.horizonMonths,
+        liquidity_preference: input.answers.liquidityPreference,
+        investment_objective: input.answers.objective,
+        investment_knowledge: input.answers.knowledgeLevel,
+        fluctuation_tolerance: input.answers.fluctuationTolerance,
+        investment_guidance_completed_at: completedAt,
+      });
+      if (profileError) throw profileError;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["investment-guidance"] });
+      void queryClient.invalidateQueries({ queryKey: ["investment-radar"] });
+    },
   });
 }
 

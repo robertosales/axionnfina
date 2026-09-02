@@ -14,6 +14,7 @@ import { InvestmentPlanTracking } from "@/components/finance/InvestmentPlanTrack
 import { PrivateFixedIncomeDesk } from "@/components/finance/PrivateFixedIncomeDesk";
 import { FgcExposurePanel } from "@/components/finance/FgcExposurePanel";
 import { InvestmentMaturityLadder } from "@/components/finance/InvestmentMaturityLadder";
+import { PortfolioOnboardingCard } from "@/components/finance/PortfolioOnboardingCard";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,6 +85,9 @@ function InvestmentsPage() {
   const [conglomerate, setConglomerate] = useState("");
   const [maturityDate, setMaturityDate] = useState("");
   const [fgcEligible, setFgcEligible] = useState(false);
+  const [simpleEntry, setSimpleEntry] = useState(true);
+  const [currentValue, setCurrentValue] = useState("");
+  const [investedValue, setInvestedValue] = useState("");
 
   const openForm = (position?: Position) => {
     setEditingId(position?.id ?? null);
@@ -98,20 +102,23 @@ function InvestmentsPage() {
     setConglomerate(position?.conglomerate ?? "");
     setMaturityDate(position?.maturityDate ?? "");
     setFgcEligible(position?.fgcEligible ?? false);
+    setSimpleEntry(!position);
+    setCurrentValue(position ? String(position.marketValue) : "");
+    setInvestedValue(position ? String(position.quantity * position.averagePrice) : "");
     setOpen(true);
   };
 
   const save = () => {
-    const parsedQuantity = Number(quantity.replace(",", "."));
-    const parsedAverage = Number(averagePrice.replace(",", "."));
-    const parsedCurrent = Number(currentPrice.replace(",", "."));
-    if (
-      !ticker.trim() ||
-      !name.trim() ||
-      parsedQuantity <= 0 ||
-      parsedAverage < 0 ||
-      parsedCurrent < 0
-    ) {
+    const parsedCurrentValue = Number(currentValue.replace(",", "."));
+    const parsedInvestedValue = Number(investedValue.replace(",", ".")) || parsedCurrentValue;
+    const parsedQuantity = simpleEntry ? 1 : Number(quantity.replace(",", "."));
+    const parsedAverage = simpleEntry
+      ? parsedInvestedValue
+      : Number(averagePrice.replace(",", "."));
+    const parsedCurrent = simpleEntry ? parsedCurrentValue : Number(currentPrice.replace(",", "."));
+    const resolvedTicker =
+      ticker.trim() || name.trim().replace(/\s+/g, "-").slice(0, 40).toUpperCase();
+    if (!name.trim() || parsedQuantity <= 0 || parsedAverage < 0 || parsedCurrent < 0) {
       toast.error("Preencha ativo, nome, quantidade e preços válidos");
       return;
     }
@@ -126,7 +133,7 @@ function InvestmentsPage() {
     upsert.mutate(
       {
         ...(editingId ? { id: editingId } : {}),
-        ticker: ticker.trim(),
+        ticker: resolvedTicker,
         name: name.trim(),
         assetClass,
         quantity: parsedQuantity,
@@ -171,8 +178,10 @@ function InvestmentsPage() {
         </div>
       </header>
 
+      {!showArchived && <PortfolioOnboardingCard onManual={() => openForm()} />}
+
       {!showArchived && (
-        <div className="mb-6 space-y-6">
+        <div className="mb-6 mt-6 space-y-6">
           <InvestmentRadarPanel />
           <InvestmentPlanSimulator />
           <InvestmentPlanTracking />
@@ -243,6 +252,13 @@ function InvestmentsPage() {
                       {ASSET_CLASS_LABEL[position.assetClass]} · {position.name}
                       {position.conglomerate && ` · ${position.conglomerate}`}
                     </span>
+                    <Badge variant="outline" className="mt-1 rounded-full text-[9px]">
+                      {position.source === "open_finance"
+                        ? "Conectada"
+                        : position.source === "csv"
+                          ? "Importada"
+                          : "Manual"}
+                    </Badge>
                   </span>
                   <span className="ml-auto text-right">
                     <span className="numeric block text-sm font-semibold">
@@ -302,14 +318,25 @@ function InvestmentsPage() {
           <DialogHeader>
             <DialogTitle>{editingId ? "Editar posição" : "Nova posição"}</DialogTitle>
           </DialogHeader>
+          {!editingId && (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <div>
+                <Label htmlFor="simple-position">Cadastro simplificado</Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Informe somente o nome, a classe e os valores totais.
+                </p>
+              </div>
+              <Switch id="simple-position" checked={simpleEntry} onCheckedChange={setSimpleEntry} />
+            </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="ticker">Ativo</Label>
+              <Label htmlFor="ticker">Código do ativo (opcional)</Label>
               <Input
                 id="ticker"
                 value={ticker}
                 onChange={(event) => setTicker(event.target.value.toUpperCase())}
-                placeholder="PETR4"
+                placeholder="Ex.: PETR4"
               />
             </div>
             <div className="space-y-1.5">
@@ -341,33 +368,60 @@ function InvestmentsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="quantity">Quantidade</Label>
-              <Input
-                id="quantity"
-                inputMode="decimal"
-                value={quantity}
-                onChange={(event) => setQuantity(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="average-price">Preço médio</Label>
-              <Input
-                id="average-price"
-                inputMode="decimal"
-                value={averagePrice}
-                onChange={(event) => setAveragePrice(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="current-price">Preço atual</Label>
-              <Input
-                id="current-price"
-                inputMode="decimal"
-                value={currentPrice}
-                onChange={(event) => setCurrentPrice(event.target.value)}
-              />
-            </div>
+            {simpleEntry ? (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="invested-value">Quanto você aplicou? (opcional)</Label>
+                  <Input
+                    id="invested-value"
+                    inputMode="decimal"
+                    value={investedValue}
+                    onChange={(event) => setInvestedValue(event.target.value)}
+                    placeholder="0,00"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="current-value">Quanto vale hoje?</Label>
+                  <Input
+                    id="current-value"
+                    inputMode="decimal"
+                    value={currentValue}
+                    onChange={(event) => setCurrentValue(event.target.value)}
+                    placeholder="0,00"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="quantity">Quantidade</Label>
+                  <Input
+                    id="quantity"
+                    inputMode="decimal"
+                    value={quantity}
+                    onChange={(event) => setQuantity(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="average-price">Preço médio</Label>
+                  <Input
+                    id="average-price"
+                    inputMode="decimal"
+                    value={averagePrice}
+                    onChange={(event) => setAveragePrice(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="current-price">Preço atual</Label>
+                  <Input
+                    id="current-price"
+                    inputMode="decimal"
+                    value={currentPrice}
+                    onChange={(event) => setCurrentPrice(event.target.value)}
+                  />
+                </div>
+              </>
+            )}
             {assetClass === "fixed_income" && (
               <div className="space-y-4 rounded-xl border p-4 sm:col-span-2">
                 <div className="flex items-center justify-between gap-3">

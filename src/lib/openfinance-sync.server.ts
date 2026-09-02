@@ -4,11 +4,14 @@ import type { Database, Json } from "@/integrations/supabase/types";
 import {
   deletePluggyItem,
   getAllPluggyTransactions,
+  getAllPluggyInvestments,
+  getAllPluggyInvestmentTransactions,
   getPluggyAccounts,
   getPluggyItem,
   type PluggyAccount,
   type PluggyTransaction,
 } from "@/lib/pluggy.server";
+import { normalizeInvestmentPosition } from "@/lib/investment-import";
 
 type AuthenticatedClient = SupabaseClient<Database>;
 
@@ -17,6 +20,8 @@ export type OpenFinanceSyncResult = {
   accountsImported: number;
   transactionsImported: number;
   duplicatesSkipped: number;
+  investmentsImported: number;
+  investmentTransactionsImported: number;
 };
 
 function accountType(account: PluggyAccount): Database["public"]["Enums"]["account_type"] {
@@ -79,7 +84,14 @@ export async function registerPluggyConnection(
       .insert({
         user_id: userId,
         institution_id: institutionId,
-        scopes: ["accounts", "balances", "transactions", "credit_cards"],
+        scopes: [
+          "accounts",
+          "balances",
+          "transactions",
+          "credit_cards",
+          "investments",
+          "investment_transactions",
+        ],
         status: "authorised",
         consent_id: item.id,
         last_synced_at: new Date().toISOString(),
@@ -140,6 +152,8 @@ export async function syncPluggyConnection(
     const accounts = await getPluggyAccounts(itemId);
     let transactionsImported = 0;
     let duplicatesSkipped = 0;
+    let investmentsImported = 0;
+    let investmentTransactionsImported = 0;
 
     for (const account of accounts) {
       const accountPayload = {
@@ -238,6 +252,90 @@ export async function syncPluggyConnection(
       }
     }
 
+    const investments = await getAllPluggyInvestments(itemId);
+    for (const investment of investments) {
+      const normalized = normalizeInvestmentPosition(investment);
+      const { data: account } = investment.accountId
+        ? await supabase
+            .from("accounts")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("external_id", investment.accountId)
+            .maybeSingle()
+        : { data: null };
+      const { data: position, error: positionError } = await supabase
+        .from("investment_positions")
+        .upsert(
+          {
+            user_id: userId,
+            account_id: account?.id ?? null,
+            ticker: normalized.ticker,
+            name: normalized.name,
+            asset_class: normalized.assetClass,
+            quantity: normalized.quantity,
+            average_price: normalized.averagePrice,
+            current_price: normalized.currentPrice,
+            private_product_type: normalized.privateProductType,
+            institution: normalized.institution ?? item.connector.name,
+            maturity_date: normalized.maturityDate,
+            fgc_eligible: normalized.fgcEligible,
+            external_id: investment.id,
+            source: "open_finance",
+            source_connection_id: connectionId,
+            reference_date: normalized.referenceDate,
+            provider_balance: normalized.marketValue,
+            raw_data: investment as unknown as Json,
+            last_synced_at: new Date().toISOString(),
+            record_origin: "open_finance",
+            archived_at: null,
+          },
+          { onConflict: "user_id,source,external_id" },
+        )
+        .select("id")
+        .single();
+      if (positionError) throw positionError;
+      investmentsImported += 1;
+
+      let movements: Awaited<ReturnType<typeof getAllPluggyInvestmentTransactions>> = [];
+      try {
+        movements = await getAllPluggyInvestmentTransactions(investment.id);
+      } catch {
+        // Nem todo conector habilitado para investimentos oferece movimentações.
+      }
+      for (const [movementIndex, movement] of movements.entries()) {
+        const fees = Object.values(movement.expenses ?? {}).reduce<number>(
+          (sum, value) => sum + (value ?? 0),
+          0,
+        );
+        const occurredAt = (movement.tradeDate ?? movement.date).slice(0, 10);
+        const externalId =
+          movement.id ??
+          `${investment.id}:${occurredAt}:${movement.type}:${movement.quantity}:${movement.amount}:${movementIndex}`;
+        const movementType = movement.type.toLowerCase();
+        const allowed = ["buy", "sell", "tax", "transfer", "interest", "amortization"];
+        const { error: movementError } = await supabase.from("investment_transactions").upsert(
+          {
+            user_id: userId,
+            position_id: position.id,
+            external_id: externalId,
+            source: "open_finance",
+            type: allowed.includes(movementType) ? movementType : "other",
+            description: movement.description ?? null,
+            quantity: movement.quantity ?? 0,
+            unit_price: movement.value ?? 0,
+            gross_amount: movement.amount ?? 0,
+            net_amount: movement.netAmount ?? null,
+            fees,
+            occurred_at: occurredAt,
+            raw_data: movement as unknown as Json,
+          },
+          { onConflict: "user_id,source,external_id" },
+        );
+        if (movementError) throw movementError;
+        investmentTransactionsImported += 1;
+      }
+    }
+
     await supabase
       .from("account_connections")
       .update({
@@ -255,6 +353,8 @@ export async function syncPluggyConnection(
       accountsImported: accounts.length,
       transactionsImported,
       duplicatesSkipped,
+      investmentsImported,
+      investmentTransactionsImported,
     };
     await supabase.from("openfinance_syncs").insert({
       connection_id: connectionId,
@@ -263,6 +363,7 @@ export async function syncPluggyConnection(
       accounts_imported: accounts.length,
       balances_imported: accounts.length,
       transactions_imported: transactionsImported,
+      investments_imported: investmentsImported,
       duplicates_skipped: duplicatesSkipped,
       duration_ms: Date.now() - startedAt,
       errors: [],

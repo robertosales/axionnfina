@@ -50,7 +50,7 @@ Critério de saída: todo usuário recebe um próximo passo compreensível e jus
 
 ## Fase 2 — Plano automático de economia
 
-Status: implementada no código; a migration `20260901050000_savings_plans.sql` precisa ser aplicada antes da publicação.
+Status: implementada; migration aplicada no Supabase em 01/09/2026.
 
 - Detectar assinaturas, recorrências, aumentos por categoria e gastos fora do padrão.
 - Transformar oportunidades em metas mensais acompanháveis.
@@ -76,10 +76,27 @@ Critério de saída: o usuário consegue sair de um insight para uma ação e ac
 
 ## Fase 3 — Carteira automática
 
+Status: primeira entrega implementada no código; a migration `20260901060000_automatic_investment_portfolio.sql` precisa ser aplicada.
+
 - Conectar o suporte de investimentos do provedor ao fluxo Open Finance realmente usado pelo app.
 - Normalizar e persistir posições, saldos, vencimentos e movimentações com idempotência.
 - Oferecer importação por CSV/PDF com revisão antes de salvar.
 - Manter cadastro manual simplificado somente como alternativa.
+
+Entregue na primeira versão:
+
+- O fluxo Pluggy realmente usado pelo app passa a solicitar e sincronizar `INVESTMENTS` e `INVESTMENT_TRANSACTIONS`.
+- Posições conectadas são normalizadas por tipo/subtipo e atualizadas por chave externa, sem consolidar instituições diferentes apenas pelo ticker.
+- Vencimento, emissor, saldo do provedor, data de referência, origem e movimentações passam a ser preservados.
+- Importação CSV com leitura local, pré-visualização, rejeição de linhas inválidas e confirmação antes de salvar.
+- Reimportação do mesmo CSV atualiza posições equivalentes de forma idempotente.
+- Cadastro manual simplificado para quem conhece apenas nome, classe, valor aplicado e valor atual.
+- Jornada visual `Origem → Leitura → Conferência → Carteira` e identificação de posições conectadas, importadas ou manuais.
+
+Próximo incremento:
+
+- Importação PDF com extrator dedicado e revisão obrigatória; não interpretar PDFs como texto bruto.
+- Exibir o histórico de movimentações importadas na interface da posição.
 
 Critério de saída: uma carteira conectada aparece sem exigir ticker, preço médio ou metadados técnicos do iniciante.
 

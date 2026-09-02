@@ -44,6 +44,7 @@ import type {
   SavingsPlan,
   SavingsPlanStatus,
 } from "@/lib/savings-opportunities";
+import type { CsvInvestmentRow } from "@/lib/investment-import";
 
 type DbJson = Database["public"]["Tables"]["investment_plans"]["Row"]["allocations"];
 
@@ -540,6 +541,8 @@ export type Position = {
   fgcEligible: boolean | null;
   archivedAt: string | null;
   recordOrigin: "manual" | "open_finance" | "import" | "system";
+  source: "manual" | "open_finance" | "csv" | "pdf";
+  lastSyncedAt: string | null;
 };
 
 export function useInvestments(showArchived = false) {
@@ -549,7 +552,7 @@ export function useInvestments(showArchived = false) {
       let request = supabase
         .from("investment_positions")
         .select(
-          "id, ticker, name, asset_class, quantity, average_price, current_price, private_product_type, institution, conglomerate, maturity_date, fgc_eligible, archived_at, record_origin",
+          "id, ticker, name, asset_class, quantity, average_price, current_price, private_product_type, institution, conglomerate, maturity_date, fgc_eligible, archived_at, record_origin, source, last_synced_at",
         )
         .order("ticker", { ascending: true });
       request = showArchived
@@ -578,6 +581,8 @@ export function useInvestments(showArchived = false) {
           fgcEligible: row.fgc_eligible,
           archivedAt: row.archived_at,
           recordOrigin: row.record_origin as Position["recordOrigin"],
+          source: row.source as Position["source"],
+          lastSyncedAt: row.last_synced_at,
         };
       });
     },
@@ -1146,11 +1151,70 @@ export function useUpsertInvestmentPosition() {
         maturity_date: input.maturityDate || null,
         fgc_eligible: input.fgcEligible ?? null,
         record_origin: "manual",
+        source: "manual",
       } as const;
       const { error } = input.id
         ? await supabase.from("investment_positions").update(payload).eq("id", input.id)
         : await supabase.from("investment_positions").insert(payload);
       if (error) throw error;
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["investments"] }),
+  });
+}
+
+export function useImportInvestmentPositions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { fileName: string; rows: CsvInvestmentRow[] }) => {
+      const userId = await requireUserId();
+      const valid = input.rows.filter((row) => row.valid);
+      const { data: batch, error: batchError } = await supabase
+        .from("investment_import_batches")
+        .insert({
+          user_id: userId,
+          file_name: input.fileName,
+          file_type: "csv",
+          status: "staged",
+          rows_found: input.rows.length,
+          rows_rejected: input.rows.length - valid.length,
+          errors: input.rows.filter((row) => !row.valid).map((row) => ({ row: row.rowNumber, errors: row.errors })) as unknown as DbJson,
+        })
+        .select("id")
+        .single();
+      if (batchError) throw batchError;
+
+      const { error } = await supabase.from("investment_positions").upsert(
+        valid.map((row) => ({
+          user_id: userId,
+          ticker: row.ticker,
+          name: row.name,
+          asset_class: row.assetClass,
+          quantity: row.quantity,
+          average_price: row.averagePrice,
+          current_price: row.currentPrice,
+          institution: row.institution,
+          maturity_date: row.maturityDate,
+          private_product_type: row.privateProductType,
+          fgc_eligible: row.fgcEligible,
+          external_id: row.externalId,
+          source: "csv",
+          source_file_name: input.fileName,
+          provider_balance: row.marketValue,
+          raw_data: row as unknown as DbJson,
+          record_origin: "import",
+          archived_at: null,
+        })),
+        { onConflict: "user_id,source,external_id" },
+      );
+      if (error) {
+        await supabase.from("investment_import_batches").update({ status: "failed" }).eq("id", batch.id);
+        throw error;
+      }
+      await supabase
+        .from("investment_import_batches")
+        .update({ status: "completed", rows_imported: valid.length, completed_at: new Date().toISOString() })
+        .eq("id", batch.id);
+      return { imported: valid.length, rejected: input.rows.length - valid.length };
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["investments"] }),
   });

@@ -120,6 +120,40 @@ export type PluggyTransaction = {
   currencyCode?: string | null;
 };
 
+export type PluggyInvestment = {
+  id: string;
+  accountId?: string | null;
+  itemId?: string | null;
+  type?: string | null;
+  subtype?: string | null;
+  name?: string | null;
+  code?: string | null;
+  isin?: string | null;
+  quantity?: number | null;
+  value?: number | null;
+  amount?: number | null;
+  balance?: number | null;
+  amountOriginal?: number | null;
+  amountProfit?: number | null;
+  date?: string | null;
+  dueDate?: string | null;
+  issuer?: string | null;
+  institution?: { name?: string | null } | null;
+};
+
+export type PluggyInvestmentTransaction = {
+  id?: string | null;
+  type: string;
+  description?: string | null;
+  quantity: number;
+  value: number;
+  amount: number;
+  netAmount?: number | null;
+  date: string;
+  tradeDate?: string | null;
+  expenses?: Record<string, number | null> | null;
+};
+
 export async function createPluggyConnectToken(userId: string): Promise<string> {
   const appUrl = process.env["APP_URL"];
   const webhookSecret = process.env["PLUGGY_WEBHOOK_SECRET"];
@@ -194,6 +228,33 @@ export async function getAllPluggyTransactions(accountId: string): Promise<Plugg
       : `/v2/transactions?${page.next}`;
   }
 
+  return transactions;
+}
+
+export async function getAllPluggyInvestments(itemId: string): Promise<PluggyInvestment[]> {
+  const investments: PluggyInvestment[] = [];
+  for (let page = 1; ; page += 1) {
+    const result = await pluggyRequest<{ results?: PluggyInvestment[]; totalPages?: number }>(
+      `/investments?itemId=${encodeURIComponent(itemId)}&pageSize=500&page=${page}`,
+    );
+    investments.push(...(result.results ?? []));
+    if (page >= (result.totalPages ?? 1)) break;
+  }
+  return investments;
+}
+
+export async function getAllPluggyInvestmentTransactions(
+  investmentId: string,
+): Promise<PluggyInvestmentTransaction[]> {
+  const transactions: PluggyInvestmentTransaction[] = [];
+  for (let page = 1; ; page += 1) {
+    const result = await pluggyRequest<{
+      results?: PluggyInvestmentTransaction[];
+      totalPages?: number;
+    }>(`/investments/${encodeURIComponent(investmentId)}/transactions?pageSize=500&page=${page}`);
+    transactions.push(...(result.results ?? []));
+    if (page >= (result.totalPages ?? 1)) break;
+  }
   return transactions;
 }
 

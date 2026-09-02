@@ -95,7 +95,7 @@ function ConnectPage() {
       });
       await queryClient.invalidateQueries();
       toast.success(
-        `${result.sync.accountsImported} conta(s) e ${result.sync.transactionsImported} movimentação(ões) sincronizadas.`,
+        `${result.sync.accountsImported} conta(s), ${result.sync.transactionsImported} movimentação(ões) e ${result.sync.investmentsImported} investimento(s) sincronizados.`,
       );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha ao importar os dados bancários.");
@@ -109,7 +109,9 @@ function ConnectPage() {
     try {
       const result = await syncConnection({ data: { connectionId } });
       await queryClient.invalidateQueries();
-      toast.success(`${result.transactionsImported} movimentação(ões) sincronizadas.`);
+      toast.success(
+        `${result.transactionsImported} movimentação(ões) e ${result.investmentsImported} investimento(s) sincronizados.`,
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha ao sincronizar.");
     } finally {
@@ -297,7 +299,7 @@ function ConnectPage() {
           selectedConnectorId={selectedConnector}
           includeSandbox
           countries={["BR"]}
-          products={["ACCOUNTS", "TRANSACTIONS"]}
+          products={["ACCOUNTS", "TRANSACTIONS", "INVESTMENTS", "INVESTMENTS_TRANSACTIONS"]}
           language="pt"
           onSuccess={handleSuccess}
           onError={(error) => {

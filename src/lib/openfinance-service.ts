@@ -447,8 +447,14 @@ async function persistInvestments(
         quantity: inv.quantity,
         average_price: inv.average_price,
         current_price: inv.current_price,
+        external_id: inv.id,
+        source: "open_finance",
+        source_connection_id: connectionId,
+        provider_balance: inv.market_value,
+        last_synced_at: new Date().toISOString(),
+        record_origin: "open_finance",
       },
-      { onConflict: "user_id,ticker" },
+      { onConflict: "user_id,source,external_id" },
     );
   }
 }

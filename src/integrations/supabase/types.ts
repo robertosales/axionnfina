@@ -866,13 +866,21 @@ export type Database = {
           created_at: string
           current_price: number
           fgc_eligible: boolean | null
+          external_id: string | null
           id: string
           institution: string | null
+          last_synced_at: string | null
           maturity_date: string | null
           name: string
           private_product_type: string | null
+          provider_balance: number | null
           quantity: number
+          raw_data: Json
           record_origin: string
+          reference_date: string | null
+          source: string
+          source_connection_id: string | null
+          source_file_name: string | null
           ticker: string
           updated_at: string
           user_id: string
@@ -887,13 +895,21 @@ export type Database = {
           created_at?: string
           current_price?: number
           fgc_eligible?: boolean | null
+          external_id?: string | null
           id?: string
           institution?: string | null
+          last_synced_at?: string | null
           maturity_date?: string | null
           name?: string
           private_product_type?: string | null
+          provider_balance?: number | null
           quantity?: number
+          raw_data?: Json
           record_origin?: string
+          reference_date?: string | null
+          source?: string
+          source_connection_id?: string | null
+          source_file_name?: string | null
           ticker: string
           updated_at?: string
           user_id: string
@@ -908,13 +924,21 @@ export type Database = {
           created_at?: string
           current_price?: number
           fgc_eligible?: boolean | null
+          external_id?: string | null
           id?: string
           institution?: string | null
+          last_synced_at?: string | null
           maturity_date?: string | null
           name?: string
           private_product_type?: string | null
+          provider_balance?: number | null
           quantity?: number
+          raw_data?: Json
           record_origin?: string
+          reference_date?: string | null
+          source?: string
+          source_connection_id?: string | null
+          source_file_name?: string | null
           ticker?: string
           updated_at?: string
           user_id?: string
@@ -1743,7 +1767,26 @@ export type Database = {
             referencedRelation: "savings_plans"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "investment_positions_source_connection_id_fkey"
+            columns: ["source_connection_id"]
+            isOneToOne: false
+            referencedRelation: "account_connections"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      investment_import_batches: {
+        Row: { id: string; user_id: string; file_name: string; file_type: string; status: string; rows_found: number; rows_imported: number; rows_rejected: number; errors: Json; created_at: string; completed_at: string | null }
+        Insert: { id?: string; user_id: string; file_name: string; file_type: string; status?: string; rows_found?: number; rows_imported?: number; rows_rejected?: number; errors?: Json; created_at?: string; completed_at?: string | null }
+        Update: { id?: string; user_id?: string; file_name?: string; file_type?: string; status?: string; rows_found?: number; rows_imported?: number; rows_rejected?: number; errors?: Json; created_at?: string; completed_at?: string | null }
+        Relationships: []
+      }
+      investment_transactions: {
+        Row: { id: string; user_id: string; position_id: string; external_id: string; source: string; type: string; description: string | null; quantity: number; unit_price: number; gross_amount: number; net_amount: number | null; fees: number; occurred_at: string; raw_data: Json; created_at: string; updated_at: string }
+        Insert: { id?: string; user_id: string; position_id: string; external_id: string; source: string; type: string; description?: string | null; quantity?: number; unit_price?: number; gross_amount?: number; net_amount?: number | null; fees?: number; occurred_at: string; raw_data?: Json; created_at?: string; updated_at?: string }
+        Update: { id?: string; user_id?: string; position_id?: string; external_id?: string; source?: string; type?: string; description?: string | null; quantity?: number; unit_price?: number; gross_amount?: number; net_amount?: number | null; fees?: number; occurred_at?: string; raw_data?: Json; created_at?: string; updated_at?: string }
+        Relationships: [{ foreignKeyName: "investment_transactions_position_id_fkey"; columns: ["position_id"]; isOneToOne: false; referencedRelation: "investment_positions"; referencedColumns: ["id"] }]
       }
       savings_plans: {
         Row: {

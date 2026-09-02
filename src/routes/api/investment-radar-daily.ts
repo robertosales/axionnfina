@@ -59,6 +59,8 @@ export const Route = createFileRoute("/api/investment-radar-daily")({
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const { processInvestmentMonitoringForUser } =
             await import("@/lib/investment-monitoring.server");
+          const { processSavingsMonitoringForUser } =
+            await import("@/lib/savings-monitoring.server");
 
           if (!isCron) {
             const authClient = userClient(token);
@@ -71,7 +73,24 @@ export const Route = createFileRoute("/api/investment-radar-daily")({
               runDate,
               true,
             );
-            return Response.json({ mode: "user", result });
+            try {
+              const savings = await processSavingsMonitoringForUser(
+                supabaseAdmin,
+                data.user.id,
+                runDate,
+              );
+              return Response.json({ mode: "user", result, savings });
+            } catch (savingsError) {
+              console.error("[SavingsMonitoring]", savingsError);
+              return Response.json({
+                mode: "user",
+                result,
+                savingsError:
+                  savingsError instanceof Error
+                    ? savingsError.message
+                    : "Falha no plano de economia.",
+              });
+            }
           }
 
           const { data: profiles, error: profilesError } = await supabaseAdmin
@@ -81,21 +100,59 @@ export const Route = createFileRoute("/api/investment-radar-daily")({
           if (profilesError) throw profilesError;
 
           const results: Awaited<ReturnType<typeof processInvestmentMonitoringForUser>>[] = [];
+          const savingsResults: Awaited<ReturnType<typeof processSavingsMonitoringForUser>>[] = [];
           const failures: Array<{ userId: string; error: string }> = [];
+          const savingsFailures: Array<{ userId: string; error: string }> = [];
           const users = profiles ?? [];
           const concurrency = 4;
           for (let index = 0; index < users.length; index += concurrency) {
             const batch = users.slice(index, index + concurrency);
             const settled = await Promise.allSettled(
-              batch.map((profile) =>
-                processInvestmentMonitoringForUser(supabaseAdmin, profile.id, runDate),
-              ),
+              batch.map(async (profile) => {
+                const [investment, savings] = await Promise.all([
+                  Promise.resolve(
+                    processInvestmentMonitoringForUser(supabaseAdmin, profile.id, runDate),
+                  ).then(
+                    (value) => ({ status: "fulfilled" as const, value }),
+                    (reason: unknown) => ({ status: "rejected" as const, reason }),
+                  ),
+                  Promise.resolve(
+                    processSavingsMonitoringForUser(supabaseAdmin, profile.id, runDate),
+                  ).then(
+                    (value) => ({ status: "fulfilled" as const, value }),
+                    (reason: unknown) => ({ status: "rejected" as const, reason }),
+                  ),
+                ]);
+                return { investment, savings };
+              }),
             );
             settled.forEach((result, resultIndex) => {
               const profile = batch[resultIndex];
               if (!profile) return;
-              if (result.status === "fulfilled") results.push(result.value);
-              else
+              if (result.status === "fulfilled") {
+                if (result.value.investment.status === "fulfilled") {
+                  results.push(result.value.investment.value);
+                } else {
+                  failures.push({
+                    userId: profile.id,
+                    error:
+                      result.value.investment.reason instanceof Error
+                        ? result.value.investment.reason.message
+                        : "Falha desconhecida no monitoramento.",
+                  });
+                }
+                if (result.value.savings.status === "fulfilled") {
+                  savingsResults.push(result.value.savings.value);
+                } else {
+                  savingsFailures.push({
+                    userId: profile.id,
+                    error:
+                      result.value.savings.reason instanceof Error
+                        ? result.value.savings.reason.message
+                        : "Falha desconhecida no plano de economia.",
+                  });
+                }
+              } else {
                 failures.push({
                   userId: profile.id,
                   error:
@@ -103,6 +160,7 @@ export const Route = createFileRoute("/api/investment-radar-daily")({
                       ? result.reason.message
                       : "Falha desconhecida no monitoramento.",
                 });
+              }
             });
           }
 
@@ -113,6 +171,16 @@ export const Route = createFileRoute("/api/investment-radar-daily")({
             skipped: results.filter((result) => result.skipped).length,
             failed: failures.length,
             results,
+            savings: {
+              detected: savingsResults.reduce(
+                (sum, result) => sum + result.opportunitiesDetected,
+                0,
+              ),
+              created: savingsResults.reduce((sum, result) => sum + result.opportunitiesCreated, 0),
+              failed: savingsFailures.length,
+              results: savingsResults,
+              failures: savingsFailures,
+            },
             failures,
           });
         } catch (error) {

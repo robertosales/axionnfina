@@ -36,7 +36,7 @@ export function useAnomalyDetection(months = 3) {
         byCategoryMonth.set(category, new Map());
       }
       const monthMap = byCategoryMonth.get(category)!;
-      monthMap.set(monthKey, (monthMap.get(category) ?? 0) + Math.abs(tx.amount));
+      monthMap.set(monthKey, (monthMap.get(monthKey) ?? 0) + Math.abs(tx.amount));
     }
 
     const result: Anomaly[] = [];

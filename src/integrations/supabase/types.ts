@@ -1698,6 +1698,128 @@ export type Database = {
           },
         ]
       }
+      saving_plan_checkins: {
+        Row: {
+          actual_amount: number
+          baseline_amount: number
+          created_at: string
+          id: string
+          note: string | null
+          plan_id: string
+          realized_saving: number
+          reference_month: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actual_amount?: number
+          baseline_amount?: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          plan_id: string
+          realized_saving?: number
+          reference_month: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actual_amount?: number
+          baseline_amount?: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          plan_id?: string
+          realized_saving?: number
+          reference_month?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saving_plan_checkins_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "savings_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      savings_plans: {
+        Row: {
+          accepted_at: string | null
+          baseline_monthly: number
+          category: string
+          completed_at: string | null
+          confidence: number
+          created_at: string
+          description: string
+          detected_on: string
+          dismissed_at: string | null
+          evidence: Json
+          expected_monthly_saving: number
+          id: string
+          kind: string
+          merchant: string | null
+          observed_amount: number
+          opportunity_key: string
+          status: string
+          target_monthly: number
+          title: string
+          tracking_started_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          baseline_monthly?: number
+          category: string
+          completed_at?: string | null
+          confidence?: number
+          created_at?: string
+          description?: string
+          detected_on?: string
+          dismissed_at?: string | null
+          evidence?: Json
+          expected_monthly_saving?: number
+          id?: string
+          kind: string
+          merchant?: string | null
+          observed_amount?: number
+          opportunity_key: string
+          status?: string
+          target_monthly?: number
+          title: string
+          tracking_started_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          baseline_monthly?: number
+          category?: string
+          completed_at?: string | null
+          confidence?: number
+          created_at?: string
+          description?: string
+          detected_on?: string
+          dismissed_at?: string | null
+          evidence?: Json
+          expected_monthly_saving?: number
+          id?: string
+          kind?: string
+          merchant?: string | null
+          observed_amount?: number
+          opportunity_key?: string
+          status?: string
+          target_monthly?: number
+          title?: string
+          tracking_started_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       security_events: {
         Row: {
           country: string | null

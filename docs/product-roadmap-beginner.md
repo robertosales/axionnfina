@@ -50,10 +50,27 @@ Critério de saída: todo usuário recebe um próximo passo compreensível e jus
 
 ## Fase 2 — Plano automático de economia
 
+Status: implementada no código; a migration `20260901050000_savings_plans.sql` precisa ser aplicada antes da publicação.
+
 - Detectar assinaturas, recorrências, aumentos por categoria e gastos fora do padrão.
 - Transformar oportunidades em metas mensais acompanháveis.
 - Persistir insights financeiros gerais com idempotência diária ou semanal.
 - Medir economia realizada, sem tratar toda redução como automaticamente sustentável.
+
+Entregue:
+
+- Detecção determinística de assinaturas, pagamentos recorrentes, categorias em alta e gastos individuais fora do padrão.
+- Análise sempre baseada no último mês completo, evitando conclusões com o mês atual ainda parcial.
+- Persistência idempotente por chave de oportunidade, com RLS e separação dos insights de investimento.
+- Detecção diária no servidor, incorporada ao agendamento protegido já usado pelo Radar.
+- Fluxo `Detectado → Aceito → Em acompanhamento → Concluído`, sem cancelamentos ou movimentações automáticas.
+- Registro mensal confirmado pelo usuário; somente essa confirmação conta como economia realizada.
+- Painel responsivo em Insights com meta mensal aceita, economia confirmada, evidências e estados de carregamento, vazio e erro.
+- Correção do agrupamento mensal do detector anterior de anomalias.
+
+Próximo incremento:
+
+- Adicionar lembretes configuráveis para planos sem registro mensal.
 
 Critério de saída: o usuário consegue sair de um insight para uma ação e acompanhar o resultado.
 

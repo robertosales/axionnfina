@@ -18,6 +18,7 @@ import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { InvestmentRadarPanel } from "@/components/finance/InvestmentRadarPanel";
 import { InvestmentDecisionBriefing } from "@/components/finance/InvestmentDecisionBriefing";
+import { SavingsPlanPanel } from "@/components/finance/SavingsPlanPanel";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -81,7 +82,9 @@ function InsightsPage() {
         />
       </header>
 
-      <ChartCard title="Evolução do patrimônio" description="Últimos 6 meses">
+      {!showArchived && <SavingsPlanPanel />}
+
+      <ChartCard title="Evolução do patrimônio" description="Últimos 6 meses" className="mt-6">
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={netWorthSeries} margin={{ left: -18, right: 8, top: 8 }}>

@@ -29,6 +29,7 @@ export type Transaction = {
   accountName: string;
   accountId?: string | null;
   pending?: boolean;
+  isRecurring?: boolean;
   archivedAt?: string | null;
   recordOrigin?: "manual" | "open_finance" | "import" | "system";
 };

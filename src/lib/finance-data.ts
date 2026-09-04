@@ -874,6 +874,7 @@ export function useUpdateTransaction() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["transactions"] });
       void queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
       void queryClient.invalidateQueries({ queryKey: ["wallet-summary"] });
     },
   });

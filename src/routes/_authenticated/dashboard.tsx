@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpRight, CalendarClock, Shield, Sparkles, TrendingUp, Wallet } from "lucide-react";
 import {
   Area,
@@ -19,7 +19,7 @@ import { AccountCard } from "@/components/finance/AccountCard";
 import { BudgetProgress } from "@/components/finance/BudgetProgress";
 import { ChartCard } from "@/components/finance/ChartCard";
 import { KPICard } from "@/components/finance/KPICard";
-import { HealthScore, calculateHealthScore } from "@/components/finance/HealthScore";
+import { HealthScore } from "@/components/finance/HealthScore";
 import { FinancialNextStepCard } from "@/components/finance/FinancialNextStepCard";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -37,10 +37,10 @@ import {
   useInvestments,
   useNetWorthSeries,
   usePayables,
-  useSeedDemoData,
   useTransactions,
 } from "@/lib/finance-data";
 import { analyzeFinancialReadiness } from "@/lib/financial-next-step";
+import { calculateHealthScore } from "@/lib/financial-health";
 import { daysUntil, formatBRL, formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -102,8 +102,6 @@ function Dashboard() {
     isError: transactionsError,
   } = useTransactions(1000);
   const { data: goals = [], isLoading: loadingGoals, isError: goalsError } = useGoals();
-  const seed = useSeedDemoData();
-
   const netWorth = accounts.reduce((total, account) => total + account.balance, 0);
   const liquidity = accounts
     .filter((account) => account.type === "CHECKING" || account.type === "SAVINGS")
@@ -143,21 +141,26 @@ function Dashboard() {
   const nextStepError =
     accountsError || transactionsError || billsError || goalsError || investmentsError;
 
-  // Health score calculation
-  const uniqueCategories = new Set(
-    transactions.filter((t) => t.kind === "expense").map((t) => t.category),
-  ).size;
-  const currentMonthTransactions = transactions.filter((t) => {
-    const now = new Date();
-    return t.date.startsWith(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
-  }).length;
+  const monthsObserved = new Set(transactions.map((transaction) => transaction.date.slice(0, 7)))
+    .size;
+  const overdueBills = openBills.filter(
+    (bill) => new Date(`${bill.dueDate}T23:59:59`) < new Date(),
+  ).length;
+  const monthlyIncome = currentMonth?.receitas ?? 0;
+  const monthlyExpenses = currentMonth?.despesas ?? 0;
 
-  const { score: healthScore, breakdown: healthBreakdown } = calculateHealthScore({
-    savingsRate,
-    totalAssets: netWorth,
+  const {
+    score: healthScore,
+    breakdown: healthBreakdown,
+    confidence: healthConfidence,
+  } = calculateHealthScore({
+    monthlyIncome,
+    monthlyExpenses,
+    liquidAssets: Math.max(0, liquidity),
     totalDebts,
-    monthlyTransactions: currentMonthTransactions,
-    uniqueCategories,
+    overdueBills,
+    monthsObserved,
+    transactionCount: transactions.length,
   });
 
   return (
@@ -168,8 +171,8 @@ function Dashboard() {
           <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Visão geral</h1>
         </div>
         {empty && (
-          <Button size="sm" onClick={() => seed.mutate()} disabled={seed.isPending}>
-            {seed.isPending ? "Criando…" : "Popular com dados de exemplo"}
+          <Button size="sm" asChild>
+            <Link to="/wallet/connect">Conectar primeira conta</Link>
           </Button>
         )}
       </header>
@@ -227,6 +230,7 @@ function Dashboard() {
         <HealthScore
           score={healthScore}
           breakdown={healthBreakdown}
+          confidence={healthConfidence}
           sparkline={netWorthSeries.map((p) => ({ value: p.value }))}
         />
 

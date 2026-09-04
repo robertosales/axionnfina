@@ -1,9 +1,22 @@
-import { ExternalLink, Plus, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import {
+  AlertTriangle,
+  ExternalLink,
+  FileCheck2,
+  Plus,
+  ShieldCheck,
+  SlidersHorizontal,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { EntityActionsMenu } from "./EntityActionsMenu";
 import { Badge } from "@/components/ui/badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -32,6 +45,7 @@ import {
   useUpdateInvestmentAlertPreferences,
 } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
+import { buildInvestmentComparison } from "@/lib/investment-comparison";
 import {
   rankPrivateOffers,
   type PrivateFixedIncomeOffer,
@@ -43,6 +57,14 @@ import { cn } from "@/lib/utils";
 const PRODUCT_LABEL = { cdb: "CDB", lci: "LCI", lca: "LCA" } as const;
 const RATE_LABEL = { fixed: "Prefixado", cdi: "% do CDI", ipca: "IPCA +" } as const;
 const today = () => new Date().toISOString().slice(0, 10);
+
+function isHttpsUrl(value: string) {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?: boolean }) {
   const offers = usePrivateFixedIncomeOffers(showArchived);
@@ -66,6 +88,7 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
   const [dailyLiquidity, setDailyLiquidity] = useState(false);
   const [fgcEligible, setFgcEligible] = useState(true);
   const [sourceUrl, setSourceUrl] = useState("");
+  const [scope, setScope] = useState<"all" | "treasury" | "private">("all");
 
   useEffect(() => {
     if (!preferences.data) return;
@@ -90,7 +113,7 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
   };
 
   const parsedAmount = Math.max(0, Number(amount.replace(",", ".")) || 0);
-  const ranked =
+  const rankedPrivate =
     radar.data && offers.data
       ? rankPrivateOffers(
           offers.data,
@@ -100,6 +123,11 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
           Number(maxAgeDays) || 7,
         )
       : [];
+  const comparison = radar.data
+    ? buildInvestmentComparison(showArchived ? [] : radar.data.opportunities, rankedPrivate).filter(
+        (item) => scope === "all" || item.origin === scope,
+      )
+    : [];
 
   const saveComparisonSettings = () => {
     const days = Number(maxAgeDays);
@@ -135,9 +163,10 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
       !maturityDate ||
       rate <= 0 ||
       minimum < 0 ||
+      !isHttpsUrl(sourceUrl) ||
       (rateType !== "fixed" && !referenceRate.trim())
     ) {
-      toast.error("Preencha instituição, conglomerado, taxas, mínimo e vencimento.");
+      toast.error("Preencha os dados e informe uma URL HTTPS verificável da oferta.");
       return;
     }
     upsert.mutate(
@@ -153,7 +182,7 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
         maturityDate,
         dailyLiquidity,
         fgcEligible,
-        sourceUrl: sourceUrl || null,
+        sourceUrl,
         sourceCheckedAt: new Date().toISOString(),
         notes: null,
       },
@@ -172,11 +201,12 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 p-5">
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            <SlidersHorizontal className="size-3.5" /> Mesa comparadora
+            <SlidersHorizontal className="size-3.5" /> Comparação ampliada
           </div>
-          <h2 className="text-lg font-semibold">CDB, LCI e LCA</h2>
+          <h2 className="text-lg font-semibold">Tesouro, CDB, LCI e LCA no mesmo contexto</h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Compare ofertas conferidas por você pelo retorno líquido, prazo, liquidez e proteção.
+            Compare aderência, prazo, liquidez, risco e proteção. Retorno estimado só aparece quando
+            a origem privada está completa e dentro da validade.
           </p>
         </div>
         {!showArchived && (
@@ -217,132 +247,216 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
           </Button>
         </div>
 
+        <div className="mt-5 flex flex-wrap items-center gap-2" aria-label="Filtrar origem">
+          {(
+            [
+              ["all", "Todas"],
+              ["treasury", "Fonte oficial"],
+              ["private", "Ofertas privadas"],
+            ] as const
+          ).map(([value, label]) => (
+            <Button
+              key={value}
+              type="button"
+              size="sm"
+              variant={scope === value ? "default" : "outline"}
+              onClick={() => setScope(value)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+
         {offers.isLoading || radar.isLoading ? (
-          <p className="mt-5 text-sm text-muted-foreground">Calculando retorno líquido…</p>
-        ) : offers.isError || radar.isError ? (
-          <p className="mt-5 text-sm text-danger">Não foi possível carregar a comparação.</p>
-        ) : ranked.length === 0 ? (
           <div className="mt-5 rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
-            Cadastre as ofertas exibidas pela sua instituição, com taxa, vencimento e origem.
+            Organizando fontes, datas e condições…
+          </div>
+        ) : offers.isError || radar.isError ? (
+          <div className="mt-5 flex items-center gap-2 rounded-xl border border-danger/30 bg-danger/5 p-4 text-sm text-danger">
+            <AlertTriangle className="size-4 shrink-0" /> Não foi possível carregar a comparação.
+          </div>
+        ) : comparison.length === 0 ? (
+          <div className="mt-5 rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
+            Nenhuma opção nesta origem. Cadastre uma oferta privada com o link da instituição ou
+            escolha outro filtro.
           </div>
         ) : (
-          <div className="mt-5 space-y-3">
-            {ranked.map((offer, index) => (
-              <article
-                key={offer.id}
-                className="grid gap-4 rounded-xl border border-border/60 p-4 lg:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(100px,.6fr))_auto] lg:items-center"
-              >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="numeric text-xs font-semibold text-muted-foreground">
-                      #{index + 1}
-                    </span>
-                    <Badge variant="outline">{PRODUCT_LABEL[offer.productType]}</Badge>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        offer.eligible
-                          ? "border-success/40 text-success"
-                          : "border-warning/40 text-warning",
-                      )}
-                    >
-                      {offer.eligible ? "Comparável" : "Fora dos critérios"}
-                    </Badge>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        offer.fresh
-                          ? "border-success/40 text-success"
-                          : "border-warning/40 text-warning",
-                      )}
-                    >
-                      {offer.fresh ? `Conferida há ${offer.sourceAgeDays}d` : "Taxa vencida"}
-                    </Badge>
-                  </div>
-                  <h3 className="mt-2 truncate text-sm font-semibold">{offer.institution}</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {offer.conglomerate} · {RATE_LABEL[offer.rateType]}{" "}
-                    {offer.rateValue.toLocaleString("pt-BR")}
-                    {offer.rateType === "cdi" ? "%" : "% a.a."}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Líquido anual</p>
-                  <p className="numeric mt-1 font-semibold">
-                    {(offer.netAnnualRate * 100).toLocaleString("pt-BR", {
-                      maximumFractionDigits: 2,
-                    })}
-                    %
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">No vencimento</p>
-                  <p className="numeric mt-1 font-semibold">{formatBRL(offer.projectedNetValue)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Liquidez · proteção</p>
-                  <p className="mt-1 text-sm">
-                    {offer.dailyLiquidity ? "Diária" : "Vencimento"} ·{" "}
-                    {offer.fgcEligible ? "FGC" : "Sem FGC"}
-                  </p>
-                </div>
-                <div className="flex items-center justify-end gap-1">
-                  {offer.sourceUrl && (
-                    <Button variant="ghost" size="icon" asChild>
-                      <a
-                        href={offer.sourceUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label="Abrir fonte da oferta"
-                      >
-                        <ExternalLink className="size-4" />
-                      </a>
-                    </Button>
+          <div className="mt-5 grid gap-4 xl:grid-cols-2">
+            {comparison.map((item) => {
+              const privateOffer =
+                item.origin === "private"
+                  ? offers.data?.find((offer) => offer.id === item.id)
+                  : null;
+              return (
+                <article
+                  key={item.id}
+                  className={cn(
+                    "flex min-w-0 flex-col rounded-xl border p-4",
+                    item.comparable ? "border-border/60" : "border-warning/30 bg-warning/[0.03]",
                   )}
-                  <EntityActionsMenu
-                    entityLabel="oferta"
-                    recordName={`${PRODUCT_LABEL[offer.productType]} ${offer.institution}`}
-                    archived={Boolean(offer.archivedAt)}
-                    {...(!showArchived ? { onEdit: () => openForm(offer) } : {})}
-                    onArchive={() =>
-                      lifecycle.archive.mutate(offer.id, {
-                        onSuccess: () => toast.success("Oferta arquivada"),
-                        onError: (error) => toast.error(error.message),
-                      })
-                    }
-                    onRestore={() =>
-                      lifecycle.restore.mutate(offer.id, {
-                        onSuccess: () => toast.success("Oferta restaurada"),
-                        onError: (error) => toast.error(error.message),
-                      })
-                    }
-                    onDelete={() =>
-                      lifecycle.remove.mutate(offer.id, {
-                        onSuccess: () => toast.success("Oferta excluída"),
-                        onError: (error) => toast.error(error.message),
-                      })
-                    }
-                    deleteDisabledReason={
-                      offer.recordOrigin !== "manual"
-                        ? "Ofertas sincronizadas devem ser arquivadas."
-                        : undefined
-                    }
-                  />
-                </div>
-                {offer.warnings.length > 0 && (
-                  <div className="rounded-lg bg-warning/10 p-3 text-xs text-warning lg:col-span-5">
-                    {offer.warnings.join(" ")}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">{item.productLabel}</Badge>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            item.comparable
+                              ? "border-success/40 text-success"
+                              : "border-warning/40 text-warning",
+                          )}
+                        >
+                          {item.comparable ? item.fitLabel : "Dados a revisar"}
+                        </Badge>
+                      </div>
+                      <h3 className="mt-3 text-base font-semibold">{item.name}</h3>
+                      <p className="mt-1 text-xs text-muted-foreground">Emissor: {item.issuer}</p>
+                    </div>
+                    {privateOffer && (
+                      <EntityActionsMenu
+                        entityLabel="oferta"
+                        recordName={item.name}
+                        archived={Boolean(privateOffer.archivedAt)}
+                        {...(!showArchived ? { onEdit: () => openForm(privateOffer) } : {})}
+                        onArchive={() =>
+                          lifecycle.archive.mutate(privateOffer.id, {
+                            onSuccess: () => toast.success("Oferta arquivada"),
+                            onError: (error) => toast.error(error.message),
+                          })
+                        }
+                        onRestore={() =>
+                          lifecycle.restore.mutate(privateOffer.id, {
+                            onSuccess: () => toast.success("Oferta restaurada"),
+                            onError: (error) => toast.error(error.message),
+                          })
+                        }
+                        onDelete={() =>
+                          lifecycle.remove.mutate(privateOffer.id, {
+                            onSuccess: () => toast.success("Oferta excluída"),
+                            onError: (error) => toast.error(error.message),
+                          })
+                        }
+                        deleteDisabledReason={
+                          privateOffer.recordOrigin !== "manual"
+                            ? "Ofertas sincronizadas devem ser arquivadas."
+                            : undefined
+                        }
+                      />
+                    )}
                   </div>
-                )}
-              </article>
-            ))}
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-muted/35 p-3 text-xs">
+                    <div>
+                      <p className="text-muted-foreground">Remuneração</p>
+                      <p className="numeric mt-1 font-semibold">{item.remuneration}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Aplicação mínima</p>
+                      <p className="numeric mt-1 font-semibold">
+                        {formatBRL(item.minimumInvestment)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Vencimento</p>
+                      <p className="numeric mt-1 font-semibold">
+                        {new Date(`${item.maturityDate}T12:00:00`).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Aderência</p>
+                      <p className="numeric mt-1 font-semibold">{item.fitScore}/100</p>
+                    </div>
+                  </div>
+
+                  {item.estimate && (
+                    <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-foreground">
+                      {item.estimate}
+                    </p>
+                  )}
+
+                  <Accordion type="single" collapsible className="mt-1">
+                    <AccordionItem value="details">
+                      <AccordionTrigger className="text-xs">
+                        Risco, liquidez, impostos e custos
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-3 text-xs leading-5 text-muted-foreground">
+                        <p>
+                          <strong className="text-foreground">Risco:</strong> {item.risk}
+                        </p>
+                        <p>
+                          <strong className="text-foreground">Liquidez:</strong> {item.liquidity}
+                        </p>
+                        <p>
+                          <strong className="text-foreground">Tributação:</strong> {item.taxes}
+                        </p>
+                        <p>
+                          <strong className="text-foreground">Custos:</strong> {item.costs}
+                        </p>
+                        <p>
+                          <strong className="text-foreground">Proteção:</strong> {item.protection}
+                        </p>
+                        <div>
+                          <strong className="text-foreground">Limitações:</strong>
+                          <ul className="mt-1 list-disc space-y-1 pl-4">
+                            {item.limitations.map((limitation) => (
+                              <li key={limitation}>{limitation}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+
+                  <div
+                    className={cn(
+                      "mt-auto rounded-lg border p-3",
+                      item.source.status === "verified"
+                        ? "border-success/25 bg-success/[0.04]"
+                        : "border-warning/30 bg-warning/[0.04]",
+                    )}
+                  >
+                    <div className="flex items-start gap-2">
+                      <FileCheck2
+                        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                        aria-hidden
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs font-semibold">Passaporte da oferta</p>
+                          <Badge variant="outline" className="text-[10px]">
+                            {item.source.statusLabel}
+                          </Badge>
+                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {item.source.name} · referência{" "}
+                          {new Date(`${item.source.referenceDate}T12:00:00`).toLocaleDateString(
+                            "pt-BR",
+                          )}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          {item.source.scope}
+                        </p>
+                      </div>
+                    </div>
+                    {item.source.url && (
+                      <Button variant="link" size="sm" className="mt-1 h-auto px-0 text-xs" asChild>
+                        <a href={item.source.url} target="_blank" rel="noreferrer">
+                          Abrir fonte <ExternalLink className="size-3" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
 
         <div className="mt-4 flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-          <ShieldCheck className="mt-0.5 size-4 shrink-0" />O FGC cobre produtos elegíveis até os
-          limites aplicáveis; confirme conglomerado, saldo total e condições na origem antes de
-          investir.
+          <ShieldCheck className="mt-0.5 size-4 shrink-0" /> A ordem indica aderência aos critérios,
+          não promessa de retorno. O suitability e a confirmação final continuam sendo feitos pela
+          instituição onde a aplicação será contratada.
         </div>
       </div>
 
@@ -417,7 +531,7 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
               type="date"
             />
             <Field
-              label="Link da origem"
+              label="Link HTTPS da oferta (obrigatório)"
               value={sourceUrl}
               onChange={setSourceUrl}
               id="offer-source"

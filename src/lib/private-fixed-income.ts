@@ -47,6 +47,15 @@ function daysBetween(start: string, end: string) {
   );
 }
 
+function hasVerifiableSource(value: string | null) {
+  if (!value) return false;
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function fixedIncomeTaxRate(product: PrivateProductType, days: number) {
   if (product === "lci" || product === "lca") return 0;
   if (days <= 180) return 0.225;
@@ -90,6 +99,7 @@ export function rankPrivateOffers(
       amount >= offer.minimumInvestment &&
       offer.maturityDate >= referenceDate &&
       (offer.rateType === "fixed" || offer.referenceRate != null) &&
+      hasVerifiableSource(offer.sourceUrl) &&
       fresh;
     return { offer, days, grossRate, taxRate, netRate, netReturn, eligible, fresh, sourceAgeDays };
   });
@@ -108,6 +118,9 @@ export function rankPrivateOffers(
           );
         }
         if (!offer.fgcEligible) warnings.push("Oferta marcada como não coberta pelo FGC.");
+        if (!hasVerifiableSource(offer.sourceUrl)) {
+          warnings.push("Inclua uma URL HTTPS da oferta para tornar a comparação verificável.");
+        }
         if (offer.rateType !== "fixed" && offer.referenceRate == null) {
           warnings.push("Informe a taxa de referência usada na data da comparação.");
         }

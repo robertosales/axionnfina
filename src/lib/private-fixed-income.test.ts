@@ -18,7 +18,7 @@ const base: PrivateFixedIncomeOffer = {
   maturityDate: "2028-09-01",
   dailyLiquidity: false,
   fgcEligible: true,
-  sourceUrl: null,
+  sourceUrl: "https://banco.example/oferta",
   sourceCheckedAt: "2026-09-01T12:00:00Z",
   notes: null,
   archivedAt: null,
@@ -67,5 +67,17 @@ describe("private fixed income comparison", () => {
     expect(ranked?.fresh).toBe(false);
     expect(ranked?.eligible).toBe(false);
     expect(ranked?.warnings[0]).toContain("confirme novamente");
+  });
+
+  it("torna incomparável uma oferta sem URL verificável", () => {
+    const [ranked] = rankPrivateOffers(
+      [{ ...base, sourceUrl: null }],
+      profile,
+      10_000,
+      "2026-09-01",
+    );
+
+    expect(ranked?.eligible).toBe(false);
+    expect(ranked?.warnings).toContainEqual(expect.stringContaining("URL HTTPS"));
   });
 });

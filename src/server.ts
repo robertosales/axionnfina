@@ -2,6 +2,12 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import {
+  completeRequest,
+  createRequestContext,
+  logEvent,
+  withRequestId,
+} from "./lib/observability.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -46,16 +52,21 @@ function isH3SwallowedErrorBody(body: string): boolean {
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    const requestContext = createRequestContext(request);
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const normalized = await normalizeCatastrophicSsrResponse(response);
+      completeRequest(requestContext, normalized.status);
+      return withRequestId(normalized, requestContext.requestId);
     } catch (error) {
-      console.error(error);
-      return new Response(renderErrorPage(), {
+      logEvent("error", "http.unhandled", { requestId: requestContext.requestId, error });
+      const response = new Response(renderErrorPage(), {
         status: 500,
         headers: { "content-type": "text/html; charset=utf-8" },
       });
+      completeRequest(requestContext, response.status);
+      return withRequestId(response, requestContext.requestId);
     }
   },
 };

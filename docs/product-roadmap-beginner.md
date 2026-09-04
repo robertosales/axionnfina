@@ -102,7 +102,7 @@ Critério de saída: uma carteira conectada aparece sem exigir ticker, preço m�
 
 ## Fase 4 — Primeiro investimento guiado
 
-Status: primeira entrega implementada no código; a migration `20260901070000_first_investment_guidance.sql` precisa ser aplicada.
+Status: primeira entrega implementada; migration aplicada no Supabase em 04/09/2026.
 
 - Coletar objetivo, prazo, necessidade de liquidez, tolerância a oscilações e conhecimento.
 - Verificar reserva e compromissos antes de apresentar produtos.
@@ -129,18 +129,40 @@ Critério de saída: um iniciante entende por que uma opção apareceu e o que p
 
 ## Fase 5 — Comparação ampliada
 
+Status: primeira entrega implementada no código.
+
 - Manter Tesouro Direto e indicadores em fontes oficiais.
 - Integrar ofertas privadas somente por fonte autorizada, verificável e datada.
 - Comparar custos, tributação, liquidez, risco e cobertura sem inventar cotações.
 - Avaliar parceria ou enquadramento regulatório antes de recomendações individualizadas comerciais.
 
+Entregue na primeira versão:
+
+- Tesouro Direto, CDB, LCI e LCA apresentados no mesmo contexto, ordenados por aderência — nunca como promessa de “melhor investimento”.
+- Passaporte da oferta com origem, data de referência, escopo e estado da verificação.
+- Comparação explícita de remuneração, prazo, liquidez, risco, tributos, custos e proteção.
+- Estimativa privada exibida somente quando a oferta possui fonte HTTPS, está vigente e atende aos critérios cadastrados.
+- Taxas públicas tratadas como fotografia da data de referência, sem projeção líquida artificial.
+- Estados responsivos de carregamento, vazio, erro, dados incompletos e fonte vencida.
+
 Critério de saída: toda opção comparada possui origem, data, escopo e limitações visíveis.
 
 ## Fase 6 — Confiança e produção
+
+Status: primeira entrega implementada; migration aplicada no Supabase em 04/09/2026. A homologação autenticada deve seguir o runbook antes da publicação.
 
 - Remover dados demonstrativos residuais dos fluxos reais.
 - Corrigir o score de saúde financeira e suas métricas.
 - Validar RLS, importação sem duplicidade e jornada E2E com dois usuários.
 - Adicionar observabilidade, limites de custo, runbooks e testes responsivos autenticados.
+
+Entregue na primeira versão:
+
+- Dados demonstrativos removidos do Dashboard e do gráfico de patrimônio; estados vazios agora conduzem à conexão de dados reais.
+- Score financeiro refeito com fluxo mensal, cobertura de reserva, peso das dívidas e contas vencidas, além de confiança separada pela cobertura dos dados.
+- Limite diário distribuído e atômico para chamadas de IA, somado ao limite por minuto e aos limites de tokens e etapas.
+- Logs JSON com `requestId`, duração, status e remoção de chaves sensíveis.
+- Endpoint de prontidão que valida configuração sem expor secrets.
+- Runbook de publicação, rollback, incidentes, monitoramento e validação RLS/IDOR com dois usuários.
 
 Critério de saída: dados reais são distinguíveis de exemplos, cálculos são auditáveis e falhas são recuperáveis.

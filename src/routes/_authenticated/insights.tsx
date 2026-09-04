@@ -22,11 +22,11 @@ import { SavingsPlanPanel } from "@/components/finance/SavingsPlanPanel";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { netWorthSeries } from "@/lib/mock-data";
 import {
   useEntityLifecycle,
   useInsights,
   useInvestmentAlertPreferences,
+  useNetWorthSeries,
   useRunInvestmentMonitoring,
 } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
@@ -66,6 +66,7 @@ function InsightsPage() {
   const lifecycle = useEntityLifecycle("insight");
   const alertPreferences = useInvestmentAlertPreferences();
   const runMonitoring = useRunInvestmentMonitoring();
+  const netWorth = useNetWorthSeries();
 
   return (
     <AppShell>
@@ -84,45 +85,70 @@ function InsightsPage() {
 
       {!showArchived && <SavingsPlanPanel />}
 
-      <ChartCard title="Evolução do patrimônio" description="Últimos 6 meses" className="mt-6">
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={netWorthSeries} margin={{ left: -18, right: 8, top: 8 }}>
-              <defs>
-                <linearGradient id="grad-nw" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.45} />
-                  <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-              <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
-              <YAxis
-                tickFormatter={(v: number) => formatBRL(v, true)}
-                tickLine={false}
-                axisLine={false}
-                fontSize={11}
-                width={70}
-              />
-              <RTooltip
-                formatter={(v: number) => formatBRL(v)}
-                contentStyle={{
-                  background: "var(--color-popover)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: 12,
-                  fontSize: 12,
-                }}
-              />
-              <Area
-                type="monotone"
-                isAnimationActive={false}
-                dataKey="value"
-                stroke="var(--color-primary)"
-                strokeWidth={2}
-                fill="url(#grad-nw)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+      <ChartCard
+        title="Evolução do patrimônio"
+        description="Histórico mensal real"
+        className="mt-6"
+      >
+        {netWorth.isLoading ? (
+          <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+            Carregando histórico…
+          </div>
+        ) : netWorth.isError ? (
+          <div className="flex h-64 items-center justify-center text-sm text-danger">
+            Não foi possível carregar a evolução do patrimônio.
+          </div>
+        ) : (netWorth.data?.length ?? 0) === 0 ? (
+          <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-6 text-center">
+            <p className="text-sm font-medium">Ainda não há snapshots mensais</p>
+            <p className="max-w-md text-xs text-muted-foreground">
+              O gráfico aparecerá depois que seus saldos reais forem registrados ao longo do tempo.
+            </p>
+          </div>
+        ) : (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={netWorth.data ?? []} margin={{ left: -18, right: 8, top: 8 }}>
+                <defs>
+                  <linearGradient id="grad-nw" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.45} />
+                    <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--color-border)"
+                  vertical={false}
+                />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
+                <YAxis
+                  tickFormatter={(v: number) => formatBRL(v, true)}
+                  tickLine={false}
+                  axisLine={false}
+                  fontSize={11}
+                  width={70}
+                />
+                <RTooltip
+                  formatter={(v: number) => formatBRL(v)}
+                  contentStyle={{
+                    background: "var(--color-popover)",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: 12,
+                    fontSize: 12,
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  isAnimationActive={false}
+                  dataKey="value"
+                  stroke="var(--color-primary)"
+                  strokeWidth={2}
+                  fill="url(#grad-nw)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </ChartCard>
 
       {!showArchived && (

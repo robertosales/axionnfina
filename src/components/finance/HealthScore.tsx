@@ -1,6 +1,6 @@
 /**
  * HealthScore — KPI card que mostra a saúde financeira do usuário (0-100).
- * Calculado com base em: taxa de poupança, diversificação, endividamento, regularidade.
+ * Calculado com base em: fluxo de caixa, reserva, dívidas e contas vencidas.
  */
 import { Activity, TrendingUp, TrendingDown } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
@@ -12,11 +12,12 @@ import { cn } from "@/lib/utils";
 type HealthScoreProps = {
   score: number;
   breakdown?: {
-    savingsRate: number;
-    diversification: number;
-    debtRatio: number;
-    regularity: number;
+    cashflow: number;
+    reserve: number;
+    debt: number;
+    commitments: number;
   };
+  confidence?: "Alta" | "Média" | "Baixa";
   sparkline?: Array<{ value: number }>;
 };
 
@@ -34,7 +35,7 @@ function getScoreLevel(score: number) {
   return scoreConfig.poor;
 }
 
-export function HealthScore({ score, breakdown, sparkline }: HealthScoreProps) {
+export function HealthScore({ score, breakdown, confidence, sparkline }: HealthScoreProps) {
   const level = getScoreLevel(score);
   const circumference = 2 * Math.PI * 38;
   const offset = circumference * (1 - score / 100);
@@ -83,28 +84,32 @@ export function HealthScore({ score, breakdown, sparkline }: HealthScoreProps) {
               <p className={cn("text-sm font-semibold", level.color)}>{level.label}</p>
             </TooltipTrigger>
             <TooltipContent>
-              <p className="text-xs">Score calculado com base em poupança, diversificação, dívidas e regularidade.</p>
+              <p className="max-w-xs text-xs">
+                Indicador educativo baseado em fluxo de caixa, reserva disponível, dívidas e contas
+                vencidas. Não é nota de crédito.
+              </p>
             </TooltipContent>
           </Tooltip>
 
           {breakdown && (
             <div className="mt-1.5 space-y-0.5 text-[10px] text-muted-foreground">
               <div className="flex justify-between">
-                <span>Poupança</span>
-                <span className="numeric">{breakdown.savingsRate}/25</span>
+                <span>Fluxo mensal</span>
+                <span className="numeric">{breakdown.cashflow}/30</span>
               </div>
               <div className="flex justify-between">
-                <span>Diversificação</span>
-                <span className="numeric">{breakdown.diversification}/25</span>
+                <span>Reserva</span>
+                <span className="numeric">{breakdown.reserve}/30</span>
               </div>
               <div className="flex justify-between">
-                <span>Endividamento</span>
-                <span className="numeric">{breakdown.debtRatio}/25</span>
+                <span>Dívidas</span>
+                <span className="numeric">{breakdown.debt}/25</span>
               </div>
               <div className="flex justify-between">
-                <span>Regularidade</span>
-                <span className="numeric">{breakdown.regularity}/25</span>
+                <span>Compromissos</span>
+                <span className="numeric">{breakdown.commitments}/15</span>
               </div>
+              {confidence && <p className="pt-1">Confiança dos dados: {confidence}</p>}
             </div>
           )}
         </div>
@@ -133,51 +138,4 @@ export function HealthScore({ score, breakdown, sparkline }: HealthScoreProps) {
       )}
     </Card>
   );
-}
-
-/* ------------------------------------------------------------------ */
-/* Health Score Calculator                                             */
-/* ------------------------------------------------------------------ */
-
-type HealthScoreInput = {
-  savingsRate: number; // 0-100%
-  totalAssets: number;
-  totalDebts: number;
-  monthlyTransactions: number;
-  uniqueCategories: number;
-};
-
-/**
- * Calcula o score de saúde financeira (0-100).
- *
- * Critérios (25 pontos cada):
- * 1. Poupança: 0% = 0pts, ≥30% = 25pts
- * 2. Diversificação: 1 categoria = 0pts, ≥5 = 25pts
- * 3. Endividamento: 100%+ = 0pts, 0% = 25pts
- * 4. Regularidade: 0 transações = 0pts, ≥20/mês = 25pts
- */
-export function calculateHealthScore(input: HealthScoreInput) {
-  const savings = Math.max(0, Math.min(25, Math.round((input.savingsRate / 30) * 25)));
-  const diversification = Math.max(
-    0,
-    Math.min(25, Math.round(((input.uniqueCategories - 1) / 4) * 25)),
-  );
-  const debtRatio = input.totalAssets > 0 ? input.totalDebts / input.totalAssets : null;
-  const debt = debtRatio === null ? 0 : Math.max(0, Math.min(25, Math.round((1 - debtRatio) * 25)));
-  const regularity = Math.max(
-    0,
-    Math.min(25, Math.round((input.monthlyTransactions / 20) * 25)),
-  );
-
-  const total = savings + diversification + debt + regularity;
-
-  return {
-    score: total,
-    breakdown: {
-      savingsRate: savings,
-      diversification,
-      debtRatio: debt,
-      regularity,
-    },
-  };
 }

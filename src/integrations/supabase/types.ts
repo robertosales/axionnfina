@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_daily_usage: {
+        Row: {
+          request_count: number
+          updated_at: string
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          request_count?: number
+          updated_at?: string
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          request_count?: number
+          updated_at?: string
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       account_balances: {
         Row: {
           account_id: string
@@ -2463,6 +2484,10 @@ export type Database = {
     }
     Functions: {
       archive_account: { Args: { p_account_id: string }; Returns: boolean }
+      consume_daily_ai_quota: {
+        Args: { p_daily_limit?: number }
+        Returns: { allowed: boolean; remaining: number }[]
+      }
       calculate_irpf_monthly: {
         Args: { p_month: number; p_year: number }
         Returns: Json

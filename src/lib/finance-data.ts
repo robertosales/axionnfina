@@ -11,14 +11,6 @@ import type {
   Transaction,
   UpcomingBill,
 } from "@/lib/mock-data";
-import {
-  accounts as demoAccounts,
-  agentInsights as demoInsights,
-  budgetItems as demoBudgets,
-  goals as demoGoals,
-  recentTransactions as demoTransactions,
-  upcomingBills as demoBills,
-} from "@/lib/mock-data";
 import type { AssetClass, BillStatus } from "@/shared/domain";
 import { ASSET_CLASS_COLOR, ASSET_CLASS_LABEL } from "@/shared/domain";
 import type {
@@ -45,10 +37,7 @@ import type {
   SavingsPlanStatus,
 } from "@/lib/savings-opportunities";
 import type { CsvInvestmentRow } from "@/lib/investment-import";
-import type {
-  FirstInvestmentAnswers,
-  FirstInvestmentGuidance,
-} from "@/lib/first-investment-guide";
+import type { FirstInvestmentAnswers, FirstInvestmentGuidance } from "@/lib/first-investment-guide";
 
 type DbJson = Database["public"]["Tables"]["investment_plans"]["Row"]["allocations"];
 
@@ -206,7 +195,7 @@ export function useCreateOpenFinanceConsent() {
           institution_id: input.institutionId,
           scopes: input.scopes,
           status: "authorised",
-          consent_id: `demo-consent-${crypto.randomUUID()}`,
+          consent_id: `pending-provider-${crypto.randomUUID()}`,
           last_synced_at: new Date().toISOString(),
         })
         .select("id")
@@ -1181,7 +1170,9 @@ export function useImportInvestmentPositions() {
           status: "staged",
           rows_found: input.rows.length,
           rows_rejected: input.rows.length - valid.length,
-          errors: input.rows.filter((row) => !row.valid).map((row) => ({ row: row.rowNumber, errors: row.errors })) as unknown as DbJson,
+          errors: input.rows
+            .filter((row) => !row.valid)
+            .map((row) => ({ row: row.rowNumber, errors: row.errors })) as unknown as DbJson,
         })
         .select("id")
         .single();
@@ -1211,12 +1202,19 @@ export function useImportInvestmentPositions() {
         { onConflict: "user_id,source,external_id" },
       );
       if (error) {
-        await supabase.from("investment_import_batches").update({ status: "failed" }).eq("id", batch.id);
+        await supabase
+          .from("investment_import_batches")
+          .update({ status: "failed" })
+          .eq("id", batch.id);
         throw error;
       }
       await supabase
         .from("investment_import_batches")
-        .update({ status: "completed", rows_imported: valid.length, completed_at: new Date().toISOString() })
+        .update({
+          status: "completed",
+          rows_imported: valid.length,
+          completed_at: new Date().toISOString(),
+        })
         .eq("id", batch.id);
       return { imported: valid.length, rejected: input.rows.length - valid.length };
     },
@@ -1676,258 +1674,6 @@ export function useUpsertTaxEvent() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tax-events"] });
       void queryClient.invalidateQueries({ queryKey: ["taxes"] });
-    },
-  });
-}
-
-/* ------------------------------------------------------------------ */
-/* Dados de exemplo                                                    */
-/* ------------------------------------------------------------------ */
-
-const demoPositions = [
-  {
-    ticker: "PETR4",
-    name: "Petrobras PN",
-    asset_class: "stock",
-    quantity: 400,
-    average_price: 34.2,
-    current_price: 38.9,
-  },
-  {
-    ticker: "ITSA4",
-    name: "Itaúsa PN",
-    asset_class: "stock",
-    quantity: 900,
-    average_price: 9.4,
-    current_price: 10.8,
-  },
-  {
-    ticker: "HGLG11",
-    name: "CSHG Logística",
-    asset_class: "fii",
-    quantity: 120,
-    average_price: 158.0,
-    current_price: 171.2,
-  },
-  {
-    ticker: "MXRF11",
-    name: "Maxi Renda",
-    asset_class: "fii",
-    quantity: 1500,
-    average_price: 10.1,
-    current_price: 10.6,
-  },
-  {
-    ticker: "TESOURO-IPCA-2029",
-    name: "Tesouro IPCA+ 2029",
-    asset_class: "fixed_income",
-    quantity: 1,
-    average_price: 92400,
-    current_price: 98400,
-  },
-  {
-    ticker: "IVVB11",
-    name: "iShares S&P 500",
-    asset_class: "etf",
-    quantity: 190,
-    average_price: 142.0,
-    current_price: 158.9,
-  },
-] as const;
-
-const demoTaxEvents = [
-  {
-    kind: "swing",
-    asset_class: "stock",
-    ticker: "PETR4",
-    gross_amount: 12400,
-    profit: 1240,
-    withheld: 6.2,
-  },
-  {
-    kind: "dividend",
-    asset_class: "stock",
-    ticker: "ITSA4",
-    gross_amount: 860,
-    profit: 0,
-    withheld: 0,
-  },
-  {
-    kind: "swing",
-    asset_class: "fii",
-    ticker: "MXRF11",
-    gross_amount: 3200,
-    profit: 240,
-    withheld: 0,
-  },
-] as const;
-
-/**
- * Popula a conta do usuário com um conjunto de dados de exemplo cobrindo
- * contas, transações, orçamento, metas, insights, investimentos, contas a
- * pagar/receber, eventos fiscais e histórico de patrimônio.
- */
-export function useSeedDemoData() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async () => {
-      const userId = await requireUserId();
-
-      const accountRows = demoAccounts.map((account) => ({
-        user_id: userId,
-        name: account.name,
-        institution: account.institution,
-        type: uiToDbAccountType[account.type as AccountType],
-        balance: account.balance,
-        open_finance: account.openFinance,
-        last_sync_at: account.lastSyncedAt,
-      }));
-
-      const { data: inserted, error: accountsError } = await supabase
-        .from("accounts")
-        .insert(accountRows)
-        .select("id, name");
-      if (accountsError) throw accountsError;
-
-      const accountIdByName = new Map((inserted ?? []).map((row) => [row.name, row.id]));
-
-      // Replica as transações demo nos últimos 6 meses para alimentar gráficos.
-      const transactionRows = [0, 1, 2, 3, 4, 5].flatMap((offset) =>
-        demoTransactions.map((tx) => {
-          const base = new Date();
-          base.setMonth(base.getMonth() - offset);
-          const day = Number(tx.date.slice(8, 10));
-          const date = new Date(base.getFullYear(), base.getMonth(), Math.min(day, 28));
-          const jitter = offset === 0 ? 1 : 0.85 + ((offset * 7) % 30) / 100;
-          return {
-            user_id: userId,
-            account_id: accountIdByName.get(tx.accountName) ?? null,
-            description: tx.description,
-            merchant: tx.merchant,
-            category: tx.category,
-            type: (tx.kind === "income"
-              ? "income"
-              : tx.kind === "transfer"
-                ? "transfer"
-                : "expense") satisfies DbTransactionType as DbTransactionType,
-            amount: Math.round(tx.amount * jitter * 100) / 100,
-            occurred_at: date.toISOString().slice(0, 10),
-          };
-        }),
-      );
-      const { error: txError } = await supabase.from("transactions").insert(transactionRows);
-      if (txError) throw txError;
-
-      const { error: budgetError } = await supabase.from("budgets").insert(
-        demoBudgets.map((item) => ({
-          user_id: userId,
-          category: item.category,
-          planned: item.planned,
-          month: monthStart(),
-        })),
-      );
-      if (budgetError) throw budgetError;
-
-      const { error: goalError } = await supabase.from("goals").insert(
-        demoGoals.map((goal) => ({
-          user_id: userId,
-          title: goal.name,
-          target_amount: goal.target,
-          current_amount: goal.current,
-          deadline: goal.dueDate,
-        })),
-      );
-      if (goalError) throw goalError;
-
-      const { error: insightError } = await supabase.from("agent_insights").insert(
-        demoInsights.map((insight) => ({
-          user_id: userId,
-          title: insight.title,
-          description: insight.body,
-          severity: (insight.severity === "warning"
-            ? "warning"
-            : insight.severity === "danger"
-              ? "critical"
-              : "info") satisfies DbSeverity as DbSeverity,
-        })),
-      );
-      if (insightError) throw insightError;
-
-      const { error: positionError } = await supabase.from("investment_positions").insert(
-        demoPositions.map((position) => ({
-          user_id: userId,
-          account_id: accountIdByName.get("Carteira consolidada") ?? null,
-          ticker: position.ticker,
-          name: position.name,
-          asset_class: position.asset_class,
-          quantity: position.quantity,
-          average_price: position.average_price,
-          current_price: position.current_price,
-        })),
-      );
-      if (positionError) throw positionError;
-
-      const { error: payableError } = await supabase.from("payables").insert(
-        demoBills.map((bill) => ({
-          user_id: userId,
-          description: bill.name,
-          amount: bill.amount,
-          due_date: bill.dueDate,
-          category: "Contas",
-          status: (bill.status === "SCHEDULED" ? "paid" : "pending") as BillStatus,
-        })),
-      );
-      if (payableError) throw payableError;
-
-      const { error: receivableError } = await supabase.from("receivables").insert([
-        {
-          user_id: userId,
-          description: "Consultoria Axionn Tech",
-          amount: 4800,
-          due_date: new Date(Date.now() + 12 * 86400000).toISOString().slice(0, 10),
-          payer: "Axionn Tech LTDA",
-        },
-        {
-          user_id: userId,
-          description: "Reembolso plano de saúde",
-          amount: 312.5,
-          due_date: new Date(Date.now() + 21 * 86400000).toISOString().slice(0, 10),
-          payer: "Operadora",
-        },
-      ]);
-      if (receivableError) throw receivableError;
-
-      const { error: taxError } = await supabase.from("tax_events").insert(
-        demoTaxEvents.map((event) => ({
-          user_id: userId,
-          kind: event.kind,
-          asset_class: event.asset_class,
-          ticker: event.ticker,
-          gross_amount: event.gross_amount,
-          profit: event.profit,
-          withheld: event.withheld,
-          occurred_at: new Date().toISOString().slice(0, 10),
-        })),
-      );
-      if (taxError) throw taxError;
-
-      const baseNetWorth = demoAccounts.reduce((total, account) => total + account.balance, 0);
-      const snapshots = [5, 4, 3, 2, 1, 0].map((offset, index) => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - offset);
-        return {
-          user_id: userId,
-          month: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`,
-          net_worth: Math.round(baseNetWorth * (0.86 + index * 0.028) * 100) / 100,
-          liquidity: Math.round(baseNetWorth * 0.2 * (0.9 + index * 0.02) * 100) / 100,
-        };
-      });
-      const { error: snapshotError } = await supabase.from("net_worth_snapshots").insert(snapshots);
-      if (snapshotError) throw snapshotError;
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries();
     },
   });
 }

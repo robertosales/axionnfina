@@ -1,46 +1,53 @@
 import { describe, expect, it } from "vitest";
 
-import { calculateHealthScore } from "@/components/finance/HealthScore";
+import { calculateHealthScore } from "@/lib/financial-health";
 
 describe("calculateHealthScore", () => {
   it("retorna score alto para boa saúde financeira", () => {
     const result = calculateHealthScore({
-      savingsRate: 35,
-      totalAssets: 200000,
+      monthlyIncome: 10000,
+      monthlyExpenses: 6500,
+      liquidAssets: 50000,
       totalDebts: 10000,
-      monthlyTransactions: 30,
-      uniqueCategories: 8,
+      overdueBills: 0,
+      monthsObserved: 6,
+      transactionCount: 90,
     });
 
     expect(result.score).toBeGreaterThanOrEqual(75);
-    expect(result.breakdown.savingsRate).toBe(25);
-    expect(result.breakdown.diversification).toBe(25);
-    expect(result.breakdown.debtRatio).toBeGreaterThanOrEqual(20);
-    expect(result.breakdown.regularity).toBe(25);
+    expect(result.breakdown.cashflow).toBe(30);
+    expect(result.breakdown.reserve).toBe(30);
+    expect(result.breakdown.debt).toBeGreaterThanOrEqual(20);
+    expect(result.breakdown.commitments).toBe(15);
+    expect(result.confidence).toBe("Alta");
   });
 
   it("retorna score baixo para má saúde financeira", () => {
     const result = calculateHealthScore({
-      savingsRate: 0,
-      totalAssets: 10000,
+      monthlyIncome: 3000,
+      monthlyExpenses: 3500,
+      liquidAssets: 0,
       totalDebts: 15000,
-      monthlyTransactions: 2,
-      uniqueCategories: 1,
+      overdueBills: 3,
+      monthsObserved: 1,
+      transactionCount: 2,
     });
 
     expect(result.score).toBeLessThanOrEqual(30);
-    expect(result.breakdown.savingsRate).toBe(0);
-    expect(result.breakdown.diversification).toBe(0);
-    expect(result.breakdown.regularity).toBeLessThanOrEqual(5);
+    expect(result.breakdown.cashflow).toBe(0);
+    expect(result.breakdown.reserve).toBe(0);
+    expect(result.breakdown.commitments).toBe(0);
   });
 
   it("score máximo é 100", () => {
     const result = calculateHealthScore({
-      savingsRate: 50,
-      totalAssets: 500000,
+      monthlyIncome: 10000,
+      monthlyExpenses: 5000,
+      liquidAssets: 30000,
       totalDebts: 0,
-      monthlyTransactions: 50,
-      uniqueCategories: 10,
+      overdueBills: 0,
+      monthsObserved: 6,
+      transactionCount: 60,
     });
 
     expect(result.score).toBe(100);
@@ -48,11 +55,13 @@ describe("calculateHealthScore", () => {
 
   it("score mínimo é 0", () => {
     const result = calculateHealthScore({
-      savingsRate: 0,
-      totalAssets: 0,
+      monthlyIncome: 0,
+      monthlyExpenses: 0,
+      liquidAssets: 0,
       totalDebts: 0,
-      monthlyTransactions: 0,
-      uniqueCategories: 0,
+      overdueBills: 3,
+      monthsObserved: 0,
+      transactionCount: 0,
     });
 
     expect(result.score).toBe(0);
@@ -60,13 +69,15 @@ describe("calculateHealthScore", () => {
 
   it("lidou com dividas altas", () => {
     const result = calculateHealthScore({
-      savingsRate: 20,
-      totalAssets: 50000,
-      totalDebts: 45000,
-      monthlyTransactions: 15,
-      uniqueCategories: 4,
+      monthlyIncome: 5000,
+      monthlyExpenses: 4000,
+      liquidAssets: 5000,
+      totalDebts: 60000,
+      overdueBills: 0,
+      monthsObserved: 4,
+      transactionCount: 40,
     });
 
-    expect(result.breakdown.debtRatio).toBeLessThanOrEqual(5);
+    expect(result.breakdown.debt).toBe(0);
   });
 });

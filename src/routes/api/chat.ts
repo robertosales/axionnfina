@@ -6,9 +6,18 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { AiConfigurationError, createAiRuntime } from "@/lib/ai-provider.server";
 import { getRateLimitHeaders, RATE_LIMITS } from "@/lib/security";
+import { logEvent } from "@/lib/observability.server";
 
 const MAX_CHAT_HISTORY = 12;
 const MAX_USER_MESSAGE_CHARS = 2_000;
+const DEFAULT_DAILY_REQUEST_LIMIT = 100;
+
+function dailyRequestLimit() {
+  const parsed = Number(process.env["AI_DAILY_REQUEST_LIMIT"] ?? DEFAULT_DAILY_REQUEST_LIMIT);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 1000
+    ? parsed
+    : DEFAULT_DAILY_REQUEST_LIMIT;
+}
 
 const SYSTEM_PROMPT = `Você é o Axionn, um agente financeiro pessoal brasileiro.
 Arquitetura: você atua como Planner + Specialists — planeje a resposta, chame as ferramentas
@@ -47,8 +56,9 @@ function userClient(token: string) {
 
 function textFromMessage(message: UIMessage) {
   return message.parts
-    .filter((part): part is Extract<(typeof message.parts)[number], { type: "text" }> =>
-      part.type === "text",
+    .filter(
+      (part): part is Extract<(typeof message.parts)[number], { type: "text" }> =>
+        part.type === "text",
     )
     .map((part) => part.text)
     .join("\n");
@@ -69,9 +79,34 @@ export const Route = createFileRoute("/api/chat")({
 
         const rateLimit = getRateLimitHeaders(`agent-chat:${userId}`, RATE_LIMITS.agentChat);
         if (!rateLimit.allowed) {
-          return new Response("Limite de mensagens atingido. Aguarde um minuto e tente novamente.", {
-            status: 429,
+          return new Response(
+            "Limite de mensagens atingido. Aguarde um minuto e tente novamente.",
+            {
+              status: 429,
+              headers: rateLimit.headers,
+            },
+          );
+        }
+
+        const { data: dailyQuota, error: dailyQuotaError } = await supabase.rpc(
+          "consume_daily_ai_quota",
+          { p_daily_limit: dailyRequestLimit() },
+        );
+        if (dailyQuotaError) {
+          logEvent("error", "ai.quota.unavailable", { error: dailyQuotaError });
+          return new Response("O controle de uso do agente está temporariamente indisponível.", {
+            status: 503,
             headers: rateLimit.headers,
+          });
+        }
+        const quota = dailyQuota?.[0];
+        if (!quota?.allowed) {
+          return new Response("Limite diário do agente atingido. Tente novamente amanhã.", {
+            status: 429,
+            headers: {
+              ...rateLimit.headers,
+              "X-RateLimit-Daily-Remaining": "0",
+            },
           });
         }
 
@@ -446,6 +481,7 @@ export const Route = createFileRoute("/api/chat")({
           headers: {
             ...rateLimit.headers,
             "X-Axionn-AI-Provider": aiRuntime.provider,
+            "X-RateLimit-Daily-Remaining": String(quota.remaining),
           },
         });
       },

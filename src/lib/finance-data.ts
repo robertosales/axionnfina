@@ -1131,7 +1131,11 @@ export function useEntityLifecycle(entity: LifecycleEntity) {
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: [lifecycleQueryKey[entity]] });
     if (entity === "account") void queryClient.invalidateQueries({ queryKey: ["wallet-summary"] });
-    if (entity === "transaction") void queryClient.invalidateQueries({ queryKey: ["budgets"] });
+    if (entity === "transaction") {
+      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      void queryClient.invalidateQueries({ queryKey: ["wallet-summary"] });
+      void queryClient.invalidateQueries({ queryKey: ["budgets"] });
+    }
     if (entity === "tax_event") void queryClient.invalidateQueries({ queryKey: ["taxes"] });
   };
 

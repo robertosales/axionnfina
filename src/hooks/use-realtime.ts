@@ -66,7 +66,7 @@ export function useRealtime({
 export function useRealtimeAccounts() {
   useRealtime({
     table: "accounts",
-    queryKeys: [["accounts"], ["net-worth"]],
+    queryKeys: [["accounts"], ["wallet-summary"], ["net-worth"]],
   });
 }
 
@@ -76,7 +76,7 @@ export function useRealtimeAccounts() {
 export function useRealtimeTransactions() {
   useRealtime({
     table: "transactions",
-    queryKeys: [["transactions"], ["budgets"], ["payables"]],
+    queryKeys: [["transactions"], ["accounts"], ["wallet-summary"], ["budgets"], ["payables"]],
   });
 }
 

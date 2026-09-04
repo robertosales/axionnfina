@@ -194,8 +194,17 @@ export async function syncPluggyConnection(
       const accountId = accountWrite.data.id;
 
       const transactions = await getAllPluggyTransactions(account.id);
+      let latestTransactionBalance: { date: string; value: number } | null = null;
+      let newTransactionDelta = 0;
       for (const transaction of transactions) {
         const normalized = transactionValues(transaction);
+        if (
+          transaction.balance !== null &&
+          transaction.balance !== undefined &&
+          (!latestTransactionBalance || transaction.date > latestTransactionBalance.date)
+        ) {
+          latestTransactionBalance = { date: transaction.date, value: transaction.balance };
+        }
         const { data: existing } = await supabase
           .from("transactions")
           .select("id")
@@ -205,7 +214,7 @@ export async function syncPluggyConnection(
         if (existing) duplicatesSkipped += 1;
 
         const rawData = transaction as unknown as Json;
-        const { error: rawError } = await supabase.from("external_transactions").upsert(
+        const { data: rawTransaction, error: rawError } = await supabase.from("external_transactions").upsert(
           {
             connection_id: connectionId,
             account_id: accountId,
@@ -224,13 +233,14 @@ export async function syncPluggyConnection(
             processed_at: new Date().toISOString(),
           },
           { onConflict: "provider,external_account_id,external_id" },
-        );
+        ).select("id").single();
         if (rawError) throw rawError;
 
         const transactionPayload = {
           user_id: userId,
           account_id: accountId,
           external_id: transaction.id,
+          external_transaction_id: rawTransaction.id,
           description: transaction.description ?? "Movimentação",
           amount: normalized.amount,
           type: normalized.type,
@@ -239,6 +249,7 @@ export async function syncPluggyConnection(
           occurred_at: transaction.date.slice(0, 10),
           posted_at: transaction.date,
           status: normalized.status,
+          record_origin: "open_finance",
         };
         const transactionWrite = existing
           ? await supabase
@@ -248,7 +259,41 @@ export async function syncPluggyConnection(
               .eq("user_id", userId)
           : await supabase.from("transactions").insert(transactionPayload);
         if (transactionWrite.error) throw transactionWrite.error;
+        if (!existing) newTransactionDelta += normalized.amount;
         transactionsImported += 1;
+      }
+
+      if (latestTransactionBalance) {
+        const { error: balanceError } = await supabase
+          .from("accounts")
+          .update({
+            balance: latestTransactionBalance.value,
+            current_balance: latestTransactionBalance.value,
+            last_sync_at: new Date().toISOString(),
+          })
+          .eq("id", accountId)
+          .eq("user_id", userId);
+        if (balanceError) throw balanceError;
+      } else if (newTransactionDelta !== 0) {
+        const { data: currentAccount, error: currentAccountError } = await supabase
+          .from("accounts")
+          .select("balance, current_balance")
+          .eq("id", accountId)
+          .eq("user_id", userId)
+          .single();
+        if (currentAccountError) throw currentAccountError;
+
+        const reconciledBalance = Number(currentAccount.balance ?? 0) + newTransactionDelta;
+        const { error: balanceError } = await supabase
+          .from("accounts")
+          .update({
+            balance: reconciledBalance,
+            current_balance: reconciledBalance,
+            last_sync_at: new Date().toISOString(),
+          })
+          .eq("id", accountId)
+          .eq("user_id", userId);
+        if (balanceError) throw balanceError;
       }
     }
 

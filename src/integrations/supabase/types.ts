@@ -2489,6 +2489,7 @@ export type Database = {
       }
     }
     Functions: {
+      create_manual_transaction: { Args: { p_data: Json }; Returns: string }
       confirm_credit_invoice: { Args: { p_invoice_id: string }; Returns: number }
       create_credit_invoice_review: {
         Args: {

@@ -775,16 +775,16 @@ export function useCreateTransaction() {
       accountId?: string | null;
       occurredAt: string;
     }) => {
-      const userId = await requireUserId();
-      const { error } = await supabase.from("transactions").insert({
-        user_id: userId,
-        account_id: input.accountId ?? null,
-        description: input.description,
-        amount: input.amount,
-        type: input.type,
-        category: input.category,
-        merchant: input.merchant ?? null,
-        occurred_at: input.occurredAt,
+      const { error } = await supabase.rpc("create_manual_transaction", {
+        p_data: {
+          account_id: input.accountId,
+          description: input.description,
+          amount: input.amount,
+          type: input.type,
+          category: input.category,
+          merchant: input.merchant ?? null,
+          occurred_at: input.occurredAt,
+        } as unknown as DbJson,
       });
       if (error) throw error;
     },

@@ -52,6 +52,7 @@ const navItems: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/wallet", label: "Carteira", icon: Wallet },
   { to: "/transactions", label: "Transações", icon: Receipt },
+  { to: "/wallet/imports", label: "Importar documentos", icon: FileText },
   { to: "/budget", label: "Orçamento", icon: PiggyBank },
   { to: "/investments", label: "Investimentos", icon: LineChart },
   { to: "/taxes", label: "Impostos", icon: FileText },

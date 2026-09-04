@@ -43,6 +43,7 @@ import {
   useArchiveAccount,
   useSetPrimaryAccount,
 } from "@/hooks/use-wallet";
+import { supabase } from "@/integrations/supabase/client";
 import { useEntityLifecycle, useInstitutions } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
 import type { AccountType, WalletSummary } from "@/lib/account-service";
@@ -84,6 +85,17 @@ function AccountsPage() {
     queryFn: () => fetchConnectors({ data: {} }),
     staleTime: 1000 * 60 * 30,
   });
+  const accountDetailsQuery = useQuery({
+    queryKey: ["account-edit-details"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("accounts")
+        .select("id, institution_id")
+        .is("archived_at", null);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -113,10 +125,12 @@ function AccountsPage() {
 
   const handleOpenEdit = (account: WalletSummary["accounts"][number]) => {
     setEditId(account.id);
+    const institutionId =
+      accountDetailsQuery.data?.find((detail) => detail.id === account.id)?.institution_id ?? "";
     setForm({
       name: account.name,
       institution: account.institution_name ?? "",
-      institution_id: "",
+      institution_id: institutionId,
       type: account.type,
       balance: String(account.balance),
       is_primary: account.is_primary,
@@ -359,7 +373,7 @@ function AccountsPage() {
 
         {/* Dialog: Criar/Editar Conta */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] overflow-y-auto sm:max-w-md">
             <DialogHeader>
               <DialogTitle>{editId ? "Editar Conta" : "Nova Conta"}</DialogTitle>
             </DialogHeader>

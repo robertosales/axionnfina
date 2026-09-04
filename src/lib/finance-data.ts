@@ -37,6 +37,7 @@ import type {
   SavingsPlanStatus,
 } from "@/lib/savings-opportunities";
 import type { CsvInvestmentRow } from "@/lib/investment-import";
+import type { StatementRow } from "@/lib/statement-import";
 import type { FirstInvestmentAnswers, FirstInvestmentGuidance } from "@/lib/first-investment-guide";
 
 type DbJson = Database["public"]["Tables"]["investment_plans"]["Row"]["allocations"];
@@ -790,6 +791,37 @@ export function useCreateTransaction() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["transactions"] });
       void queryClient.invalidateQueries({ queryKey: ["budgets"] });
+    },
+  });
+}
+
+export function useImportStatementTransactions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { accountId: string; rows: StatementRow[] }) => {
+      const validRows = input.rows.filter((row) => row.valid);
+      let imported = 0;
+      for (const row of validRows) {
+        const { error } = await supabase.rpc("upsert_transaction_idempotent", {
+          p_idempotency_key: row.externalId,
+          p_data: {
+            account_id: input.accountId,
+            description: row.description,
+            amount: row.amount,
+            type: row.amount >= 0 ? "income" : "expense",
+            category: "Outros",
+            occurred_at: row.date,
+          } as unknown as DbJson,
+        });
+        if (error) throw error;
+        imported += 1;
+      }
+      return { imported, ignored: input.rows.length - validRows.length };
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      void queryClient.invalidateQueries({ queryKey: ["wallet-summary"] });
     },
   });
 }
@@ -1675,6 +1707,97 @@ export function useUpsertTaxEvent() {
       void queryClient.invalidateQueries({ queryKey: ["tax-events"] });
       void queryClient.invalidateQueries({ queryKey: ["taxes"] });
     },
+  });
+}
+
+export type TransactionCategory = {
+  id: string;
+  label: string;
+  kind: "income" | "expense" | "transfer" | string;
+  isSystem: boolean;
+  archivedAt: string | null;
+};
+
+export function useTransactionCategories() {
+  return useQuery({
+    queryKey: ["transaction-categories"],
+    queryFn: async (): Promise<TransactionCategory[]> => {
+      const { data, error } = await supabase
+        .from("transaction_categories")
+        .select("id, label, name, kind, is_system, archived_at")
+        .is("archived_at", null)
+        .order("kind")
+        .order("label");
+      if (error) throw error;
+      return (data ?? []).map((category) => ({
+        id: category.id,
+        label: category.name ?? category.label,
+        kind: category.kind,
+        isSystem: category.is_system,
+        archivedAt: category.archived_at,
+      }));
+    },
+  });
+}
+
+export function useCreateTransactionCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { label: string; kind: "income" | "expense" }) => {
+      const userId = await requireUserId();
+      const label = input.label.trim();
+      if (label.length < 2) throw new Error("Informe um nome de categoria válido.");
+
+      const { error } = await supabase.from("transaction_categories").insert({
+        user_id: userId,
+        code: `custom_${crypto.randomUUID()}`,
+        label,
+        name: label,
+        kind: input.kind,
+        is_system: false,
+        color: "#64748b",
+      });
+      if (error) {
+        if (error.code === "23505") throw new Error("Já existe uma categoria com esse nome.");
+        throw error;
+      }
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["transaction-categories"] }),
+  });
+}
+
+export function useArchiveTransactionCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("transaction_categories")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("is_system", false);
+      if (error) throw error;
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["transaction-categories"] }),
+  });
+}
+
+export function useUpdateTransactionCategoryDefinition() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; label: string }) => {
+      const label = input.label.trim();
+      if (label.length < 2) throw new Error("Informe um nome de categoria válido.");
+      const { error } = await supabase
+        .from("transaction_categories")
+        .update({ label, name: label })
+        .eq("id", input.id)
+        .eq("is_system", false);
+      if (error) {
+        if (error.code === "23505") throw new Error("Já existe uma categoria com esse nome.");
+        throw error;
+      }
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["transaction-categories"] }),
   });
 }
 

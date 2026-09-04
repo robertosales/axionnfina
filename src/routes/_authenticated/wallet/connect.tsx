@@ -34,6 +34,14 @@ const normalizeName = (value: string) =>
     .replace(/banco|brasil|pagamentos|unibanco|economica|federal/g, "")
     .replace(/[^a-z0-9]/g, "");
 
+function connectionLabel(connection: { status: string; consent_status?: string }) {
+  if (connection.consent_status === "expired") return "Expirada";
+  if (connection.status === "active") return "Conectada";
+  if (connection.status === "error") return "Ação necessária";
+  if (connection.status === "pending") return "Conectando";
+  return "Inativa";
+}
+
 function ConnectPage() {
   const queryClient = useQueryClient();
   const { data: institutions = [] } = useInstitutions();
@@ -183,13 +191,7 @@ function ConnectPage() {
                               : "outline"
                         }
                       >
-                        {connection.status === "active"
-                          ? "Ativa"
-                          : connection.status === "error"
-                            ? "Erro"
-                            : connection.status === "pending"
-                              ? "Pendente"
-                              : "Inativa"}
+                        {connectionLabel(connection)}
                       </Badge>
                       <Button
                         variant="ghost"
@@ -212,6 +214,9 @@ function ConnectPage() {
                         <Unplug className="size-4" />
                       </Button>
                     </div>
+                    {connection.error_message && (
+                      <p className="mt-2 text-xs text-danger">{connection.error_message}</p>
+                    )}
                   </div>
                 );
               })}

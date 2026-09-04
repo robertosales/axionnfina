@@ -54,6 +54,26 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Account not found" }, { status: 404 });
         }
 
+        if (parsed.category_id) {
+          const { data: category, error: categoryError } = await supabase
+            .from("transaction_categories")
+            .select("kind")
+            .eq("id", parsed.category_id)
+            .maybeSingle();
+
+          if (categoryError) {
+            return NextResponse.json({ error: "Could not validate transaction category" }, { status: 400 });
+          }
+
+          const expectedKind = parsed.amount >= 0 ? "income" : "expense";
+          if (!category || (category.kind !== expectedKind && category.kind !== "transfer")) {
+            return NextResponse.json(
+              { error: "The category type does not match the transaction" },
+              { status: 400 },
+            );
+          }
+        }
+
         // Auto-categorize if no category provided
         let categoryId = parsed.category_id;
         let subcategoryId = parsed.subcategory_id;
@@ -110,12 +130,11 @@ export async function POST(req: NextRequest) {
         }
 
         // Create journal entry
-        await ledgerService.createTransactionJournalEntry(
+        await ledgerService.createIncomeExpenseJournalEntry(
           transaction.id,
           parsed.description,
           parsed.account_id,
-          parsed.account_id, // Will be resolved to ledger accounts
-          Math.abs(parsed.amount),
+          parsed.amount,
           parsed.currency,
           new Date(parsed.posted_at),
         );

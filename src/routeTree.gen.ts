@@ -30,6 +30,7 @@ import { Route as ApiInvestmentRadarDailyRouteImport } from './routes/api/invest
 import { Route as AuthenticatedWalletIndexRouteImport } from './routes/_authenticated/wallet/index'
 import { Route as AuthenticatedWalletAccountsRouteImport } from './routes/_authenticated/wallet/accounts'
 import { Route as AuthenticatedWalletConnectRouteImport } from './routes/_authenticated/wallet/connect'
+import { Route as AuthenticatedWalletImportsRouteImport } from './routes/_authenticated/wallet/imports'
 import { Route as ApiWebhooksOpenfinanceProviderRouteImport } from './routes/api/webhooks/openfinance/$provider'
 
 const IndexRoute = IndexRouteImport.update({
@@ -141,6 +142,12 @@ const AuthenticatedWalletConnectRoute =
     path: '/wallet/connect',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedWalletImportsRoute =
+  AuthenticatedWalletImportsRouteImport.update({
+    id: '/wallet/imports',
+    path: '/wallet/imports',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiWebhooksOpenfinanceProviderRoute =
   ApiWebhooksOpenfinanceProviderRouteImport.update({
     id: '/api/webhooks/openfinance/$provider',
@@ -168,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/api/investment-radar-daily': typeof ApiInvestmentRadarDailyRoute
   '/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/wallet/connect': typeof AuthenticatedWalletConnectRoute
+  '/wallet/imports': typeof AuthenticatedWalletImportsRoute
   '/wallet/': typeof AuthenticatedWalletIndexRoute
   '/api/webhooks/openfinance/$provider': typeof ApiWebhooksOpenfinanceProviderRoute
 }
@@ -191,6 +199,7 @@ export interface FileRoutesByTo {
   '/api/investment-radar-daily': typeof ApiInvestmentRadarDailyRoute
   '/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/wallet/connect': typeof AuthenticatedWalletConnectRoute
+  '/wallet/imports': typeof AuthenticatedWalletImportsRoute
   '/wallet': typeof AuthenticatedWalletIndexRoute
   '/api/webhooks/openfinance/$provider': typeof ApiWebhooksOpenfinanceProviderRoute
 }
@@ -216,6 +225,7 @@ export interface FileRoutesById {
   '/api/investment-radar-daily': typeof ApiInvestmentRadarDailyRoute
   '/_authenticated/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/_authenticated/wallet/connect': typeof AuthenticatedWalletConnectRoute
+  '/_authenticated/wallet/imports': typeof AuthenticatedWalletImportsRoute
   '/_authenticated/wallet/': typeof AuthenticatedWalletIndexRoute
   '/api/webhooks/openfinance/$provider': typeof ApiWebhooksOpenfinanceProviderRoute
 }
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/api/investment-radar-daily'
     | '/wallet/accounts'
     | '/wallet/connect'
+    | '/wallet/imports'
     | '/wallet/'
     | '/api/webhooks/openfinance/$provider'
   fileRoutesByTo: FileRoutesByTo
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/api/investment-radar-daily'
     | '/wallet/accounts'
     | '/wallet/connect'
+    | '/wallet/imports'
     | '/wallet'
     | '/api/webhooks/openfinance/$provider'
   id:
@@ -288,6 +300,7 @@ export interface FileRouteTypes {
     | '/api/investment-radar-daily'
     | '/_authenticated/wallet/accounts'
     | '/_authenticated/wallet/connect'
+    | '/_authenticated/wallet/imports'
     | '/_authenticated/wallet/'
     | '/api/webhooks/openfinance/$provider'
   fileRoutesById: FileRoutesById
@@ -452,6 +465,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWalletConnectRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/wallet/imports': {
+      id: '/_authenticated/wallet/imports'
+      path: '/wallet/imports'
+      fullPath: '/wallet/imports'
+      preLoaderRoute: typeof AuthenticatedWalletImportsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/webhooks/openfinance/$provider': {
       id: '/api/webhooks/openfinance/$provider'
       path: '/api/webhooks/openfinance/$provider'
@@ -476,6 +496,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTransactionsRoute: typeof AuthenticatedTransactionsRoute
   AuthenticatedWalletAccountsRoute: typeof AuthenticatedWalletAccountsRoute
   AuthenticatedWalletConnectRoute: typeof AuthenticatedWalletConnectRoute
+  AuthenticatedWalletImportsRoute: typeof AuthenticatedWalletImportsRoute
   AuthenticatedWalletIndexRoute: typeof AuthenticatedWalletIndexRoute
 }
 
@@ -493,6 +514,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTransactionsRoute: AuthenticatedTransactionsRoute,
   AuthenticatedWalletAccountsRoute: AuthenticatedWalletAccountsRoute,
   AuthenticatedWalletConnectRoute: AuthenticatedWalletConnectRoute,
+  AuthenticatedWalletImportsRoute: AuthenticatedWalletImportsRoute,
   AuthenticatedWalletIndexRoute: AuthenticatedWalletIndexRoute,
 }
 

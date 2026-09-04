@@ -89,6 +89,50 @@ export class LedgerService {
     });
   }
 
+  async createIncomeExpenseJournalEntry(
+    transactionId: string,
+    description: string,
+    financialAccountId: string,
+    amount: number,
+    currency: string,
+    entryDate: Date,
+  ): Promise<string> {
+    const financialLedgerAccount = await this.getLedgerAccountByFinancialAccount(financialAccountId);
+    const offsetLedgerAccount = await this.getSystemLedgerAccount(amount > 0 ? "revenue" : "expense");
+
+    if (!financialLedgerAccount || !offsetLedgerAccount) {
+      throw new Error("Could not find ledger accounts for transaction");
+    }
+
+    const absoluteAmount = Math.abs(amount);
+    const isIncome = amount > 0;
+    return this.createJournalEntry({
+      entry_date: entryDate,
+      description,
+      reference_type: "transaction",
+      reference_id: transactionId,
+      source: "auto",
+      lines: [
+        {
+          ledger_account_id: isIncome ? financialLedgerAccount.id : offsetLedgerAccount.id,
+          entry_type: "debit",
+          amount: absoluteAmount,
+          currency,
+          description,
+          sort_order: 1,
+        },
+        {
+          ledger_account_id: isIncome ? offsetLedgerAccount.id : financialLedgerAccount.id,
+          entry_type: "credit",
+          amount: absoluteAmount,
+          currency,
+          description,
+          sort_order: 2,
+        },
+      ],
+    });
+  }
+
   async createTransferJournalEntry(
     pairId: string,
     description: string,
@@ -140,6 +184,20 @@ export class LedgerService {
       .select("id")
       .eq("account_id", accountId)
       .eq("is_active", true)
+      .maybeSingle();
+
+    return data;
+  }
+
+  private async getSystemLedgerAccount(type: "revenue" | "expense"): Promise<{ id: string } | null> {
+    const { data } = await this.supabase
+      .from("ledger_accounts")
+      .select("id")
+      .eq("type", type)
+      .eq("is_system", true)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .limit(1)
       .maybeSingle();
 
     return data;

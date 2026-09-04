@@ -1991,6 +1991,7 @@ export type Database = {
       }
       transaction_categories: {
         Row: {
+          archived_at: string | null
           code: string
           color: string
           created_at: string
@@ -2003,9 +2004,11 @@ export type Database = {
           parent_code: string | null
           parent_id: string | null
           sort_order: number
+          user_id: string | null
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           code: string
           color?: string
           created_at?: string
@@ -2018,9 +2021,11 @@ export type Database = {
           parent_code?: string | null
           parent_id?: string | null
           sort_order?: number
+          user_id?: string | null
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           code?: string
           color?: string
           created_at?: string
@@ -2033,6 +2038,7 @@ export type Database = {
           parent_code?: string | null
           parent_id?: string | null
           sort_order?: number
+          user_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2483,6 +2489,18 @@ export type Database = {
       }
     }
     Functions: {
+      confirm_credit_invoice: { Args: { p_invoice_id: string }; Returns: number }
+      create_credit_invoice_review: {
+        Args: {
+          p_card_id: string
+          p_due_date: string | null
+          p_file_name: string
+          p_file_type: string
+          p_items: Json
+          p_reference_month: string
+        }
+        Returns: string
+      }
       archive_account: { Args: { p_account_id: string }; Returns: boolean }
       consume_daily_ai_quota: {
         Args: { p_daily_limit?: number }

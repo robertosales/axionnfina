@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2, Link2, Plus, ShieldCheck } from "lucide-react";
+import { Archive, CheckCircle2, Link2, Pencil, Plus, ShieldCheck, Tags } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -30,6 +30,10 @@ import {
   useAccounts,
   useCreateOpenFinanceConsent,
   useOpenFinanceInstitutions,
+  useArchiveTransactionCategory,
+  useCreateTransactionCategory,
+  useTransactionCategories,
+  useUpdateTransactionCategoryDefinition,
   useUpsertAccount,
 } from "@/lib/finance-data";
 import type { AccountType } from "@/lib/mock-data";
@@ -69,6 +73,10 @@ function SettingsPage() {
   const upsertAccount = useUpsertAccount();
   const institutionsQuery = useOpenFinanceInstitutions();
   const createConsent = useCreateOpenFinanceConsent();
+  const categoriesQuery = useTransactionCategories();
+  const createCategory = useCreateTransactionCategory();
+  const archiveCategory = useArchiveTransactionCategory();
+  const updateCategory = useUpdateTransactionCategoryDefinition();
   const [open, setOpen] = useState(false);
   const [institution, setInstitution] = useState("");
   const [name, setName] = useState("");
@@ -81,6 +89,23 @@ function SettingsPage() {
     Object.fromEntries(scopes.map((s) => [s.id, s.default])),
   );
   const [institutionId, setInstitutionId] = useState("");
+  const [categoryLabel, setCategoryLabel] = useState("");
+  const [categoryKind, setCategoryKind] = useState<"income" | "expense">("expense");
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryLabel, setEditingCategoryLabel] = useState("");
+
+  const saveCategory = () => {
+    createCategory.mutate(
+      { label: categoryLabel, kind: categoryKind },
+      {
+        onSuccess: () => {
+          toast.success("Categoria criada");
+          setCategoryLabel("");
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  };
 
   const connectOpenFinance = () => {
     if (!institutionId) {
@@ -160,6 +185,69 @@ function SettingsPage() {
               <AccountCard key={account.id} account={account} />
             ))}
           </div>
+
+          <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+            <div className="flex items-center gap-2">
+              <Tags className="size-4 text-primary" aria-hidden />
+              <h2 className="text-sm font-semibold">Categorias</h2>
+            </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_150px_auto]">
+              <Label className="sr-only" htmlFor="category-label">
+                Nome da categoria
+              </Label>
+              <Input
+                id="category-label"
+                value={categoryLabel}
+                onChange={(event) => setCategoryLabel(event.target.value)}
+                placeholder="Nova categoria"
+              />
+              <Select
+                value={categoryKind}
+                onValueChange={(value) => setCategoryKind(value as "income" | "expense")}
+              >
+                <SelectTrigger aria-label="Tipo da categoria">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="expense">Despesa</SelectItem>
+                  <SelectItem value="income">Receita</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={saveCategory} disabled={createCategory.isPending || !categoryLabel.trim()}>
+                <Plus className="size-4" /> Adicionar
+              </Button>
+            </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {(categoriesQuery.data ?? []).map((category) => (
+                <div key={category.id} className="space-y-2">
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm">{category.label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {category.kind === "income" ? "Receita" : category.kind === "expense" ? "Despesa" : "Sistema"}
+                      </p>
+                    </div>
+                    {!category.isSystem && (
+                      <div className="flex shrink-0 gap-1">
+                        <Button variant="ghost" size="icon" className="size-8" title="Editar categoria" onClick={() => { setEditingCategoryId(category.id); setEditingCategoryLabel(category.label); }}>
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="size-8" title="Arquivar categoria" onClick={() => archiveCategory.mutate(category.id, { onSuccess: () => toast.success("Categoria arquivada"), onError: (error) => toast.error(error.message) })}>
+                          <Archive className="size-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  {editingCategoryId === category.id && (
+                    <div className="flex gap-2">
+                      <Input value={editingCategoryLabel} onChange={(event) => setEditingCategoryLabel(event.target.value)} aria-label="Novo nome da categoria" />
+                      <Button size="sm" onClick={() => updateCategory.mutate({ id: category.id, label: editingCategoryLabel }, { onSuccess: () => { setEditingCategoryId(null); toast.success("Categoria atualizada"); }, onError: (error) => toast.error(error.message) })}>Salvar</Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
 
         <Card className="h-fit rounded-xl border-border/60 p-5 shadow-elevation-1">
@@ -237,7 +325,7 @@ function SettingsPage() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="rounded-2xl">
+        <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle>Cadastrar nova conta</DialogTitle>
           </DialogHeader>

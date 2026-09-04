@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { type ColumnDef } from "@tanstack/react-table";
-import { Download, Plus } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { Download, Plus, Upload } from "lucide-react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/layout/AppShell";
@@ -31,12 +31,16 @@ import type { Transaction } from "@/lib/mock-data";
 import {
   useAccounts,
   useCreateTransaction,
+  useImportStatementTransactions,
   useEntityLifecycle,
   useTransactions,
+  useTransactionCategories,
   useUpdateTransaction,
   useUpdateTransactionCategory,
 } from "@/lib/finance-data";
 import { formatBRL, formatShortDate, initials } from "@/lib/format";
+import { parseStatementCsv, type StatementRow } from "@/lib/statement-import";
+import { parseStatementXml } from "@/lib/document-import";
 import { cn } from "@/lib/utils";
 
 declare module "@tanstack/react-table" {
@@ -88,13 +92,19 @@ function TransactionsPage() {
   const [showArchived, setShowArchived] = useState(false);
   const { data: transactions = [], isLoading } = useTransactions(200, showArchived);
   const { data: accounts = [] } = useAccounts();
+  const { data: transactionCategories = [] } = useTransactionCategories();
   const createTransaction = useCreateTransaction();
+  const importTransactions = useImportStatementTransactions();
   const updateTransaction = useUpdateTransaction();
   const updateCategory = useUpdateTransactionCategory();
   const lifecycle = useEntityLifecycle("transaction");
 
   const [open, setOpen] = useState(false);
   const [editTransactionId, setEditTransactionId] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRows, setImportRows] = useState<StatementRow[]>([]);
+  const [importAccountId, setImportAccountId] = useState("");
   const [form, setForm] = useState({
     description: "",
     amount: "",
@@ -106,9 +116,17 @@ function TransactionsPage() {
   });
 
   const categories = useMemo(
-    () => Array.from(new Set(transactions.map((t) => t.category))).sort(),
-    [transactions],
-  );
+    () =>
+      Array.from(
+        new Set([
+          ...transactionCategories
+            .filter((category) => category.kind === form.type || category.kind === "transfer")
+            .map((category) => category.label),
+          ...transactions.map((transaction) => transaction.category),
+        ]),
+      ).sort(),
+      [form.type, transactionCategories, transactions],
+    );
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => kind === "all" || t.kind === kind);
@@ -132,6 +150,55 @@ function TransactionsPage() {
     });
     setOpen(true);
   }, []);
+
+  const readStatement = useCallback(async (file?: File) => {
+    if (!file) return;
+    const extension = file.name.toLowerCase().split(".").pop();
+    if (file.size > 10 * 1024 * 1024 || !["csv", "xml", "pdf"].includes(extension ?? "")) {
+      toast.error("Selecione um arquivo CSV, XML ou PDF de até 10 MB.");
+      return;
+    }
+    const accountId = importAccountId || accounts[0]?.id || "";
+    if (!accountId) {
+      toast.error("Cadastre ou selecione uma conta antes de importar.");
+      return;
+    }
+    let rows: StatementRow[];
+    if (extension === "pdf") {
+      const data = new FormData();
+      data.append("file", file);
+      data.append("kind", "statement");
+      data.append("owner_id", accountId);
+      const response = await fetch("/api/documents", { method: "POST", body: data });
+      const result = (await response.json()) as { error?: string; rows?: StatementRow[] };
+      if (!response.ok || !result.rows) throw new Error(result.error ?? "Não foi possível interpretar o PDF.");
+      rows = result.rows;
+    } else {
+      const content = await file.text();
+      rows = extension === "xml" ? parseStatementXml(content, accountId) : parseStatementCsv(content, accountId);
+    }
+    if (!rows.length) {
+      toast.error("O arquivo não contém linhas de extrato.");
+      return;
+    }
+    setImportAccountId(accountId);
+    setImportRows(rows);
+    setImportOpen(true);
+  }, [accounts, importAccountId]);
+
+  const confirmImport = useCallback(() => {
+    importTransactions.mutate(
+      { accountId: importAccountId, rows: importRows },
+      {
+        onSuccess: (result) => {
+          toast.success(`${result.imported} lançamento(s) importado(s); ${result.ignored} ignorado(s).`);
+          setImportOpen(false);
+          setImportRows([]);
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  }, [importAccountId, importRows, importTransactions]);
 
   const openEditTransaction = useCallback((transaction: Transaction) => {
     setEditTransactionId(transaction.id);
@@ -391,6 +458,16 @@ function TransactionsPage() {
           >
             <Download className="size-4" /> Exportar
           </Button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".csv,.xml,.pdf,text/csv,application/xml,text/xml,application/pdf"
+            className="sr-only"
+            onChange={(event) => void readStatement(event.target.files?.[0])}
+          />
+          <Button variant="outline" size="sm" onClick={() => importInputRef.current?.click()} disabled={showArchived}>
+            <Upload className="size-4" /> Importar CSV
+          </Button>
           <Button size="sm" onClick={openNewTransaction} disabled={showArchived}>
             <Plus className="size-4" /> Nova transação
           </Button>
@@ -528,6 +605,35 @@ function TransactionsPage() {
                 : editTransactionId
                   ? "Salvar alterações"
                   : "Registrar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Conferir extrato antes de importar</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Select value={importAccountId} onValueChange={setImportAccountId}>
+              <SelectTrigger><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
+              <SelectContent>
+                {accounts.map((account) => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full min-w-[38rem] text-left text-xs">
+                <thead className="bg-muted/40"><tr><th className="p-2">Linha</th><th>Data</th><th>Descrição</th><th>Valor</th><th>Status</th></tr></thead>
+                <tbody className="divide-y divide-border">
+                  {importRows.map((row) => <tr key={row.rowNumber}><td className="p-2">{row.rowNumber}</td><td>{row.date || "-"}</td><td>{row.description || "-"}</td><td>{row.amount ? formatBRL(row.amount) : "-"}</td><td className={row.valid ? "text-success" : "text-danger"}>{row.valid ? "Pronta" : row.errors.join(", ")}</td></tr>)}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={confirmImport} disabled={importTransactions.isPending || !importRows.some((row) => row.valid)}>
+              {importTransactions.isPending ? "Importando…" : "Confirmar importação"}
             </Button>
           </DialogFooter>
         </DialogContent>

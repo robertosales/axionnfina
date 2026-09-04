@@ -30,13 +30,13 @@ export function AccountCard({ account }: { account: Account }) {
   const negative = account.balance < 0;
 
   return (
-    <Card className="flex flex-row items-center gap-4 rounded-xl border-border/60 p-4 shadow-elevation-1 transition-[box-shadow,transform] duration-150 ease-out motion-safe:hover:-translate-y-0.5 hover:shadow-elevation-2">
+    <Card className="flex min-w-0 flex-row flex-wrap items-center gap-3 rounded-xl border-border/60 p-4 shadow-elevation-1 transition-[box-shadow,transform] duration-150 ease-out motion-safe:hover:-translate-y-0.5 hover:shadow-elevation-2">
       <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted text-foreground/80">
         <Icon className="size-5" aria-hidden />
       </span>
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+      <div className="min-w-0 flex-1 basis-[min(14rem,100%)]">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <p className="truncate text-sm font-medium">{account.institution}</p>
           {account.openFinance && (
             <Badge variant="outline" className="rounded-full text-[10px]">
@@ -44,12 +44,12 @@ export function AccountCard({ account }: { account: Account }) {
             </Badge>
           )}
         </div>
-        <p className="truncate text-xs text-muted-foreground">
+        <p className="break-words text-xs text-muted-foreground">
            {meta.label}{account.branch ? ` · Ag. ${account.branch}` : ""}{account.accountNumber ? ` · Conta ${account.accountNumber}` : ""} · sync {syncLabel(account.lastSyncedAt)}
         </p>
       </div>
 
-      <div className="text-right">
+      <div className="ml-auto shrink-0 text-right">
         <p
           className={cn(
             "numeric text-sm font-semibold",

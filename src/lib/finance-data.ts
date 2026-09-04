@@ -1755,7 +1755,7 @@ export function useTransactionCategories() {
 export function useCreateTransactionCategory() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { label: string; kind: "income" | "expense" }) => {
+    mutationFn: async (input: { label: string; kind: "income" | "expense" | "transfer" }) => {
       const userId = await requireUserId();
       const label = input.label.trim();
       if (label.length < 2) throw new Error("Informe um nome de categoria válido.");

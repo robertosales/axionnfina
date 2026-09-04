@@ -90,7 +90,7 @@ function SettingsPage() {
   );
   const [institutionId, setInstitutionId] = useState("");
   const [categoryLabel, setCategoryLabel] = useState("");
-  const [categoryKind, setCategoryKind] = useState<"income" | "expense">("expense");
+  const [categoryKind, setCategoryKind] = useState<"income" | "expense" | "transfer">("expense");
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCategoryLabel, setEditingCategoryLabel] = useState("");
 
@@ -211,6 +211,7 @@ function SettingsPage() {
                 <SelectContent>
                   <SelectItem value="expense">Despesa</SelectItem>
                   <SelectItem value="income">Receita</SelectItem>
+                  <SelectItem value="transfer">Transferência</SelectItem>
                 </SelectContent>
               </Select>
               <Button onClick={saveCategory} disabled={createCategory.isPending || !categoryLabel.trim()}>

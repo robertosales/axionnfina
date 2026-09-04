@@ -109,7 +109,7 @@ function TransactionsPage() {
     description: "",
     amount: "",
     type: "expense" as "expense" | "income" | "transfer",
-    category: "Outros",
+    category: "Outras despesas",
     merchant: "",
     accountId: "",
     occurredAt: new Date().toISOString().slice(0, 10),
@@ -117,16 +117,12 @@ function TransactionsPage() {
 
   const categories = useMemo(
     () =>
-      Array.from(
-        new Set([
-          ...transactionCategories
-            .filter((category) => category.kind === form.type || category.kind === "transfer")
-            .map((category) => category.label),
-          ...transactions.map((transaction) => transaction.category),
-        ]),
-      ).sort(),
-      [form.type, transactionCategories, transactions],
-    );
+      transactionCategories
+        .filter((category) => category.kind === form.type)
+        .map((category) => category.label)
+        .sort((left, right) => left.localeCompare(right, "pt-BR")),
+    [form.type, transactionCategories],
+  );
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => kind === "all" || t.kind === kind);
@@ -143,7 +139,7 @@ function TransactionsPage() {
       description: "",
       amount: "",
       type: "expense",
-      category: "Outros",
+      category: "Outras despesas",
       merchant: "",
       accountId: "",
       occurredAt: new Date().toISOString().slice(0, 10),
@@ -514,15 +510,7 @@ function TransactionsPage() {
           <DialogHeader>
             <DialogTitle>{editTransactionId ? "Editar transação" : "Nova transação"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="desc">Descrição</Label>
-              <Input
-                id="desc"
-                value={form.description}
-                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              />
-            </div>
+          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="amount">Valor</Label>
@@ -561,17 +549,24 @@ function TransactionsPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="category">Categoria</Label>
-                <Input
-                  id="category"
-                  list="new-tx-categories"
+                <Select
                   value={form.category}
-                  onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-                />
-                <datalist id="new-tx-categories">
-                  {categories.map((category) => (
-                    <option key={category} value={category} />
-                  ))}
-                </datalist>
+                  onValueChange={(value) => setForm((prev) => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Categorias de {form.type === "income" ? "receita" : form.type === "expense" ? "despesa" : "transferência"}.
+                </p>
               </div>
             </div>
             {accounts.length > 0 && (

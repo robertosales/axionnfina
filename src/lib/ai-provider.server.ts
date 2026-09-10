@@ -1,7 +1,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 export const DEFAULT_CLOUDFLARE_AI_MODEL = "@cf/google/gemma-4-26b-a4b-it";
-export const DEFAULT_LOVABLE_AI_MODEL = "google/gemini-2.5-flash";
+export const DEFAULT_LOVABLE_AI_MODEL = "google/gemini-3.8-flash";
 
 export type AiProviderName = "cloudflare" | "lovable";
 
@@ -27,12 +27,16 @@ export class AiConfigurationError extends Error {
  * interromper o chat, em vez de consumir créditos de outro provedor sem aviso.
  */
 export function resolveAiProviderConfig(env: AiEnvironment): AiProviderConfig {
-  const rawProvider = (env["AI_PROVIDER"] ?? "cloudflare").trim().toLowerCase();
+  const rawProvider = (env["AI_PROVIDER"] ?? "lovable").trim().toLowerCase();
 
   if (rawProvider === "cloudflare") {
     const accountId = env["CLOUDFLARE_ACCOUNT_ID"]?.trim();
     const apiToken = env["CLOUDFLARE_API_TOKEN"]?.trim();
     if (!accountId || !apiToken) {
+      // Cloudflare incompleto: usa Lovable AI quando disponível, em vez de derrubar o chat.
+      if (env["LOVABLE_API_KEY"]?.trim()) {
+        return resolveAiProviderConfig({ ...env, AI_PROVIDER: "lovable" });
+      }
       throw new AiConfigurationError(
         "Cloudflare Workers AI não configurado. Defina CLOUDFLARE_ACCOUNT_ID e CLOUDFLARE_API_TOKEN no servidor.",
       );

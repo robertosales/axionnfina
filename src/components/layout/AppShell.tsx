@@ -1,9 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Bell,
-  CalendarClock,
   Bot,
+  CalendarClock,
   Coins,
   CreditCard,
   FileText,
@@ -26,7 +26,6 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 
 import { CommandPalette } from "@/components/layout/CommandPalette";
-import { useSessionUser } from "@/hooks/use-session-user";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSessionUser } from "@/hooks/use-session-user";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -57,11 +57,18 @@ const navItems: NavItem[] = [
   { to: "/wallet", label: "Carteira", icon: Wallet, group: "Vida financeira" },
   { to: "/wallet/accounts", label: "Contas bancárias", icon: CreditCard, group: "Vida financeira" },
   { to: "/transactions", label: "Transações", icon: Receipt, group: "Vida financeira" },
-  { to: "/bills", label: "Contas a pagar", icon: CalendarClock, group: "Vida financeira" },
+  {
+    to: "/bills",
+    label: "Contas a pagar e receber",
+    icon: CalendarClock,
+    group: "Vida financeira",
+  },
   { to: "/wallet/imports", label: "Importar documentos", icon: FileText, group: "Vida financeira" },
+  { to: "/reconciliation", label: "Conferir saldos", icon: Receipt, group: "Vida financeira" },
   { to: "/investments", label: "Investimentos", icon: LineChart, group: "Investimentos" },
   { to: "/goals", label: "Metas", icon: Target, group: "Planejamento" },
   { to: "/budget", label: "Orçamento", icon: PiggyBank, group: "Planejamento" },
+  { to: "/reports", label: "Relatórios", icon: FileText, group: "Planejamento" },
   { to: "/taxes", label: "Impostos", icon: FileText, group: "Planejamento" },
   { to: "/security", label: "Segurança", icon: Shield, group: "Sistema" },
   { to: "/settings", label: "Configurações", icon: Settings, group: "Sistema" },

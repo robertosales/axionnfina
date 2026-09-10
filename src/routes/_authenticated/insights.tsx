@@ -1,7 +1,7 @@
+import { DataState } from "@/components/finance/DataState";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
 import { BellRing, RefreshCw } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from "react";
 import {
   Area,
   AreaChart,
@@ -11,17 +11,18 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { toast } from "sonner";
 
-import { AppShell } from "@/components/layout/AppShell";
 import { ChartCard } from "@/components/finance/ChartCard";
 import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
-import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
-import { InvestmentRadarPanel } from "@/components/finance/InvestmentRadarPanel";
 import { InvestmentDecisionBriefing } from "@/components/finance/InvestmentDecisionBriefing";
+import { InvestmentRadarPanel } from "@/components/finance/InvestmentRadarPanel";
+import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { SavingsPlanPanel } from "@/components/finance/SavingsPlanPanel";
-import { Card } from "@/components/ui/card";
+import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   useEntityLifecycle,
   useInsights,
@@ -62,7 +63,7 @@ const tone = {
 
 function InsightsPage() {
   const [showArchived, setShowArchived] = useState(false);
-  const { data: agentInsights = [] } = useInsights(showArchived);
+  const { data: agentInsights = [], isLoading, isError, refetch } = useInsights(showArchived);
   const lifecycle = useEntityLifecycle("insight");
   const alertPreferences = useInvestmentAlertPreferences();
   const runMonitoring = useRunInvestmentMonitoring();
@@ -183,7 +184,10 @@ function InsightsPage() {
                 onClick={() =>
                   runMonitoring.mutate(undefined, {
                     onSuccess: () => toast.success("Monitoramento atualizado"),
-                    onError: (error) => toast.error(error.message),
+                    onError: (error) =>
+                      toast.error(
+                        "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                      ),
                   })
                 }
                 disabled={runMonitoring.isPending}
@@ -196,40 +200,58 @@ function InsightsPage() {
         </div>
       )}
 
-      <div className="mt-4 grid gap-4 md:grid-cols-3">
-        {agentInsights.map((insight) => (
-          <Card
-            key={insight.id}
-            className={cn(
-              "relative rounded-xl border p-5 pr-12 shadow-elevation-1",
-              tone[insight.severity],
-            )}
-          >
-            <div className="absolute right-3 top-3">
-              <EntityActionsMenu
-                entityLabel="insight"
-                recordName={insight.title}
-                archived={Boolean(insight.archivedAt)}
-                onArchive={() =>
-                  lifecycle.archive.mutate(insight.id, {
-                    onSuccess: () => toast.success("Insight arquivado"),
-                    onError: (error) => toast.error(error.message),
-                  })
-                }
-                onRestore={() =>
-                  lifecycle.restore.mutate(insight.id, {
-                    onSuccess: () => toast.success("Insight restaurado"),
-                    onError: (error) => toast.error(error.message),
-                  })
-                }
-              />
-            </div>
-            <h2 className="text-sm font-semibold">{insight.title}</h2>
-            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{insight.body}</p>
-          </Card>
-        ))}
-      </div>
-      {agentInsights.length === 0 && (
+      <DataState
+        loading={isLoading}
+        error={isError}
+        empty={agentInsights.length === 0}
+        onRetry={() => void refetch()}
+      >
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          {agentInsights.map((insight) => (
+            <Card
+              key={insight.id}
+              className={cn(
+                "relative rounded-xl border p-5 pr-12 shadow-elevation-1",
+                tone[insight.severity],
+              )}
+            >
+              <div className="absolute right-3 top-3">
+                <EntityActionsMenu
+                  disabled={
+                    lifecycle.archive.isPending ||
+                    lifecycle.restore.isPending ||
+                    lifecycle.remove.isPending
+                  }
+                  entityLabel="insight"
+                  recordName={insight.title}
+                  archived={Boolean(insight.archivedAt)}
+                  onArchive={() =>
+                    lifecycle.archive.mutate(insight.id, {
+                      onSuccess: () => toast.success("Insight arquivado"),
+                      onError: (error) =>
+                        toast.error(
+                          "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                        ),
+                    })
+                  }
+                  onRestore={() =>
+                    lifecycle.restore.mutate(insight.id, {
+                      onSuccess: () => toast.success("Insight restaurado"),
+                      onError: (error) =>
+                        toast.error(
+                          "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                        ),
+                    })
+                  }
+                />
+              </div>
+              <h2 className="text-sm font-semibold">{insight.title}</h2>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{insight.body}</p>
+            </Card>
+          ))}
+        </div>
+      </DataState>
+      {!isLoading && !isError && agentInsights.length === 0 && (
         <p className="mt-4 text-sm text-muted-foreground">
           Nenhum insight {showArchived ? "arquivado" : "ativo"} no momento.
         </p>

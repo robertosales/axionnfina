@@ -9,7 +9,7 @@ export function DataState({
   onRetry,
 }: {
   loading?: boolean;
-  error?: boolean;
+  error?: unknown;
   empty?: boolean;
   children: ReactNode;
   onRetry?: () => void;
@@ -23,7 +23,11 @@ export function DataState({
   if (error)
     return (
       <div role="alert" className="py-6 text-sm">
-        <p>Não foi possível carregar estes dados.</p>
+        <p>
+          {typeof error === "object" && error !== null && "code" in error && error.code === "42501"
+            ? "Você não tem permissão para consultar estes dados."
+            : "Não foi possível carregar estes dados."}
+        </p>
         {onRetry && (
           <Button variant="outline" className="mt-3" onClick={onRetry}>
             Tentar novamente

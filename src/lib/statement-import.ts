@@ -36,7 +36,7 @@ const splitCsvLine = (line: string, delimiter: string) => {
 
 function parseDate(value: string): string | null {
   const trimmed = value.trim();
-  const br = trimmed.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+  const br = trimmed.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
   if (br) return `${br[3]}-${br[2]}-${br[1]}`;
   const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
   return iso ? `${iso[1]}-${iso[2]}-${iso[3]}` : null;
@@ -54,9 +54,13 @@ function parseAmount(value: string): number {
 }
 
 export function parseStatementCsv(content: string, accountId: string): StatementRow[] {
-  const lines = content.replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.trim());
+  const lines = content
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .filter((line) => line.trim());
   if (lines.length < 2) return [];
-  const delimiter = (lines[0]!.match(/;/g)?.length ?? 0) > (lines[0]!.match(/,/g)?.length ?? 0) ? ";" : ",";
+  const delimiter =
+    (lines[0]!.match(/;/g)?.length ?? 0) > (lines[0]!.match(/,/g)?.length ?? 0) ? ";" : ",";
   const headers = splitCsvLine(lines[0]!, delimiter).map(normalizeHeader);
   const indexOf = (...names: string[]) => headers.findIndex((header) => names.includes(header));
   const dateIndex = indexOf("data", "date", "datamovimento", "datatransacao");

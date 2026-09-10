@@ -1,3 +1,4 @@
+import { formatPercent } from "@/lib/format";
 import {
   Archive,
   ArrowRight,
@@ -129,7 +130,8 @@ export function InvestmentPlanSimulator() {
           setSaveOpen(false);
           setTab("plans");
         },
-        onError: (error) => toast.error(error.message),
+        onError: (error) =>
+          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
       },
     );
   };
@@ -224,7 +226,7 @@ export function InvestmentPlanSimulator() {
                   <div className="rounded-xl bg-muted/50 p-3">
                     <span className="text-xs text-muted-foreground">Taxa de referência</span>
                     <strong className="numeric mt-1 block text-sm">
-                      {simulation.weightedAnnualRate.toFixed(2)}% a.a.
+                      {formatPercent(simulation.weightedAnnualRate).replace(/^\+/, "")} a.a.
                     </strong>
                   </div>
                 </div>
@@ -312,7 +314,7 @@ export function InvestmentPlanSimulator() {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-medium">{scenario.label}</span>
                       <Badge variant="outline" className="numeric rounded-full text-[10px]">
-                        {scenario.annualRate.toFixed(2)}% a.a.
+                        {formatPercent(scenario.annualRate).replace(/^\+/, "")} a.a.
                       </Badge>
                     </div>
                     <strong className="numeric mt-4 block text-xl">
@@ -429,19 +431,28 @@ export function InvestmentPlanSimulator() {
                         onArchive={() =>
                           lifecycle.archive.mutate(plan.id, {
                             onSuccess: () => toast.success("Plano arquivado"),
-                            onError: (error) => toast.error(error.message),
+                            onError: (error) =>
+                              toast.error(
+                                "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                              ),
                           })
                         }
                         onRestore={() =>
                           lifecycle.restore.mutate(plan.id, {
                             onSuccess: () => toast.success("Plano restaurado"),
-                            onError: (error) => toast.error(error.message),
+                            onError: (error) =>
+                              toast.error(
+                                "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                              ),
                           })
                         }
                         onDelete={() =>
                           lifecycle.remove.mutate(plan.id, {
                             onSuccess: () => toast.success("Plano excluído"),
-                            onError: (error) => toast.error(error.message),
+                            onError: (error) =>
+                              toast.error(
+                                "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                              ),
                           })
                         }
                       />

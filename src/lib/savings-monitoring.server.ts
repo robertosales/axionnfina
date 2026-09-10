@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
-import type { Transaction } from "@/lib/mock-data";
 import { detectSavingsOpportunities } from "@/lib/savings-opportunities";
+import type { Transaction } from "@/shared/finance-types";
 
 type DatabaseClient = SupabaseClient<Database>;
 type DbJson = Database["public"]["Tables"]["savings_plans"]["Row"]["evidence"];

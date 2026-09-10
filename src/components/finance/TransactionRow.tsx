@@ -1,10 +1,10 @@
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 
-import type { Transaction } from "@/lib/mock-data";
 import { Badge } from "@/components/ui/badge";
 import { formatBRL, formatShortDate, initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { Transaction } from "@/shared/finance-types";
 
 const kindTone: Record<Transaction["kind"], string> = {
   income: "text-income",
@@ -29,7 +29,12 @@ type Props = {
 };
 
 /** Linha de transação expansível com detalhes brutos e ações inline. */
-export function TransactionRow({ transaction, onCategoryChange, onDelete, categories = [] }: Props) {
+export function TransactionRow({
+  transaction,
+  onCategoryChange,
+  onDelete,
+  categories = [],
+}: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(transaction.category);
@@ -43,7 +48,10 @@ export function TransactionRow({ transaction, onCategoryChange, onDelete, catego
         className="focus-ring flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40"
       >
         <ChevronRight
-          className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-90")}
+          className={cn(
+            "size-4 shrink-0 text-muted-foreground transition-transform",
+            open && "rotate-90",
+          )}
           aria-hidden
         />
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-xs font-medium">
@@ -65,7 +73,12 @@ export function TransactionRow({ transaction, onCategoryChange, onDelete, catego
           <span className="size-2 shrink-0 rounded-full bg-warning" title="Pendente" />
         )}
 
-        <span className={cn("numeric w-28 text-right text-sm font-semibold", kindTone[transaction.kind])}>
+        <span
+          className={cn(
+            "numeric w-28 text-right text-sm font-semibold",
+            kindTone[transaction.kind],
+          )}
+        >
           {formatBRL(transaction.amount)}
         </span>
       </button>

@@ -1,13 +1,19 @@
+import { DataState } from "@/components/finance/DataState";
+import { FinancialForm } from "@/components/finance/FinancialForm";
+import { MoneyInput } from "@/components/finance/MoneyInput";
+import { useFinancialConfirmation } from "@/components/finance/use-financial-confirmation";
+import { ValidatedInput } from "@/components/finance/ValidatedInput";
+import { localDateInput, parseFinancialInput } from "@/lib/financial-input";
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus, Upload } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { AppShell } from "@/components/layout/AppShell";
 import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
-import { Button } from "@/components/ui/button";
+import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Dialog,
@@ -17,9 +23,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { parseDigitableLine } from "@/lib/boleto";
 import {
   useEntityLifecycle,
   usePayables,
@@ -28,20 +34,19 @@ import {
   useUpsertPayable,
   useUpsertReceivable,
 } from "@/lib/finance-data";
-import { parseDigitableLine } from "@/lib/boleto";
 import { daysUntil, formatBRL, formatLongDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/bills")({
   head: () => ({
     meta: [
-      { title: "Contas a pagar — Axionn Finance" },
+      { title: "Contas a pagar e receber — Axionn Finance" },
       {
         name: "description",
         content:
           "Controle boletos e contas a pagar, com status de agendamento, atraso e leitura automática de boletos.",
       },
-      { property: "og:title", content: "Contas a pagar — Axionn Finance" },
+      { property: "og:title", content: "Contas a pagar e receber — Axionn Finance" },
       {
         property: "og:description",
         content: "Boletos, vencimentos e agendamentos em uma única fila de pagamento.",
@@ -54,9 +59,21 @@ export const Route = createFileRoute("/_authenticated/bills")({
 });
 
 function BillsPage() {
+  const { confirm, confirmation } = useFinancialConfirmation();
   const [showArchived, setShowArchived] = useState(false);
-  const { data: bills = [], isLoading } = usePayables(showArchived);
-  const { data: receivables = [] } = useReceivables(showArchived);
+  const {
+    data: bills = [],
+    isLoading: loadingBills,
+    isError: billsError,
+    refetch: retryBills,
+  } = usePayables(showArchived);
+  const {
+    data: receivables = [],
+    isLoading: loadingReceivables,
+    isError: receivablesError,
+    refetch: retryReceivables,
+  } = useReceivables(showArchived);
+  const isLoading = loadingBills || loadingReceivables;
   const upsert = useUpsertPayable();
   const upsertReceivable = useUpsertReceivable();
   const settle = useSettlePayable();
@@ -70,7 +87,7 @@ function BillsPage() {
   const [line, setLine] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [dueDate, setDueDate] = useState(new Date().toISOString().slice(0, 10));
+  const [dueDate, setDueDate] = useState(localDateInput());
   const [barcode, setBarcode] = useState<string | null>(null);
   const [payer, setPayer] = useState("");
 
@@ -90,12 +107,19 @@ function BillsPage() {
     toast.success("Boleto lido com sucesso");
   };
 
-  const save = () => {
-    const value = Number(amount.replace(",", "."));
+  const save = async () => {
+    const value = parseFinancialInput(amount);
     if (!description.trim() || !Number.isFinite(value) || value <= 0) {
       toast.error("Informe descrição e valor válidos");
       return;
     }
+    if (
+      editingPayableId &&
+      !(await confirm(
+        `Alterar “${description}” para ${formatBRL(value)}, vencimento ${formatLongDate(dueDate)}?`,
+      ))
+    )
+      return;
     upsert.mutate(
       {
         ...(editingPayableId ? { id: editingPayableId } : {}),
@@ -114,7 +138,8 @@ function BillsPage() {
           setAmount("");
           setBarcode(null);
         },
-        onError: (error) => toast.error(error.message),
+        onError: (error) =>
+          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
       },
     );
   };
@@ -133,7 +158,7 @@ function BillsPage() {
     setEditingPayableId(null);
     setDescription("");
     setAmount("");
-    setDueDate(new Date().toISOString().slice(0, 10));
+    setDueDate(localDateInput());
     setBarcode(null);
     setLine("");
     setOpen(true);
@@ -152,17 +177,24 @@ function BillsPage() {
     setEditingReceivableId(null);
     setDescription("");
     setAmount("");
-    setDueDate(new Date().toISOString().slice(0, 10));
+    setDueDate(localDateInput());
     setPayer("");
     setReceivableOpen(true);
   };
 
-  const saveReceivable = () => {
-    const value = Number(amount.replace(",", "."));
+  const saveReceivable = async () => {
+    const value = parseFinancialInput(amount);
     if (!description.trim() || !payer.trim() || !Number.isFinite(value) || value <= 0) {
       toast.error("Informe descrição, pagador e valor válidos");
       return;
     }
+    if (
+      editingReceivableId &&
+      !(await confirm(
+        `Alterar recebimento “${description}” para ${formatBRL(value)}, vencimento ${formatLongDate(dueDate)}?`,
+      ))
+    )
+      return;
     upsertReceivable.mutate(
       {
         ...(editingReceivableId ? { id: editingReceivableId } : {}),
@@ -176,18 +208,24 @@ function BillsPage() {
           toast.success(editingReceivableId ? "Recebimento atualizado" : "Recebimento incluído");
           setReceivableOpen(false);
         },
-        onError: (error) => toast.error(error.message),
+        onError: (error) =>
+          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
       },
     );
   };
 
   return (
     <AppShell>
+      {confirmation}
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Contas a pagar</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Contas a pagar e receber</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {pending.length} contas abertas · {formatBRL(total)}
+            {billsError || receivablesError
+              ? "Dados indisponíveis"
+              : isLoading
+                ? "Carregando contas…"
+                : `${pending.length} contas abertas · ${formatBRL(total)}`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -202,259 +240,348 @@ function BillsPage() {
           )}
           {!showArchived && (
             <Button size="sm" onClick={openNewPayable}>
-              <Upload className="size-4" /> Enviar boleto
+              <Upload className="size-4" /> Nova conta / boleto
             </Button>
           )}
         </div>
       </header>
-
-      <Card className="rounded-xl border-border/60 p-0 shadow-elevation-1">
-        {isLoading && <p className="p-4 text-sm text-muted-foreground">Carregando contas…</p>}
-        {!isLoading && bills.length === 0 && (
-          <p className="p-4 text-sm text-muted-foreground">Nenhuma conta cadastrada.</p>
-        )}
-        <ul className="divide-y divide-border/60">
-          {bills.map((bill) => {
-            const days = daysUntil(bill.dueDate);
-            return (
-              <li key={bill.id} className="flex items-center justify-between gap-4 p-4">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{bill.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatLongDate(bill.dueDate)} ·{" "}
-                    {days < 0 ? `${Math.abs(days)} dias em atraso` : `em ${days} dias`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "rounded-full text-[10px]",
-                      bill.status === "OVERDUE" && "border-danger/50 text-danger",
-                      bill.status === "SCHEDULED" && "border-success/50 text-success",
-                    )}
-                  >
-                    {bill.dbStatus === "paid"
-                      ? "Paga"
-                      : bill.status === "OVERDUE"
-                        ? "Atrasada"
-                        : bill.status === "SCHEDULED"
-                          ? "Agendada"
-                          : "Pendente"}
-                  </Badge>
-                  <span className="numeric w-28 text-right text-sm font-semibold">
-                    {formatBRL(bill.amount)}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={bill.dbStatus === "paid" || settle.isPending}
-                    onClick={() =>
-                      settle.mutate(bill.id, {
-                        onSuccess: () => toast.success("Conta baixada"),
-                        onError: (error) => toast.error(error.message),
-                      })
-                    }
-                  >
-                    {bill.dbStatus === "paid" ? "Paga" : "Pagar"}
-                  </Button>
-                  <EntityActionsMenu
-                    entityLabel="conta"
-                    recordName={bill.name}
-                    archived={Boolean(bill.archivedAt)}
-                    onEdit={() => editPayable(bill)}
-                    onArchive={() =>
-                      payableLifecycle.archive.mutate(bill.id, {
-                        onSuccess: () => toast.success("Conta arquivada"),
-                        onError: (error) => toast.error(error.message),
-                      })
-                    }
-                    onRestore={() =>
-                      payableLifecycle.restore.mutate(bill.id, {
-                        onSuccess: () => toast.success("Conta restaurada"),
-                        onError: (error) => toast.error(error.message),
-                      })
-                    }
-                    onDelete={() =>
-                      payableLifecycle.remove.mutate(bill.id, {
-                        onSuccess: () => toast.success("Conta excluída"),
-                        onError: (error) => toast.error(error.message),
-                      })
-                    }
-                    deleteDisabledReason={
-                      bill.recordOrigin !== "manual"
-                        ? "Contas sincronizadas devem ser arquivadas."
-                        : undefined
-                    }
-                  />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </Card>
-
-      {(receivables.length > 0 || !showArchived) && (
-        <>
-          <Separator className="my-8" />
-          <h2 className="mb-3 text-base font-semibold">Contas a receber</h2>
-          <Card className="rounded-xl border-border/60 p-0 shadow-elevation-1">
-            <ul className="divide-y divide-border/60">
-              {receivables.map((item) => (
-                <li key={item.id} className="flex items-center justify-between gap-4 p-4">
+      <DataState
+        loading={loadingBills || loadingReceivables}
+        error={billsError || receivablesError}
+        onRetry={() => {
+          void retryBills();
+          void retryReceivables();
+        }}
+      >
+        <Card className="rounded-xl border-border/60 p-0 shadow-elevation-1">
+          {isLoading && <p className="p-4 text-sm text-muted-foreground">Carregando contas…</p>}
+          {!isLoading && bills.length === 0 && (
+            <p className="p-4 text-sm text-muted-foreground">Nenhuma conta cadastrada.</p>
+          )}
+          <ul className="divide-y divide-border/60">
+            {bills.map((bill) => {
+              const days = daysUntil(bill.dueDate);
+              return (
+                <li key={bill.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{item.description}</p>
+                    <p className="truncate text-sm font-medium">{bill.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {item.payer} · {formatLongDate(item.dueDate)}
+                      {formatLongDate(bill.dueDate)} ·{" "}
+                      {bill.dbStatus === "paid"
+                        ? "Baixa registrada"
+                        : days < 0
+                          ? `${Math.abs(days)} dias em atraso`
+                          : days === 0
+                            ? "Vence hoje"
+                            : `em ${days} dias`}
                     </p>
                   </div>
-                  <span className="numeric text-sm font-semibold text-income">
-                    {formatBRL(item.amount)}
-                  </span>
-                  <EntityActionsMenu
-                    entityLabel="recebimento"
-                    recordName={item.description}
-                    archived={Boolean(item.archivedAt)}
-                    onEdit={() => editReceivable(item)}
-                    onArchive={() =>
-                      receivableLifecycle.archive.mutate(item.id, {
-                        onSuccess: () => toast.success("Recebimento arquivado"),
-                        onError: (error) => toast.error(error.message),
-                      })
-                    }
-                    onRestore={() =>
-                      receivableLifecycle.restore.mutate(item.id, {
-                        onSuccess: () => toast.success("Recebimento restaurado"),
-                        onError: (error) => toast.error(error.message),
-                      })
-                    }
-                    onDelete={() =>
-                      receivableLifecycle.remove.mutate(item.id, {
-                        onSuccess: () => toast.success("Recebimento excluído"),
-                        onError: (error) => toast.error(error.message),
-                      })
-                    }
-                    deleteDisabledReason={
-                      item.recordOrigin !== "manual"
-                        ? "Recebimentos sincronizados devem ser arquivados."
-                        : undefined
-                    }
-                  />
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "rounded-full text-[10px]",
+                        bill.status === "OVERDUE" && "border-danger/50 text-danger",
+                        bill.status === "SCHEDULED" && "border-success/50 text-success",
+                      )}
+                    >
+                      {bill.dbStatus === "paid"
+                        ? "Paga"
+                        : bill.status === "OVERDUE"
+                          ? "Atrasada"
+                          : bill.status === "SCHEDULED"
+                            ? "Agendada"
+                            : "Pendente"}
+                    </Badge>
+                    <span className="numeric w-28 text-right text-sm font-semibold">
+                      {formatBRL(bill.amount)}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={bill.dbStatus === "paid" || settle.isPending}
+                      onClick={async () => {
+                        if (
+                          !(await confirm(
+                            `Marcar “${bill.name}”, ${formatBRL(bill.amount)}, vencimento ${formatLongDate(bill.dueDate)}, como paga? Esta ação registra a baixa e não realiza transferência bancária.`,
+                          ))
+                        )
+                          return;
+                        settle.mutate(bill.id, {
+                          onSuccess: () => toast.success("Conta marcada como paga"),
+                          onError: () =>
+                            toast.error("Não foi possível registrar a baixa. Tente novamente."),
+                        });
+                      }}
+                    >
+                      {bill.dbStatus === "paid"
+                        ? "Paga"
+                        : settle.isPending
+                          ? "Registrando…"
+                          : "Marcar como paga"}
+                    </Button>
+                    <EntityActionsMenu
+                      disabled={
+                        payableLifecycle.archive.isPending ||
+                        payableLifecycle.restore.isPending ||
+                        payableLifecycle.remove.isPending
+                      }
+                      entityLabel="conta"
+                      recordName={bill.name}
+                      archived={Boolean(bill.archivedAt)}
+                      onEdit={() => editPayable(bill)}
+                      onArchive={() =>
+                        payableLifecycle.archive.mutate(bill.id, {
+                          onSuccess: () => toast.success("Conta arquivada"),
+                          onError: (error) =>
+                            toast.error(
+                              "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                            ),
+                        })
+                      }
+                      onRestore={() =>
+                        payableLifecycle.restore.mutate(bill.id, {
+                          onSuccess: () => toast.success("Conta restaurada"),
+                          onError: (error) =>
+                            toast.error(
+                              "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                            ),
+                        })
+                      }
+                      onDelete={() =>
+                        payableLifecycle.remove.mutate(bill.id, {
+                          onSuccess: () => toast.success("Conta excluída"),
+                          onError: (error) =>
+                            toast.error(
+                              "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                            ),
+                        })
+                      }
+                      deleteDisabledReason={
+                        bill.recordOrigin !== "manual"
+                          ? "Contas sincronizadas devem ser arquivadas."
+                          : undefined
+                      }
+                    />
+                  </div>
                 </li>
-              ))}
-            </ul>
-          </Card>
-        </>
-      )}
+              );
+            })}
+          </ul>
+        </Card>
 
+        {(receivables.length > 0 || !showArchived) && (
+          <>
+            <Separator className="my-8" />
+            <h2 className="mb-3 text-base font-semibold">Contas a receber</h2>
+            <Card className="rounded-xl border-border/60 p-0 shadow-elevation-1">
+              {receivables.length === 0 && (
+                <p className="p-4 text-sm text-muted-foreground">
+                  Nenhuma conta a receber cadastrada.
+                </p>
+              )}
+              <ul className="divide-y divide-border/60">
+                {receivables.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex flex-wrap items-center justify-between gap-4 p-4"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{item.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.payer} · {formatLongDate(item.dueDate)}
+                      </p>
+                    </div>
+                    <span className="numeric text-sm font-semibold text-income">
+                      {formatBRL(item.amount)}
+                    </span>
+                    <EntityActionsMenu
+                      disabled={
+                        receivableLifecycle.archive.isPending ||
+                        receivableLifecycle.restore.isPending ||
+                        receivableLifecycle.remove.isPending
+                      }
+                      entityLabel="recebimento"
+                      recordName={item.description}
+                      archived={Boolean(item.archivedAt)}
+                      onEdit={() => editReceivable(item)}
+                      onArchive={() =>
+                        receivableLifecycle.archive.mutate(item.id, {
+                          onSuccess: () => toast.success("Recebimento arquivado"),
+                          onError: (error) =>
+                            toast.error(
+                              "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                            ),
+                        })
+                      }
+                      onRestore={() =>
+                        receivableLifecycle.restore.mutate(item.id, {
+                          onSuccess: () => toast.success("Recebimento restaurado"),
+                          onError: (error) =>
+                            toast.error(
+                              "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                            ),
+                        })
+                      }
+                      onDelete={() =>
+                        receivableLifecycle.remove.mutate(item.id, {
+                          onSuccess: () => toast.success("Recebimento excluído"),
+                          onError: (error) =>
+                            toast.error(
+                              "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                            ),
+                        })
+                      }
+                      deleteDisabledReason={
+                        item.recordOrigin !== "manual"
+                          ? "Recebimentos sincronizados devem ser arquivados."
+                          : undefined
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </>
+        )}
+      </DataState>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editingPayableId ? "Editar conta a pagar" : "Nova conta a pagar"}
-            </DialogTitle>
-            <DialogDescription>
-              Cole a linha digitável do boleto para preencher automaticamente valor e vencimento.
-            </DialogDescription>
-          </DialogHeader>
+          <FinancialForm>
+            <DialogHeader>
+              <DialogTitle>
+                {editingPayableId ? "Editar conta a pagar" : "Nova conta a pagar"}
+              </DialogTitle>
+              <DialogDescription>
+                Cole a linha digitável do boleto para preencher automaticamente valor e vencimento.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="line">Linha digitável</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="line"
-                  value={line}
-                  onChange={(e) => setLine(e.target.value)}
-                  placeholder="00000.00000 00000.000000 00000.000000 0 00000000000000"
-                />
-                <Button type="button" variant="outline" onClick={readBoleto}>
-                  Ler
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="desc">Descrição</Label>
-              <Input
-                id="desc"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="amount">Valor</Label>
-                <Input id="amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                <Label htmlFor="line">Linha digitável</Label>
+                <div className="flex gap-2">
+                  <ValidatedInput
+                    id="line"
+                    value={line}
+                    onChange={(e) => setLine(e.target.value)}
+                    placeholder="00000.00000 00000.000000 00000.000000 0 00000000000000"
+                  />
+                  <Button type="button" variant="outline" onClick={readBoleto}>
+                    Ler
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="due">Vencimento</Label>
-                <Input
-                  id="due"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                <Label htmlFor="desc">Descrição</Label>
+                <ValidatedInput
+                  required
+                  id="desc"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="amount">Valor</Label>
+                  <MoneyInput
+                    min={0.01}
+                    id="amount"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="due">Vencimento</Label>
+                  <ValidatedInput
+                    required
+                    id="due"
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
 
-          <DialogFooter>
-            <Button onClick={save} disabled={upsert.isPending}>
-              <Plus className="size-4" /> {upsert.isPending ? "Salvando…" : "Salvar conta"}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button
+                data-financial-submit
+                type="button"
+                onClick={save}
+                disabled={upsert.isPending}
+              >
+                <Plus className="size-4" /> {upsert.isPending ? "Salvando…" : "Salvar conta"}
+              </Button>
+            </DialogFooter>
+          </FinancialForm>
         </DialogContent>
       </Dialog>
 
       <Dialog open={receivableOpen} onOpenChange={setReceivableOpen}>
         <DialogContent className="rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editingReceivableId ? "Editar conta a receber" : "Nova conta a receber"}
-            </DialogTitle>
-            <DialogDescription>
-              Registre valores previstos para manter a projeção de caixa atualizada.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="receivable-description">Descrição</Label>
-              <Input
-                id="receivable-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="payer">Pagador</Label>
-              <Input id="payer" value={payer} onChange={(event) => setPayer(event.target.value)} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+          <FinancialForm>
+            <DialogHeader>
+              <DialogTitle>
+                {editingReceivableId ? "Editar conta a receber" : "Nova conta a receber"}
+              </DialogTitle>
+              <DialogDescription>
+                Registre valores previstos para manter a projeção de caixa atualizada.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="receivable-amount">Valor</Label>
-                <Input
-                  id="receivable-amount"
-                  inputMode="decimal"
-                  value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
+                <Label htmlFor="receivable-description">Descrição</Label>
+                <ValidatedInput
+                  required
+                  id="receivable-description"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="receivable-due">Vencimento</Label>
-                <Input
-                  id="receivable-due"
-                  type="date"
-                  value={dueDate}
-                  onChange={(event) => setDueDate(event.target.value)}
+                <Label htmlFor="payer">Pagador</Label>
+                <ValidatedInput
+                  required
+                  id="payer"
+                  value={payer}
+                  onChange={(event) => setPayer(event.target.value)}
                 />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="receivable-amount">Valor</Label>
+                  <MoneyInput
+                    min={0.01}
+                    id="receivable-amount"
+                    inputMode="decimal"
+                    value={amount}
+                    onChange={(event) => setAmount(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="receivable-due">Vencimento</Label>
+                  <ValidatedInput
+                    required
+                    id="receivable-due"
+                    type="date"
+                    value={dueDate}
+                    onChange={(event) => setDueDate(event.target.value)}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={saveReceivable} disabled={upsertReceivable.isPending}>
-              {upsertReceivable.isPending ? "Salvando…" : "Salvar recebimento"}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button
+                data-financial-submit
+                type="button"
+                onClick={saveReceivable}
+                disabled={upsertReceivable.isPending}
+              >
+                {upsertReceivable.isPending ? "Salvando…" : "Salvar recebimento"}
+              </Button>
+            </DialogFooter>
+          </FinancialForm>
         </DialogContent>
       </Dialog>
     </AppShell>

@@ -1,39 +1,40 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, Plus, Upload, Landmark, Target, Bot } from "lucide-react";
+import { DashboardCharts } from "@/components/finance/DashboardCharts";
 import { DataState } from "@/components/finance/DataState";
 import { InvestmentPurpose } from "@/components/finance/InvestmentPurpose";
-import { wealthSummary, syncFreshness, snapshotChange } from "@/lib/wealth-summary";
-import { ArrowUpRight, CalendarClock, Shield, Sparkles, TrendingUp, Wallet } from "lucide-react";
+import { snapshotChange, syncFreshness, wealthSummary } from "@/lib/wealth-summary";
+import { useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip as RTooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+  ArrowUpRight,
+  Bot,
+  CalendarClock,
+  Eye,
+  EyeOff,
+  Landmark,
+  Plus,
+  Shield,
+  Sparkles,
+  Target,
+  TrendingUp,
+  Upload,
+  Wallet,
+} from "lucide-react";
+import { useState } from "react";
+import { Area, AreaChart, ResponsiveContainer, Tooltip as RTooltip, XAxis } from "recharts";
 
-import { AppShell } from "@/components/layout/AppShell";
 import { AccountCard } from "@/components/finance/AccountCard";
 import { BudgetProgress } from "@/components/finance/BudgetProgress";
 import { ChartCard } from "@/components/finance/ChartCard";
-import { KPICard } from "@/components/finance/KPICard";
-import { HealthScore } from "@/components/finance/HealthScore";
 import { FinancialNextStepCard } from "@/components/finance/FinancialNextStepCard";
+import { HealthScore } from "@/components/finance/HealthScore";
+import { KPICard } from "@/components/finance/KPICard";
+import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { useSessionUser } from "@/hooks/use-session-user";
-import { useRealtimeAccounts, useRealtimeTransactions } from "@/hooks/use-realtime";
+import { Card } from "@/components/ui/card";
 import { useAnomalyDetection, useMoneyAge } from "@/hooks/use-anomaly-detection";
+import { useRealtimeAccounts, useRealtimeTransactions } from "@/hooks/use-realtime";
+import { useSessionUser } from "@/hooks/use-session-user";
 import {
   useAccounts,
   useBudgets,
@@ -45,9 +46,9 @@ import {
   usePayables,
   useTransactions,
 } from "@/lib/finance-data";
-import { analyzeFinancialReadiness } from "@/lib/financial-next-step";
 import { calculateHealthScore } from "@/lib/financial-health";
-import { daysUntil, formatBRL, formatShortDate } from "@/lib/format";
+import { analyzeFinancialReadiness } from "@/lib/financial-next-step";
+import { daysUntil, formatBRL, formatPercent, formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -118,7 +119,7 @@ function Dashboard() {
     data: transactions = [],
     isLoading: loadingTransactions,
     isError: transactionsError,
-  } = useTransactions(1000);
+  } = useTransactions(null);
   const { data: goals = [], isLoading: loadingGoals, isError: goalsError } = useGoals();
   const {
     netWorth,
@@ -271,8 +272,8 @@ function Dashboard() {
               </DataState>
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
                 <p>
-                  Snapshots: mês {monthlyChange === null ? "—" : `${monthlyChange.toFixed(1)}%`} ·
-                  ano {annualChange === null ? "—" : `${annualChange.toFixed(1)}%`}
+                  Snapshots: mês {monthlyChange === null ? "—" : formatPercent(monthlyChange)} · ano{" "}
+                  {annualChange === null ? "—" : formatPercent(annualChange)}
                 </p>
                 <div className="flex gap-1" aria-label="Período do histórico">
                   {[6, 12].map((months) => (
@@ -424,12 +425,12 @@ function Dashboard() {
                   : loadingTransactions
                     ? "Carregando…"
                     : monthlyIncome > 0
-                      ? `${savingsRate.toFixed(1).replace(".", ",")}%`
+                      ? formatPercent(savingsRate)
                       : "Sem receitas"
               }
               hint={
                 previousMonth && previousMonth.receitas > 0
-                  ? `${(savingsRate - previousSavingsRate).toFixed(1)} p.p. em relação ao mês anterior`
+                  ? `${formatPercent(savingsRate - previousSavingsRate).replace("%", "")} p.p. em relação ao mês anterior`
                   : "Sem receitas anteriores para comparar"
               }
               icon={ArrowUpRight}
@@ -596,154 +597,16 @@ function Dashboard() {
             </Card>
           </section>
 
-          {/* Charts */}
-          <section className="mt-6 grid gap-4 lg:grid-cols-3">
-            <ChartCard
-              title="Fluxo de caixa"
-              description={
-                cashflowTruncated
-                  ? "Amostra das últimas 1.000 transações; resultado parcial"
-                  : "Receitas e despesas nos últimos 6 meses, sem transferências"
-              }
-              className="lg:col-span-2"
-            >
-              <DataState
-                loading={loadingTransactions}
-                error={transactionsError}
-                empty={transactions.length === 0}
-              >
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      accessibilityLayer
-                      data={cashflow}
-                      margin={{ left: -18, right: 8, top: 8 }}
-                    >
-                      <defs>
-                        <linearGradient id="grad-in" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="var(--color-income)" stopOpacity={0.45} />
-                          <stop offset="100%" stopColor="var(--color-income)" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="grad-out" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="var(--color-expense)" stopOpacity={0.4} />
-                          <stop offset="100%" stopColor="var(--color-expense)" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="var(--color-border)"
-                        vertical={false}
-                      />
-                      <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
-                      <YAxis
-                        tickFormatter={(v: number) => formatBRL(v, true)}
-                        tickLine={false}
-                        axisLine={false}
-                        fontSize={11}
-                        width={70}
-                      />
-                      <RTooltip
-                        formatter={(v: number) => formatBRL(v)}
-                        contentStyle={{
-                          background: "var(--color-popover)",
-                          border: "1px solid var(--color-border)",
-                          borderRadius: 12,
-                          fontSize: 12,
-                        }}
-                      />
-                      <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                      <Area
-                        type="monotone"
-                        isAnimationActive={false}
-                        dataKey="receitas"
-                        stroke="var(--color-income)"
-                        strokeWidth={2}
-                        fill="url(#grad-in)"
-                      />
-                      <Area
-                        type="monotone"
-                        isAnimationActive={false}
-                        dataKey="despesas"
-                        stroke="var(--color-expense)"
-                        strokeWidth={2}
-                        fill="url(#grad-out)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-                <details className="mt-2 text-sm">
-                  <summary className="focus-ring cursor-pointer rounded">
-                    Ver valores do fluxo de caixa
-                  </summary>
-                  <table className="mt-2 w-full text-xs">
-                    <thead>
-                      <tr>
-                        <th>Mês</th>
-                        <th>Receitas</th>
-                        <th>Despesas</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cashflow.map((month) => (
-                        <tr key={month.month}>
-                          <td>{month.month}</td>
-                          <td className="numeric">{formatBRL(month.receitas)}</td>
-                          <td className="numeric">{formatBRL(month.despesas)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </details>
-              </DataState>
-            </ChartCard>
-
-            <ChartCard title="Alocação de investimentos" description="Carteira consolidada">
-              <DataState
-                loading={loadingInvestments}
-                error={investmentsError}
-                empty={allocation.length === 0}
-              >
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={allocation}
-                        dataKey="value"
-                        nameKey="name"
-                        innerRadius={58}
-                        outerRadius={88}
-                        paddingAngle={3}
-                        isAnimationActive={false}
-                        stroke="none"
-                      >
-                        {allocation.map((slice) => (
-                          <Cell key={slice.name} fill={slice.token} />
-                        ))}
-                      </Pie>
-                      <RTooltip
-                        formatter={(v: number) => formatBRL(v)}
-                        contentStyle={{
-                          background: "var(--color-popover)",
-                          border: "1px solid var(--color-border)",
-                          borderRadius: 12,
-                          fontSize: 12,
-                        }}
-                      />
-                      <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <ul className="space-y-2 text-sm">
-                  {allocation.map((item) => (
-                    <li key={item.name} className="flex flex-wrap justify-between gap-2">
-                      <span>{item.name}</span>
-                      <span className="numeric">{formatBRL(item.value)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </DataState>
-            </ChartCard>
-          </section>
+          <DashboardCharts
+            cashflowTruncated={cashflowTruncated}
+            cashflow={cashflow}
+            loadingTransactions={loadingTransactions}
+            transactionsError={transactionsError}
+            transactions={transactions}
+            loadingInvestments={loadingInvestments}
+            investmentsError={investmentsError}
+            allocation={allocation}
+          />
 
           <details className="mt-6 rounded-xl border border-border bg-card p-5">
             <summary className="focus-ring cursor-pointer rounded font-semibold">

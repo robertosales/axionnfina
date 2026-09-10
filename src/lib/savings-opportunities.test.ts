@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Transaction } from "./mock-data";
+import type { Transaction } from "@/shared/finance-types";
 import { detectSavingsOpportunities } from "./savings-opportunities";
 
 const expense = (

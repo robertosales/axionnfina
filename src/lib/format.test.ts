@@ -30,15 +30,15 @@ describe("formatBRL", () => {
 
 describe("formatPercent", () => {
   it("formata percentual positivo com sinal", () => {
-    expect(formatPercent(5.2)).toBe("+5,2%");
+    expect(formatPercent(5.2)).toBe("+5,20%");
   });
 
   it("formata percentual negativo", () => {
-    expect(formatPercent(-3.1)).toBe("-3,1%");
+    expect(formatPercent(-3.1)).toBe("-3,10%");
   });
 
   it("formata zero sem sinal", () => {
-    expect(formatPercent(0)).toBe("0,0%");
+    expect(formatPercent(0)).toBe("0,00%");
   });
 });
 

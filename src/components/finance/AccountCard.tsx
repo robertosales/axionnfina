@@ -1,12 +1,12 @@
 import { Building2, CreditCard, Landmark, LineChart, PiggyBank, RefreshCw } from "lucide-react";
 
-import type { Account } from "@/lib/mock-data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useSyncAccount } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useSyncAccount } from "@/lib/finance-data";
+import type { Account } from "@/shared/finance-types";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 

@@ -1,3 +1,4 @@
+import { formatPercent } from "@/lib/format";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -96,7 +97,7 @@ export function InvestmentPurpose({ positions }: { positions: Position[] }) {
             <li key={institution} className="flex flex-wrap justify-between gap-2">
               <span>{institution}</span>
               <span className="numeric">
-                {total > 0 ? `${((value / total) * 100).toFixed(1)}%` : "—"}
+                {total > 0 ? formatPercent((value / total) * 100).replace(/^\+/, "") : "—"}
               </span>
             </li>
           ))}

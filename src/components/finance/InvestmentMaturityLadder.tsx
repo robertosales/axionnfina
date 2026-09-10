@@ -1,3 +1,4 @@
+import { localDateInput } from "@/lib/financial-input";
 import { CalendarClock, CircleAlert } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,7 @@ export function InvestmentMaturityLadder({ positions }: { positions: Position[] 
   const preferences = useInvestmentAlertPreferences();
   const fixedIncome = positions.filter((position) => position.assetClass === "fixed_income");
   const missingMaturity = fixedIncome.filter((position) => !position.maturityDate);
-  const referenceDate = new Date().toISOString().slice(0, 10);
+  const referenceDate = localDateInput();
   const ladder = buildMaturityLadder(
     fixedIncome,
     referenceDate,

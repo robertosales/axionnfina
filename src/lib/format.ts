@@ -19,7 +19,7 @@ export function formatBRL(value: number, compact = false): string {
 }
 
 /** Formata variação percentual com sinal explícito. */
-export function formatPercent(value: number, digits = 1): string {
+export function formatPercent(value: number, digits = 2): string {
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(digits).replace(".", ",")}%`;
 }
@@ -59,4 +59,8 @@ export function initials(name: string): string {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+export function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat("pt-BR").format(parseCalendarDate(iso));
 }

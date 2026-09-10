@@ -1,10 +1,14 @@
+import { FinancialForm } from "@/components/finance/FinancialForm";
+import { MoneyInput } from "@/components/finance/MoneyInput";
+import { ValidatedInput } from "@/components/finance/ValidatedInput";
+import { parseFinancialInput } from "@/lib/financial-input";
 import { createFileRoute } from "@tanstack/react-router";
 import { Archive, CheckCircle2, Link2, Pencil, Plus, ShieldCheck, Tags } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { AppShell } from "@/components/layout/AppShell";
 import { AccountCard } from "@/components/finance/AccountCard";
+import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -28,15 +32,15 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
   useAccounts,
-  useCreateOpenFinanceConsent,
-  useOpenFinanceInstitutions,
   useArchiveTransactionCategory,
+  useCreateOpenFinanceConsent,
   useCreateTransactionCategory,
+  useOpenFinanceInstitutions,
   useTransactionCategories,
   useUpdateTransactionCategoryDefinition,
   useUpsertAccount,
 } from "@/lib/finance-data";
-import type { AccountType } from "@/lib/mock-data";
+import type { AccountType } from "@/shared/finance-types";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -102,7 +106,8 @@ function SettingsPage() {
           toast.success("Categoria criada");
           setCategoryLabel("");
         },
-        onError: (error) => toast.error(error.message),
+        onError: (error) =>
+          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
       },
     );
   };
@@ -121,13 +126,14 @@ function SettingsPage() {
       },
       {
         onSuccess: () => toast.success("Consentimento autorizado e conexão registrada"),
-        onError: (error) => toast.error(error.message),
+        onError: (error) =>
+          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
       },
     );
   };
 
   const saveAccount = () => {
-    const amount = Number(balance.replace(",", "."));
+    const amount = parseFinancialInput(balance);
     if (!institution.trim() || !name.trim() || !Number.isFinite(amount)) {
       toast.error("Informe instituição, nome e saldo válidos");
       return;
@@ -154,7 +160,8 @@ function SettingsPage() {
           setType("CHECKING");
           setBalance("0");
         },
-        onError: (error) => toast.error(error.message),
+        onError: (error) =>
+          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
       },
     );
   };
@@ -214,7 +221,10 @@ function SettingsPage() {
                   <SelectItem value="transfer">Transferência</SelectItem>
                 </SelectContent>
               </Select>
-              <Button onClick={saveCategory} disabled={createCategory.isPending || !categoryLabel.trim()}>
+              <Button
+                onClick={saveCategory}
+                disabled={createCategory.isPending || !categoryLabel.trim()}
+              >
                 <Plus className="size-4" /> Adicionar
               </Button>
             </div>
@@ -225,15 +235,42 @@ function SettingsPage() {
                     <div className="min-w-0">
                       <p className="truncate text-sm">{category.label}</p>
                       <p className="text-xs text-muted-foreground">
-                        {category.kind === "income" ? "Receita" : category.kind === "expense" ? "Despesa" : "Sistema"}
+                        {category.kind === "income"
+                          ? "Receita"
+                          : category.kind === "expense"
+                            ? "Despesa"
+                            : "Sistema"}
                       </p>
                     </div>
                     {!category.isSystem && (
                       <div className="flex shrink-0 gap-1">
-                        <Button variant="ghost" size="icon" className="size-8" title="Editar categoria" onClick={() => { setEditingCategoryId(category.id); setEditingCategoryLabel(category.label); }}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          title="Editar categoria"
+                          onClick={() => {
+                            setEditingCategoryId(category.id);
+                            setEditingCategoryLabel(category.label);
+                          }}
+                        >
                           <Pencil className="size-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="size-8" title="Arquivar categoria" onClick={() => archiveCategory.mutate(category.id, { onSuccess: () => toast.success("Categoria arquivada"), onError: (error) => toast.error(error.message) })}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          title="Arquivar categoria"
+                          onClick={() =>
+                            archiveCategory.mutate(category.id, {
+                              onSuccess: () => toast.success("Categoria arquivada"),
+                              onError: (error) =>
+                                toast.error(
+                                  "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                                ),
+                            })
+                          }
+                        >
                           <Archive className="size-4" />
                         </Button>
                       </div>
@@ -241,8 +278,31 @@ function SettingsPage() {
                   </div>
                   {editingCategoryId === category.id && (
                     <div className="flex gap-2">
-                      <Input value={editingCategoryLabel} onChange={(event) => setEditingCategoryLabel(event.target.value)} aria-label="Novo nome da categoria" />
-                      <Button size="sm" onClick={() => updateCategory.mutate({ id: category.id, label: editingCategoryLabel }, { onSuccess: () => { setEditingCategoryId(null); toast.success("Categoria atualizada"); }, onError: (error) => toast.error(error.message) })}>Salvar</Button>
+                      <Input
+                        value={editingCategoryLabel}
+                        onChange={(event) => setEditingCategoryLabel(event.target.value)}
+                        aria-label="Novo nome da categoria"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          updateCategory.mutate(
+                            { id: category.id, label: editingCategoryLabel },
+                            {
+                              onSuccess: () => {
+                                setEditingCategoryId(null);
+                                toast.success("Categoria atualizada");
+                              },
+                              onError: (error) =>
+                                toast.error(
+                                  "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                                ),
+                            },
+                          )
+                        }
+                      >
+                        Salvar
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -327,88 +387,96 @@ function SettingsPage() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] overflow-y-auto rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Cadastrar nova conta</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="institution">Instituição</Label>
-              <Input
-                id="institution"
-                value={institution}
-                onChange={(event) => setInstitution(event.target.value)}
-                placeholder="Ex.: Nubank"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="account-name">Nome da conta</Label>
-              <Input
-                id="account-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Ex.: Conta corrente"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Tipo</Label>
-              <Select value={type} onValueChange={(value) => setType(value as AccountType)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CHECKING">Conta corrente</SelectItem>
-                  <SelectItem value="SAVINGS">Poupança</SelectItem>
-                  <SelectItem value="CREDIT_CARD">Cartão de crédito</SelectItem>
-                  <SelectItem value="INVESTMENT">Investimentos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {type === "CHECKING" && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="branch">Agência</Label>
-                    <Input
-                      id="branch"
-                      value={branch}
-                      onChange={(event) => setBranch(event.target.value)}
+          <FinancialForm>
+            <DialogHeader>
+              <DialogTitle>Cadastrar nova conta</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="institution">Instituição</Label>
+                <ValidatedInput
+                  id="institution"
+                  value={institution}
+                  onChange={(event) => setInstitution(event.target.value)}
+                  placeholder="Ex.: Nubank"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="account-name">Nome da conta</Label>
+                <ValidatedInput
+                  required
+                  id="account-name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Ex.: Conta corrente"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Tipo</Label>
+                <Select value={type} onValueChange={(value) => setType(value as AccountType)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CHECKING">Conta corrente</SelectItem>
+                    <SelectItem value="SAVINGS">Poupança</SelectItem>
+                    <SelectItem value="CREDIT_CARD">Cartão de crédito</SelectItem>
+                    <SelectItem value="INVESTMENT">Investimentos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {type === "CHECKING" && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="branch">Agência</Label>
+                      <ValidatedInput
+                        id="branch"
+                        value={branch}
+                        onChange={(event) => setBranch(event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="account-number">Número da conta</Label>
+                      <ValidatedInput
+                        id="account-number"
+                        value={accountNumber}
+                        onChange={(event) => setAccountNumber(event.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                    <Label htmlFor="open-finance">Conectar via Open Finance</Label>
+                    <Switch
+                      id="open-finance"
+                      checked={openFinance}
+                      onCheckedChange={setOpenFinance}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="account-number">Número da conta</Label>
-                    <Input
-                      id="account-number"
-                      value={accountNumber}
-                      onChange={(event) => setAccountNumber(event.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                  <Label htmlFor="open-finance">Conectar via Open Finance</Label>
-                  <Switch
-                    id="open-finance"
-                    checked={openFinance}
-                    onCheckedChange={setOpenFinance}
-                  />
-                </div>
-              </>
-            )}
-            <div className="space-y-1.5">
-              <Label htmlFor="account-balance">Saldo atual</Label>
-              <Input
-                id="account-balance"
-                inputMode="decimal"
-                value={balance}
-                onChange={(event) => setBalance(event.target.value)}
-                placeholder="0,00"
-              />
+                </>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="account-balance">Saldo atual</Label>
+                <MoneyInput
+                  id="account-balance"
+                  inputMode="decimal"
+                  value={balance}
+                  onChange={(event) => setBalance(event.target.value)}
+                  placeholder="0,00"
+                />
+              </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={saveAccount} disabled={upsertAccount.isPending}>
-              {upsertAccount.isPending ? "Salvando…" : "Salvar conta"}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button
+                data-financial-submit
+                type="button"
+                onClick={saveAccount}
+                disabled={upsertAccount.isPending}
+              >
+                {upsertAccount.isPending ? "Salvando…" : "Salvar conta"}
+              </Button>
+            </DialogFooter>
+          </FinancialForm>
         </DialogContent>
       </Dialog>
     </AppShell>

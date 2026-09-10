@@ -1,3 +1,5 @@
+import { parseFinancialInput } from "@/lib/financial-input";
+import { localDateInput } from "@/lib/financial-input";
 import {
   AlertTriangle,
   ExternalLink,
@@ -56,7 +58,7 @@ import { cn } from "@/lib/utils";
 
 const PRODUCT_LABEL = { cdb: "CDB", lci: "LCI", lca: "LCA" } as const;
 const RATE_LABEL = { fixed: "Prefixado", cdi: "% do CDI", ipca: "IPCA +" } as const;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => localDateInput();
 
 function isHttpsUrl(value: string) {
   try {
@@ -112,9 +114,9 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
     setOpen(true);
   };
 
-  const parsedAmount = Math.max(0, Number(amount.replace(",", ".")) || 0);
+  const parsedAmount = parseFinancialInput(amount);
   const rankedPrivate =
-    radar.data && offers.data
+    radar.data && offers.data && Number.isFinite(parsedAmount) && parsedAmount >= 0
       ? rankPrivateOffers(
           offers.data,
           radar.data.profile,
@@ -131,7 +133,13 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
 
   const saveComparisonSettings = () => {
     const days = Number(maxAgeDays);
-    if (!preferences.data || parsedAmount <= 0 || days < 1 || days > 90) {
+    if (
+      !preferences.data ||
+      !Number.isFinite(parsedAmount) ||
+      parsedAmount <= 0 ||
+      days < 1 ||
+      days > 90
+    ) {
       toast.error("Informe um valor positivo e uma validade entre 1 e 90 dias.");
       return;
     }
@@ -148,19 +156,23 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
       },
       {
         onSuccess: () => toast.success("Critérios da comparação salvos"),
-        onError: (error) => toast.error(error.message),
+        onError: (error) =>
+          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
       },
     );
   };
 
   const save = () => {
-    const rate = Number(rateValue.replace(",", "."));
-    const reference = Number(referenceRate.replace(",", "."));
-    const minimum = Number(minimumInvestment.replace(",", "."));
+    const rate = parseFinancialInput(rateValue);
+    const reference = parseFinancialInput(referenceRate);
+    const minimum = parseFinancialInput(minimumInvestment);
     if (
       !institution.trim() ||
       !conglomerate.trim() ||
       !maturityDate ||
+      !Number.isFinite(rate) ||
+      !Number.isFinite(minimum) ||
+      (rateType !== "fixed" && !Number.isFinite(reference)) ||
       rate <= 0 ||
       minimum < 0 ||
       !isHttpsUrl(sourceUrl) ||
@@ -191,7 +203,8 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
           toast.success(editing ? "Oferta atualizada" : "Oferta incluída");
           setOpen(false);
         },
-        onError: (error) => toast.error(error.message),
+        onError: (error) =>
+          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
       },
     );
   };
@@ -322,19 +335,28 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
                         onArchive={() =>
                           lifecycle.archive.mutate(privateOffer.id, {
                             onSuccess: () => toast.success("Oferta arquivada"),
-                            onError: (error) => toast.error(error.message),
+                            onError: (error) =>
+                              toast.error(
+                                "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                              ),
                           })
                         }
                         onRestore={() =>
                           lifecycle.restore.mutate(privateOffer.id, {
                             onSuccess: () => toast.success("Oferta restaurada"),
-                            onError: (error) => toast.error(error.message),
+                            onError: (error) =>
+                              toast.error(
+                                "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                              ),
                           })
                         }
                         onDelete={() =>
                           lifecycle.remove.mutate(privateOffer.id, {
                             onSuccess: () => toast.success("Oferta excluída"),
-                            onError: (error) => toast.error(error.message),
+                            onError: (error) =>
+                              toast.error(
+                                "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                              ),
                           })
                         }
                         deleteDisabledReason={

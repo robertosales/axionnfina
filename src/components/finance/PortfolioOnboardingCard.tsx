@@ -180,7 +180,10 @@ export function PortfolioOnboardingCard({ onManual }: { onManual: () => void }) 
                       toast.success(`${result.imported} posição(ões) importadas`);
                       setReviewOpen(false);
                     },
-                    onError: (error) => toast.error(error.message),
+                    onError: (error) =>
+                      toast.error(
+                        "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                      ),
                   },
                 )
               }

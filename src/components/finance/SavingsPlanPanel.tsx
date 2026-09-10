@@ -1,3 +1,5 @@
+import { MoneyInput } from "@/components/finance/MoneyInput";
+import { parseFinancialInput } from "@/lib/financial-input";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -148,14 +150,15 @@ export function SavingsPlanPanel() {
                 ? "Plano concluído"
                 : "Oportunidade dispensada",
           ),
-        onError: (error) => toast.error(error.message),
+        onError: (error) =>
+          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
       },
     );
   };
 
   const saveCheckIn = () => {
     if (!checkInPlan) return;
-    const amount = Number(actualAmount.replace(",", "."));
+    const amount = parseFinancialInput(actualAmount);
     if (!Number.isFinite(amount) || amount < 0 || !referenceMonth) {
       toast.error("Informe o mês e quanto foi gasto");
       return;
@@ -173,7 +176,8 @@ export function SavingsPlanPanel() {
           setCheckInPlan(null);
           setActualAmount("");
         },
-        onError: (error) => toast.error(error.message),
+        onError: (error) =>
+          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
       },
     );
   };
@@ -418,7 +422,8 @@ export function SavingsPlanPanel() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="saving-actual">Quanto você gastou?</Label>
-              <Input
+              <MoneyInput
+                min={0}
                 id="saving-actual"
                 inputMode="decimal"
                 placeholder="0,00"

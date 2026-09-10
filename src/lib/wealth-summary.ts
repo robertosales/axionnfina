@@ -1,4 +1,4 @@
-import type { Account } from "./mock-data";
+import type { Account } from "@/shared/finance-types";
 
 /** Account balances are authoritative; positions may describe the same investment accounts. */
 export function wealthSummary(accounts: Account[], positionTotal: number) {

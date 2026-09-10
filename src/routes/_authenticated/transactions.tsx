@@ -1,15 +1,21 @@
+import { DataState } from "@/components/finance/DataState";
+import { FinancialForm } from "@/components/finance/FinancialForm";
+import { MoneyInput } from "@/components/finance/MoneyInput";
+import { useFinancialConfirmation } from "@/components/finance/use-financial-confirmation";
+import { ValidatedInput } from "@/components/finance/ValidatedInput";
+import { localDateInput, parseFinancialInput } from "@/lib/financial-input";
+import { filterTransactions, transactionCsv, transactionKindLabel } from "@/lib/transaction-view";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ColumnDef } from "@tanstack/react-table";
 import { Download, Plus, Upload } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { AppShell } from "@/components/layout/AppShell";
 import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
-import { DataTable, CopyButton } from "@/components/ui/data-table";
+import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { CopyButton, DataTable } from "@/components/ui/data-table";
 import {
   Dialog,
   DialogContent,
@@ -27,24 +33,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Transaction } from "@/lib/mock-data";
+import { parseStatementXml } from "@/lib/document-import";
 import {
   useAccounts,
   useCreateTransaction,
-  useImportStatementTransactions,
   useEntityLifecycle,
-  useTransactions,
+  useImportStatementTransactions,
   useTransactionCategories,
+  useTransactions,
   useUpdateTransaction,
   useUpdateTransactionCategory,
 } from "@/lib/finance-data";
-import { formatBRL, formatShortDate, initials } from "@/lib/format";
+import { formatBRL, formatDate, initials } from "@/lib/format";
 import { parseStatementCsv, type StatementRow } from "@/lib/statement-import";
-import { parseStatementXml } from "@/lib/document-import";
 import { cn } from "@/lib/utils";
+import type { Transaction } from "@/shared/finance-types";
 
 declare module "@tanstack/react-table" {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface TableMeta<TData> {
     editingId?: string | null;
     setEditingId?: (id: string | null) => void;
@@ -90,9 +95,22 @@ const kindColors: Record<Transaction["kind"], string> = {
 };
 
 function TransactionsPage() {
+  const { confirm, confirmation } = useFinancialConfirmation();
   const [kind, setKind] = useState<(typeof filters)[number]["key"]>("all");
   const [showArchived, setShowArchived] = useState(false);
-  const { data: transactions = [], isLoading } = useTransactions(200, showArchived);
+  const {
+    data: transactions = [],
+    isLoading,
+    isError,
+    error: queryError,
+    refetch,
+  } = useTransactions(null, showArchived);
+  const [search, setSearch] = useState("");
+  const [accountFilter, setAccountFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const { data: accounts = [] } = useAccounts();
   const { data: transactionCategories = [] } = useTransactionCategories();
   const createTransaction = useCreateTransaction();
@@ -108,6 +126,7 @@ function TransactionsPage() {
     importedEdit?.recordOrigin === "open_finance" || importedEdit?.recordOrigin === "import";
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [readingImport, setReadingImport] = useState(false);
   const [importRows, setImportRows] = useState<StatementRow[]>([]);
   const [importAccountId, setImportAccountId] = useState("");
   const [form, setForm] = useState({
@@ -117,7 +136,7 @@ function TransactionsPage() {
     category: "Outras despesas",
     merchant: "",
     accountId: "",
-    occurredAt: new Date().toISOString().slice(0, 10),
+    occurredAt: localDateInput(),
   });
 
   const categories = useMemo(
@@ -130,8 +149,15 @@ function TransactionsPage() {
   );
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((t) => kind === "all" || t.kind === kind);
-  }, [transactions, kind]);
+    return filterTransactions(transactions, {
+      search,
+      kind,
+      account: accountFilter,
+      category: categoryFilter,
+      from: dateFrom,
+      to: dateTo,
+    });
+  }, [transactions, kind, search, accountFilter, categoryFilter, dateFrom, dateTo]);
 
   const total = useMemo(
     () => filteredTransactions.reduce((sum, t) => sum + t.amount, 0),
@@ -147,7 +173,7 @@ function TransactionsPage() {
       category: "Outras despesas",
       merchant: "",
       accountId: "",
-      occurredAt: new Date().toISOString().slice(0, 10),
+      occurredAt: localDateInput(),
     });
     setOpen(true);
   }, []);
@@ -205,7 +231,8 @@ function TransactionsPage() {
           setImportOpen(false);
           setImportRows([]);
         },
-        onError: (error) => toast.error(error.message),
+        onError: (error) =>
+          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
       },
     );
   }, [importAccountId, importRows, importTransactions]);
@@ -224,16 +251,30 @@ function TransactionsPage() {
     setOpen(true);
   }, []);
 
-  const submit = useCallback(() => {
-    const value = Math.abs(Number(form.amount.replace(",", ".")));
+  const submit = useCallback(async () => {
+    const value = parseFinancialInput(form.amount);
     if (!form.description.trim()) {
       toast.error("Informe a descrição da transação");
       return;
     }
-    if (!Number.isFinite(value) || value === 0) {
+    if (!Number.isFinite(value) || value <= 0) {
       toast.error("Informe um valor válido maior que zero");
       return;
     }
+    if (
+      !form.category.trim() ||
+      (!categories.includes(form.category) && form.category !== importedEdit?.category)
+    ) {
+      toast.error("Selecione uma categoria do tipo escolhido");
+      return;
+    }
+    if (
+      editTransactionId &&
+      !(await confirm(
+        `Salvar alterações em “${form.description}”, valor ${formatBRL(value)}, data ${formatDate(form.occurredAt)}?${importedEdit?.isRecurring ? " Somente este lançamento será alterado." : ""}`,
+      ))
+    )
+      return;
     const payload = {
       description: form.description.trim(),
       amount:
@@ -255,7 +296,8 @@ function TransactionsPage() {
         setEditTransactionId(null);
         setForm((prev) => ({ ...prev, description: "", amount: "", merchant: "" }));
       },
-      onError: (error: Error) => toast.error(error.message),
+      onError: (error: Error) =>
+        toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
     };
 
     if (editTransactionId) {
@@ -265,6 +307,8 @@ function TransactionsPage() {
     }
   }, [
     form,
+    categories,
+    confirm,
     editTransactionId,
     createTransaction,
     updateTransaction,
@@ -273,15 +317,9 @@ function TransactionsPage() {
   ]);
 
   const exportCsv = useCallback(() => {
-    const header = "data;descricao;estabelecimento;categoria;tipo;valor";
-    const body = filteredTransactions
-      .map((t) =>
-        [t.date, t.description, t.merchant, t.category, t.kind, t.amount.toFixed(2)]
-          .map((field) => String(field).replaceAll(";", ","))
-          .join(";"),
-      )
-      .join("\n");
-    const blob = new Blob([`${header}\n${body}`], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([transactionCsv(filteredTransactions)], {
+      type: "text/csv;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -315,7 +353,7 @@ function TransactionsPage() {
         accessorKey: "date",
         header: "Data",
         size: 100,
-        cell: ({ row }) => <span className="text-sm">{formatShortDate(row.original.date)}</span>,
+        cell: ({ row }) => <span className="text-sm">{formatDate(row.original.date)}</span>,
       },
       {
         id: "category",
@@ -330,8 +368,10 @@ function TransactionsPage() {
                 list="tx-categories-inline"
                 defaultValue={row.original.category}
                 autoFocus
+                aria-label="Editar categoria"
                 className="focus-ring h-7 w-full rounded-md border border-border bg-background px-2 text-xs"
                 onBlur={(e) => {
+                  if (e.target.dataset["cancelled"] === "true") return;
                   const newCategory = e.target.value.trim() || row.original.category;
                   updateCategory.mutate(
                     { id: row.original.id, category: newCategory },
@@ -340,7 +380,10 @@ function TransactionsPage() {
                         toast.success("Categoria atualizada");
                         table.options.meta?.setEditingId?.(null);
                       },
-                      onError: (error) => toast.error(error.message),
+                      onError: (error) =>
+                        toast.error(
+                          "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                        ),
                     },
                   );
                 }}
@@ -349,6 +392,7 @@ function TransactionsPage() {
                     (e.target as HTMLInputElement).blur();
                   }
                   if (e.key === "Escape") {
+                    e.currentTarget.dataset["cancelled"] = "true";
                     table.options.meta?.setEditingId?.(null);
                   }
                 }}
@@ -401,6 +445,11 @@ function TransactionsPage() {
         cell: ({ row }) => (
           <div className="flex justify-end">
             <EntityActionsMenu
+              disabled={
+                lifecycle.archive.isPending ||
+                lifecycle.restore.isPending ||
+                lifecycle.remove.isPending
+              }
               entityLabel="transação"
               recordName={row.original.description}
               archived={Boolean(row.original.archivedAt)}
@@ -408,19 +457,28 @@ function TransactionsPage() {
               onArchive={() =>
                 lifecycle.archive.mutate(row.original.id, {
                   onSuccess: () => toast.success("Transação arquivada"),
-                  onError: (error) => toast.error(error.message),
+                  onError: (error) =>
+                    toast.error(
+                      "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                    ),
                 })
               }
               onRestore={() =>
                 lifecycle.restore.mutate(row.original.id, {
                   onSuccess: () => toast.success("Transação restaurada"),
-                  onError: (error) => toast.error(error.message),
+                  onError: (error) =>
+                    toast.error(
+                      "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                    ),
                 })
               }
               onDelete={() =>
                 lifecycle.remove.mutate(row.original.id, {
                   onSuccess: () => toast.success("Transação excluída"),
-                  onError: (error) => toast.error(error.message),
+                  onError: (error) =>
+                    toast.error(
+                      "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                    ),
                 })
               }
               deleteDisabledReason={
@@ -439,10 +497,10 @@ function TransactionsPage() {
   /* Sub-componente expandido */
   const renderSubComponent = useCallback(
     (row: { original: Transaction }) => (
-      <div className="grid grid-cols-2 gap-4 text-xs sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-4 text-xs sm:grid-cols-4">
         <div>
           <dt className="text-muted-foreground">Tipo</dt>
-          <dd className="font-medium capitalize">{row.original.kind}</dd>
+          <dd className="font-medium capitalize">{transactionKindLabel[row.original.kind]}</dd>
         </div>
         <div>
           <dt className="text-muted-foreground">Estabelecimento</dt>
@@ -456,19 +514,56 @@ function TransactionsPage() {
           <dt className="text-muted-foreground">Conta</dt>
           <dd className="font-medium">{row.original.accountName}</dd>
         </div>
-      </div>
+        <div>
+          <dt className="text-muted-foreground">Identificador</dt>
+          <dd className="break-all">{row.original.id}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Origem</dt>
+          <dd>
+            {row.original.recordOrigin
+              ? {
+                  manual: "Manual",
+                  open_finance: "Open Finance",
+                  import: "Importação",
+                  system: "Sistema",
+                }[row.original.recordOrigin]
+              : "Não informada"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Situação</dt>
+          <dd>{row.original.pending ? "Pendente" : "Confirmada"}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Recorrência</dt>
+          <dd>
+            {row.original.isRecurring
+              ? "Recorrente; edição somente deste lançamento"
+              : "Não recorrente"}
+          </dd>
+        </div>
+      </dl>
     ),
     [],
   );
 
   return (
     <AppShell>
+      {confirmation}
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Transações</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {filteredTransactions.length} lançamentos · saldo do filtro{" "}
-            <span className="numeric font-medium text-foreground">{formatBRL(total)}</span>
+            {isError
+              ? "Dados indisponíveis"
+              : isLoading
+                ? "Carregando transações…"
+                : `${filteredTransactions.length} lançamentos`}{" "}
+            · saldo do filtro{" "}
+            <span className="numeric font-medium text-foreground">
+              {isError || isLoading ? "—" : formatBRL(total)}
+            </span>
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -480,7 +575,7 @@ function TransactionsPage() {
             variant="outline"
             size="sm"
             onClick={exportCsv}
-            disabled={filteredTransactions.length === 0}
+            disabled={isError || isLoading || filteredTransactions.length === 0}
           >
             <Download className="size-4" /> Exportar
           </Button>
@@ -489,15 +584,27 @@ function TransactionsPage() {
             type="file"
             accept=".csv,.xml,.pdf,text/csv,application/xml,text/xml,application/pdf"
             className="sr-only"
-            onChange={(event) => void readStatement(event.target.files?.[0])}
+            onChange={async (event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (!file || readingImport) return;
+              setReadingImport(true);
+              try {
+                await readStatement(file);
+              } catch {
+                toast.error("Não foi possível ler o extrato. Confira o arquivo e tente novamente.");
+              } finally {
+                setReadingImport(false);
+              }
+            }}
           />
           <Button
             variant="outline"
             size="sm"
             onClick={() => importInputRef.current?.click()}
-            disabled={showArchived}
+            disabled={showArchived || readingImport}
           >
-            <Upload className="size-4" /> Importar CSV
+            <Upload className="size-4" /> {readingImport ? "Lendo extrato…" : "Importar extrato"}
           </Button>
           <Button size="sm" onClick={openNewTransaction} disabled={showArchived}>
             <Plus className="size-4" /> Nova transação
@@ -505,28 +612,112 @@ function TransactionsPage() {
         </div>
       </header>
 
-      <DataTable
-        columns={columns}
-        data={filteredTransactions}
-        rowHeight={56}
-        maxHeight={600}
-        enableFiltering
-        filterPlaceholder="Buscar por descrição, merchant ou categoria…"
-        isLoading={isLoading}
-        renderSubComponent={renderSubComponent}
-        toolbar={
-          <Tabs value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
-            <TabsList>
-              {filters.map((f) => (
-                <TabsTrigger key={f.key} value={f.key} className="text-xs">
-                  {f.label}
-                </TabsTrigger>
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+          <Label htmlFor="transaction-search">Buscar transações</Label>
+          <Input
+            id="transaction-search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Descrição, estabelecimento ou categoria"
+          />
+        </div>
+        <div>
+          <Label htmlFor="filter-account">Conta</Label>
+          <select
+            id="filter-account"
+            className="h-9 w-full rounded-md border bg-background px-2"
+            value={accountFilter}
+            onChange={(e) => setAccountFilter(e.target.value)}
+          >
+            <option value="all">Todas as contas</option>
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label htmlFor="filter-category">Categoria</Label>
+          <select
+            id="filter-category"
+            className="h-9 w-full rounded-md border bg-background px-2"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+          >
+            <option value="all">Todas as categorias</option>
+            {Array.from(new Set(transactions.map((t) => t.category)))
+              .sort()
+              .map((category) => (
+                <option key={category}>{category}</option>
               ))}
-            </TabsList>
-          </Tabs>
-        }
-      />
-
+          </select>
+        </div>
+        <div>
+          <Label htmlFor="filter-from">De</Label>
+          <Input
+            id="filter-from"
+            type="date"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="filter-to">Até</Label>
+          <Input
+            id="filter-to"
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
+        </div>
+        <Button
+          variant="outline"
+          className="self-end"
+          onClick={() => {
+            setSearch("");
+            setKind("all");
+            setAccountFilter("all");
+            setCategoryFilter("all");
+            setDateFrom("");
+            setDateTo("");
+          }}
+        >
+          Limpar filtros
+        </Button>
+      </div>
+      <DataState loading={isLoading} error={queryError || isError} onRetry={() => void refetch()}>
+        <DataTable
+          columns={columns}
+          data={filteredTransactions}
+          getRowId={(row) => row.id}
+          meta={{ editingId: editingCategoryId, setEditingId: setEditingCategoryId }}
+          rowHeight={56}
+          maxHeight={600}
+          enableFiltering={false}
+          filterPlaceholder="Buscar por descrição, estabelecimento ou categoria…"
+          isLoading={isLoading}
+          renderSubComponent={renderSubComponent}
+          toolbar={
+            <Tabs
+              className="w-full min-w-0"
+              value={kind}
+              onValueChange={(v) => setKind(v as typeof kind)}
+            >
+              <TabsList className="h-auto w-full flex-wrap justify-start">
+                {filters.map((f) => (
+                  <TabsTrigger key={f.key} value={f.key} className="text-xs">
+                    {f.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          }
+        />
+      </DataState>
       {/* Datalist para inline editing */}
       <datalist id="tx-categories-inline">
         {categories.map((category) => (
@@ -542,121 +733,135 @@ function TransactionsPage() {
         }}
       >
         <DialogContent className="rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>{editTransactionId ? "Editar transação" : "Nova transação"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="description">Descrição</Label>
-              <Input
-                id="description"
-                required
-                placeholder="Ex.: Parcela do financiamento"
-                value={form.description}
-                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+          <FinancialForm>
+            <DialogHeader>
+              <DialogTitle>{editTransactionId ? "Editar transação" : "Nova transação"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="amount">Valor</Label>
-                <Input
-                  id="amount"
-                  disabled={financialFieldsLocked}
-                  value={form.amount}
-                  onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
+                <Label htmlFor="description">Descrição</Label>
+                <ValidatedInput
+                  required
+                  id="description"
+                  placeholder="Ex.: Parcela do financiamento"
+                  value={form.description}
+                  onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="date">Data</Label>
-                <Input
-                  id="date"
-                  disabled={financialFieldsLocked}
-                  type="date"
-                  value={form.occurredAt}
-                  onChange={(e) => setForm((p) => ({ ...p, occurredAt: e.target.value }))}
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="amount">Valor</Label>
+                  <MoneyInput
+                    min={0.01}
+                    id="amount"
+                    disabled={financialFieldsLocked}
+                    value={form.amount}
+                    onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="date">Data</Label>
+                  <ValidatedInput
+                    required
+                    id="date"
+                    disabled={financialFieldsLocked}
+                    type="date"
+                    value={form.occurredAt}
+                    onChange={(e) => setForm((p) => ({ ...p, occurredAt: e.target.value }))}
+                  />
+                </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="transaction-type">Tipo</Label>
+                  <Select
+                    value={form.type}
+                    disabled={financialFieldsLocked}
+                    onValueChange={(v) =>
+                      setForm((p) => ({
+                        ...p,
+                        type: v as typeof p.type,
+                        category:
+                          transactionCategories.find((category) => category.kind === v)?.label ??
+                          "",
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="transaction-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="expense">Despesa</SelectItem>
+                      <SelectItem value="income">Receita</SelectItem>
+                      <SelectItem value="transfer">Transferência</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="category">Categoria</Label>
+                  <Select
+                    value={form.category}
+                    onValueChange={(value) => setForm((prev) => ({ ...prev, category: value }))}
+                  >
+                    <SelectTrigger id="category">
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Categorias de{" "}
+                    {form.type === "income"
+                      ? "receita"
+                      : form.type === "expense"
+                        ? "despesa"
+                        : "transferência"}
+                    .
+                  </p>
+                </div>
+              </div>
+              {accounts.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="transaction-account">Conta</Label>
+                  <Select
+                    value={form.accountId}
+                    disabled={financialFieldsLocked}
+                    onValueChange={(v) => setForm((p) => ({ ...p, accountId: v }))}
+                  >
+                    <SelectTrigger id="transaction-account">
+                      <SelectValue placeholder="Selecione a conta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Tipo</Label>
-                <Select
-                  value={form.type}
-                  disabled={financialFieldsLocked}
-                  onValueChange={(v) => setForm((p) => ({ ...p, type: v as typeof p.type }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="expense">Despesa</SelectItem>
-                    <SelectItem value="income">Receita</SelectItem>
-                    <SelectItem value="transfer">Transferência</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="category">Categoria</Label>
-                <Select
-                  value={form.category}
-                  onValueChange={(value) => setForm((prev) => ({ ...prev, category: value }))}
-                >
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Categorias de{" "}
-                  {form.type === "income"
-                    ? "receita"
-                    : form.type === "expense"
-                      ? "despesa"
-                      : "transferência"}
-                  .
-                </p>
-              </div>
-            </div>
-            {accounts.length > 0 && (
-              <div className="space-y-1.5">
-                <Label>Conta</Label>
-                <Select
-                  value={form.accountId}
-                  disabled={financialFieldsLocked}
-                  onValueChange={(v) => setForm((p) => ({ ...p, accountId: v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a conta" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={submit}
-              disabled={createTransaction.isPending || updateTransaction.isPending}
-            >
-              {createTransaction.isPending || updateTransaction.isPending
-                ? "Salvando…"
-                : editTransactionId
-                  ? "Salvar alterações"
-                  : "Registrar"}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button
+                data-financial-submit
+                type="button"
+                onClick={submit}
+                disabled={createTransaction.isPending || updateTransaction.isPending}
+              >
+                {createTransaction.isPending || updateTransaction.isPending
+                  ? "Salvando…"
+                  : editTransactionId
+                    ? "Salvar alterações"
+                    : "Registrar"}
+              </Button>
+            </DialogFooter>
+          </FinancialForm>
         </DialogContent>
       </Dialog>
 

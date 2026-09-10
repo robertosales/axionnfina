@@ -115,7 +115,8 @@ export function InvestmentPlanTracking() {
           toast.success("Alertas de investimento atualizados");
           setSettingsOpen(false);
         },
-        onError: (error) => toast.error(error.message),
+        onError: (error) =>
+          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
       },
     );
   };
@@ -126,7 +127,8 @@ export function InvestmentPlanTracking() {
         toast.success(
           `Análise atualizada: ${result?.plansEvaluated ?? 0} plano(s) e ${result?.insightsCreated ?? 0} novo(s) insight(s).`,
         ),
-      onError: (error) => toast.error(error.message),
+      onError: (error) =>
+        toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
     });
   };
 

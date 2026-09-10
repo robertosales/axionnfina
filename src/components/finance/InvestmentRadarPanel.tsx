@@ -1,3 +1,4 @@
+import { formatPercent } from "@/lib/format";
 import { Link } from "@tanstack/react-router";
 import {
   CheckCircle2,
@@ -222,7 +223,8 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
         toast.success("Preferências atualizadas. O ranking será recalculado.");
         setProfileOpen(false);
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) =>
+        toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
     });
   };
 
@@ -314,7 +316,9 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
                 className="text-xs text-muted-foreground hover:text-foreground"
               >
                 {indicator.label}:{" "}
-                <strong className="numeric text-foreground">{indicator.value.toFixed(2)}%</strong>
+                <strong className="numeric text-foreground">
+                  {formatPercent(indicator.value).replace(/^\+/, "")}
+                </strong>
               </a>
             ))}
           </div>

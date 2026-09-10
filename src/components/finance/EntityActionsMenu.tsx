@@ -58,6 +58,7 @@ export function EntityActionsMenu({
     : `“${recordName}” sairá das visões ativas, mas poderá ser restaurado depois.`;
 
   const confirm = () => {
+    if (disabled) return;
     if (pendingAction === "delete") onDelete?.();
     if (pendingAction === "archive") onArchive?.();
     setPendingAction(null);
@@ -124,6 +125,7 @@ export function EntityActionsMenu({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
+              disabled={disabled}
               onClick={confirm}
               className={cn(
                 isDeleting

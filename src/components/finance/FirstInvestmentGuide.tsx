@@ -12,7 +12,12 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -52,8 +57,16 @@ const QUESTIONS: Array<{ title: string; helper: string; choices: Choice[] }> = [
     helper: "O objetivo vem antes do nome do investimento.",
     choices: [
       { value: "reserve", label: "Imprevistos", description: "Criar ou reforçar minha reserva." },
-      { value: "growth", label: "Fazer o patrimônio crescer", description: "Sem uma data exata para usar." },
-      { value: "retirement", label: "Aposentadoria", description: "Construir renda para o futuro." },
+      {
+        value: "growth",
+        label: "Fazer o patrimônio crescer",
+        description: "Sem uma data exata para usar.",
+      },
+      {
+        value: "retirement",
+        label: "Aposentadoria",
+        description: "Construir renda para o futuro.",
+      },
       { value: "education", label: "Educação", description: "Pagar estudos meus ou da família." },
     ],
   },
@@ -71,18 +84,42 @@ const QUESTIONS: Array<{ title: string; helper: string; choices: Choice[] }> = [
     title: "Você pode precisar retirar antes?",
     helper: "Liquidez é a facilidade de transformar o investimento em dinheiro disponível.",
     choices: [
-      { value: "daily", label: "Sim, a qualquer momento", description: "Preciso de acesso rápido." },
-      { value: "up_to_1_year", label: "Talvez dentro de um ano", description: "Aceito alguma espera." },
-      { value: "long_term", label: "Não antes do prazo", description: "Posso manter até a data planejada." },
+      {
+        value: "daily",
+        label: "Sim, a qualquer momento",
+        description: "Preciso de acesso rápido.",
+      },
+      {
+        value: "up_to_1_year",
+        label: "Talvez dentro de um ano",
+        description: "Aceito alguma espera.",
+      },
+      {
+        value: "long_term",
+        label: "Não antes do prazo",
+        description: "Posso manter até a data planejada.",
+      },
     ],
   },
   {
     title: "Como você reagiria ao ver o valor cair?",
     helper: "Não existe resposta certa. Considere como você realmente se sentiria.",
     choices: [
-      { value: "avoid", label: "Quero evitar oscilações", description: "Uma queda me deixaria desconfortável." },
-      { value: "some", label: "Aceito pequenas oscilações", description: "Se entender o motivo e o prazo." },
-      { value: "high", label: "Aceito oscilações maiores", description: "Se fizer sentido para um prazo longo." },
+      {
+        value: "avoid",
+        label: "Quero evitar oscilações",
+        description: "Uma queda me deixaria desconfortável.",
+      },
+      {
+        value: "some",
+        label: "Aceito pequenas oscilações",
+        description: "Se entender o motivo e o prazo.",
+      },
+      {
+        value: "high",
+        label: "Aceito oscilações maiores",
+        description: "Se fizer sentido para um prazo longo.",
+      },
     ],
   },
   {
@@ -90,8 +127,16 @@ const QUESTIONS: Array<{ title: string; helper: string; choices: Choice[] }> = [
     helper: "Isso define quanto detalhe e risco faz sentido apresentar agora.",
     choices: [
       { value: "none", label: "Estou começando", description: "Ainda não conheço os produtos." },
-      { value: "basic", label: "Conheço o básico", description: "Entendo risco, prazo e liquidez." },
-      { value: "experienced", label: "Já invisto", description: "Consigo comparar classes e custos." },
+      {
+        value: "basic",
+        label: "Conheço o básico",
+        description: "Entendo risco, prazo e liquidez.",
+      },
+      {
+        value: "experienced",
+        label: "Já invisto",
+        description: "Consigo comparar classes e custos.",
+      },
     ],
   },
 ];
@@ -112,9 +157,15 @@ function updateAnswer(
   if (step === 0) return { ...answers, objective: value as FirstInvestmentAnswers["objective"] };
   if (step === 1) return { ...answers, horizonMonths: Number(value) };
   if (step === 2)
-    return { ...answers, liquidityPreference: value as FirstInvestmentAnswers["liquidityPreference"] };
+    return {
+      ...answers,
+      liquidityPreference: value as FirstInvestmentAnswers["liquidityPreference"],
+    };
   if (step === 3)
-    return { ...answers, fluctuationTolerance: value as FirstInvestmentAnswers["fluctuationTolerance"] };
+    return {
+      ...answers,
+      fluctuationTolerance: value as FirstInvestmentAnswers["fluctuationTolerance"],
+    };
   return { ...answers, knowledgeLevel: value as FirstInvestmentAnswers["knowledgeLevel"] };
 }
 
@@ -144,11 +195,7 @@ export function FirstInvestmentGuide() {
     [accounts, transactions, openBills, goals, investments.total],
   );
   const loading =
-    loadingAccounts ||
-    loadingTransactions ||
-    loadingBills ||
-    loadingGoals ||
-    investments.isLoading;
+    loadingAccounts || loadingTransactions || loadingBills || loadingGoals || investments.isLoading;
   const activeAnswers = submittedAnswers ?? latest.data?.answers ?? null;
   const guidance = activeAnswers ? buildFirstInvestmentGuidance(financial, activeAnswers) : null;
   const gate = buildFirstInvestmentGuidance(financial, answers);
@@ -181,7 +228,8 @@ export function FirstInvestmentGuide() {
           setOpen(false);
           toast.success("Caminhos atualizados com suas respostas");
         },
-        onError: (error) => toast.error(error.message),
+        onError: (error) =>
+          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
       },
     );
   };
@@ -226,7 +274,9 @@ export function FirstInvestmentGuide() {
               <p className="mt-1 font-semibold">
                 {loading ? "Verificando seus dados…" : gate.title}
               </p>
-              {!loading && <p className="mt-1 text-xs leading-5 text-muted-foreground">{gate.explanation}</p>}
+              {!loading && (
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">{gate.explanation}</p>
+              )}
             </div>
           </div>
         </div>
@@ -235,7 +285,9 @@ export function FirstInvestmentGuide() {
       <div className="grid gap-3 border-b border-border/60 bg-muted/[0.18] px-5 py-4 sm:grid-cols-3 sm:px-6">
         <div>
           <p className="text-xs text-muted-foreground">Sobra mensal estimada</p>
-          <p className="numeric mt-1 text-sm font-semibold">{formatBRL(financial.metrics.monthlySurplus)}</p>
+          <p className="numeric mt-1 text-sm font-semibold">
+            {formatBRL(financial.metrics.monthlySurplus)}
+          </p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Reserva estimada</p>
@@ -289,7 +341,9 @@ export function FirstInvestmentGuide() {
                   <p className="text-sm font-semibold">Avaliação concluída</p>
                 </div>
                 <h3 className="mt-2 text-lg font-semibold">{guidance.title}</h3>
-                <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{guidance.explanation}</p>
+                <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+                  {guidance.explanation}
+                </p>
               </div>
               <Button variant="outline" className="h-10 shrink-0" onClick={begin}>
                 <RotateCcw aria-hidden /> Refazer respostas
@@ -310,13 +364,27 @@ export function FirstInvestmentGuide() {
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{path.reason}</p>
                   <Accordion type="single" collapsible className="mt-2">
                     <AccordionItem value="details" className="border-b-0">
-                      <AccordionTrigger className="py-3 text-xs">Riscos, liquidez e custos</AccordionTrigger>
+                      <AccordionTrigger className="py-3 text-xs">
+                        Riscos, liquidez e custos
+                      </AccordionTrigger>
                       <AccordionContent className="space-y-3 text-xs leading-5 text-muted-foreground">
-                        <p><strong className="text-foreground">Risco:</strong> {path.risk}</p>
-                        <p><strong className="text-foreground">Liquidez:</strong> {path.liquidity}</p>
-                        <p><strong className="text-foreground">Custos:</strong> {path.costs}</p>
-                        <p><strong className="text-foreground">O que pode dar errado:</strong> {path.whatCanGoWrong}</p>
-                        <p><strong className="text-foreground">Antes de decidir:</strong> {path.nextCheck}</p>
+                        <p>
+                          <strong className="text-foreground">Risco:</strong> {path.risk}
+                        </p>
+                        <p>
+                          <strong className="text-foreground">Liquidez:</strong> {path.liquidity}
+                        </p>
+                        <p>
+                          <strong className="text-foreground">Custos:</strong> {path.costs}
+                        </p>
+                        <p>
+                          <strong className="text-foreground">O que pode dar errado:</strong>{" "}
+                          {path.whatCanGoWrong}
+                        </p>
+                        <p>
+                          <strong className="text-foreground">Antes de decidir:</strong>{" "}
+                          {path.nextCheck}
+                        </p>
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
@@ -340,7 +408,9 @@ export function FirstInvestmentGuide() {
         <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto rounded-2xl p-0">
           <DialogHeader className="border-b border-border/60 p-5 pb-4 sm:p-6 sm:pb-4">
             <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-              <span>Pergunta {step + 1} de {QUESTIONS.length}</span>
+              <span>
+                Pergunta {step + 1} de {QUESTIONS.length}
+              </span>
               <span>{Math.round(((step + 1) / QUESTIONS.length) * 100)}%</span>
             </div>
             <Progress value={((step + 1) / QUESTIONS.length) * 100} className="mt-2 h-1.5" />
@@ -366,7 +436,9 @@ export function FirstInvestmentGuide() {
                   <RadioGroupItem value={choice.value} />
                   <span>
                     <span className="block text-sm font-semibold">{choice.label}</span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground">{choice.description}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {choice.description}
+                    </span>
                   </span>
                 </label>
               ))}

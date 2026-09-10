@@ -1,6 +1,6 @@
-import type { BudgetItem } from "@/lib/mock-data";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { BudgetItem } from "@/shared/finance-types";
 
 /** Barra de orçamento com marcadores de threshold (80% alerta, 100% estouro). */
 export function BudgetProgress({ item }: { item: BudgetItem }) {

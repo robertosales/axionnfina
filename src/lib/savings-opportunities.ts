@@ -1,4 +1,4 @@
-import type { Transaction } from "@/lib/mock-data";
+import type { Transaction } from "@/shared/finance-types";
 
 export type SavingsOpportunityKind =
   "subscription" | "recurring" | "category_increase" | "unusual_expense";

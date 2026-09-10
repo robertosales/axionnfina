@@ -1,6 +1,6 @@
+import type { Account } from "@/shared/finance-types";
 import { describe, expect, it } from "vitest";
-import { wealthSummary, syncFreshness, snapshotChange } from "./wealth-summary";
-import type { Account } from "./mock-data";
+import { snapshotChange, syncFreshness, wealthSummary } from "./wealth-summary";
 
 const account = (changes: Partial<Account> = {}): Account => ({
   id: "a",

@@ -1,3 +1,4 @@
+import { localDateInput } from "@/lib/financial-input";
 import { ArrowRight, ListChecks } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +47,7 @@ export function InvestmentDecisionBriefing() {
     preferences.isLoading;
   const failed =
     investments.isError || plans.isError || offers.isError || radar.isError || preferences.isError;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateInput();
 
   const progress =
     investments.positions.length > 0

@@ -1,7 +1,7 @@
-import type { Goal } from "@/lib/mock-data";
-import type { ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { daysUntil, formatBRL, formatLongDate } from "@/lib/format";
+import type { Goal } from "@/shared/finance-types";
+import type { ReactNode } from "react";
 
 /**
  * Anel de progresso SVG + projeção simplificada (P10/P50/P90).

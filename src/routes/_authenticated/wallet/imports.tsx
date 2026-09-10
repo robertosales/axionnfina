@@ -69,7 +69,7 @@ function InvoiceImportPage() {
       const { data: invoiceId, error } = await supabase.rpc("create_credit_invoice_review", {
         p_card_id: cardId,
         p_reference_month: `${referenceMonth}-01`,
-        p_due_date: dueDate || null,
+        p_due_date: dueDate || `${referenceMonth}-01`,
         p_file_name: fileName,
         p_file_type: "csv",
         p_items: validRows.map((row) => ({

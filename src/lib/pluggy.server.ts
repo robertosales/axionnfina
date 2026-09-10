@@ -3,6 +3,7 @@
  * Nunca expõe client_secret nem a API key ao frontend.
  */
 
+import { fetchWithRetry } from "./fetch-retry";
 const PLUGGY_BASE_URL = "https://api.pluggy.ai";
 
 export type PluggyConnectorSummary = {
@@ -60,7 +61,7 @@ async function getApiKey(): Promise<string> {
 
 async function pluggyRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const apiKey = await getApiKey();
-  const response = await fetch(`${PLUGGY_BASE_URL}${path}`, {
+  const response = await fetchWithRetry(`${PLUGGY_BASE_URL}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",

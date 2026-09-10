@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
+import { syncConnection } from "@/lib/pluggy.functions";
+import { upsertAccount } from "@/lib/account-service";
 import type { Database } from "@/integrations/supabase/types";
 import type {
   Account,
@@ -100,8 +102,9 @@ export function useAccounts() {
       const { data, error } = await supabase
         .from("accounts")
         .select(
-          "id, name, institution, type, balance, open_finance, last_sync_at, branch, account_number",
+          "id, name, institution, type, balance, open_finance, last_sync_at, branch, account_number, metadata, record_origin",
         )
+        .is("archived_at", null)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []).map((row) => ({
@@ -110,7 +113,15 @@ export function useAccounts() {
         name: row.name,
         type: dbToUiAccountType[row.type as DbAccountType],
         balance: Number(row.balance),
-        lastSyncedAt: row.last_sync_at ?? new Date().toISOString(),
+        lastSyncedAt: row.last_sync_at,
+        connectionId:
+          row.metadata &&
+          typeof row.metadata === "object" &&
+          !Array.isArray(row.metadata) &&
+          typeof row.metadata["connection_id"] === "string"
+            ? row.metadata["connection_id"]
+            : null,
+        recordOrigin: row.record_origin as NonNullable<Account["recordOrigin"]>,
         openFinance: row.open_finance,
         branch: row.branch ?? "",
         accountNumber: row.account_number ?? "",
@@ -132,40 +143,53 @@ export function useUpsertAccount() {
       accountNumber?: string;
       openFinance?: boolean;
     }) => {
-      const userId = await requireUserId();
-      const payload = {
-        user_id: userId,
+      await requireUserId();
+      return upsertAccount({
+        ...(input.id ? { id: input.id } : {}),
         institution: input.institution,
         name: input.name,
         type: uiToDbAccountType[input.type],
         balance: input.balance,
         open_finance: input.openFinance ?? false,
-        last_sync_at: new Date().toISOString(),
-        branch: input.branch?.trim() || null,
-        account_number: input.accountNumber?.trim() || null,
-      };
-      const { error } = input.id
-        ? await supabase.from("accounts").update(payload).eq("id", input.id)
-        : await supabase.from("accounts").insert(payload);
-      if (error) throw error;
+        branch: input.branch?.trim() || "",
+        account_number: input.accountNumber?.trim() || "",
+      });
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["accounts"] }),
   });
 }
 
-/** Atualiza o carimbo da conta após uma sincronização Open Finance. */
+/** Solicita sincronização real; somente o provedor atualiza o carimbo. */
 export function useSyncAccount() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (accountId: string) => {
       await requireUserId();
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("accounts")
-        .update({ last_sync_at: new Date().toISOString() })
-        .eq("id", accountId);
+        .select("metadata, open_finance")
+        .eq("id", accountId)
+        .single();
       if (error) throw error;
+      const metadata = data.metadata;
+      const connectionId =
+        metadata && typeof metadata === "object" && !Array.isArray(metadata)
+          ? metadata["connection_id"]
+          : null;
+      if (!data.open_finance || typeof connectionId !== "string")
+        throw new Error("Conexão não disponível");
+      return syncConnection({ data: { connectionId } });
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["accounts"] }),
+    onSuccess: () => {
+      for (const key of [
+        "accounts",
+        "wallet-summary",
+        "account-connections",
+        "transactions",
+        "investments",
+      ])
+        void queryClient.invalidateQueries({ queryKey: [key] });
+    },
   });
 }
 
@@ -216,7 +240,7 @@ export function useTransactions(limit = 200, showArchived = false) {
       let request = supabase
         .from("transactions")
         .select(
-          "id, account_id, description, merchant, category, type, amount, occurred_at, is_recurring, archived_at, record_origin, accounts(name)",
+          "id, account_id, description, merchant, category, type, amount, occurred_at, status, is_recurring, archived_at, record_origin, accounts(name)",
         )
         .order("occurred_at", { ascending: false })
         .limit(limit);
@@ -225,11 +249,19 @@ export function useTransactions(limit = 200, showArchived = false) {
         : request.is("archived_at", null);
       const { data, error } = await request;
       if (error) throw error;
+      const { data: overrides, error: overrideError } = await supabase
+        .from("transaction_overrides")
+        .select("*");
+      if (overrideError) throw overrideError;
+      const corrections = new Map(
+        (overrides ?? []).map((override) => [override.transaction_id, override]),
+      );
       return (data ?? []).map((row) => ({
         id: row.id,
-        description: row.description,
-        merchant: row.merchant ?? "",
-        category: row.category,
+        description: corrections.get(row.id)?.description ?? row.description,
+        merchant: corrections.get(row.id)?.merchant ?? row.merchant ?? "",
+        category: corrections.get(row.id)?.category ?? row.category,
+        pending: row.status === "pending",
         kind: row.type as DbTransactionType,
         amount: Number(row.amount),
         date: row.occurred_at,
@@ -245,7 +277,7 @@ export function useTransactions(limit = 200, showArchived = false) {
 
 /** Orçamento do mês corrente, com o gasto calculado a partir das transações. */
 export function useBudgets(showArchived = false) {
-  const transactions = useTransactions();
+  const transactions = useTransactions(1000);
 
   const query = useQuery({
     queryKey: ["budgets", monthStart(), showArchived],
@@ -267,7 +299,14 @@ export function useBudgets(showArchived = false) {
   const month = monthStart().slice(0, 7);
   const items: BudgetItem[] = (query.data ?? []).map((row) => {
     const spent = (transactions.data ?? [])
-      .filter((tx) => tx.category === row.category && tx.date.startsWith(month) && tx.amount < 0)
+      .filter(
+        (tx) =>
+          tx.category === row.category &&
+          tx.date.startsWith(month) &&
+          tx.kind === "expense" &&
+          !tx.pending &&
+          tx.amount < 0,
+      )
       .reduce((total, tx) => total + Math.abs(tx.amount), 0);
     return {
       id: row.id,
@@ -279,7 +318,12 @@ export function useBudgets(showArchived = false) {
     };
   });
 
-  return { ...query, items };
+  return {
+    ...query,
+    items,
+    isLoading: query.isLoading || transactions.isLoading,
+    isError: query.isError || transactions.isError,
+  };
 }
 
 /** Metas financeiras com sugestão mensal derivada do prazo. */
@@ -699,6 +743,7 @@ export function useCashflow(months = 6) {
   }
 
   for (const tx of transactions.data ?? []) {
+    if (tx.kind === "transfer" || tx.kind === "investment" || tx.pending || tx.archivedAt) continue;
     const key = tx.date.slice(0, 7);
     const bucket = buckets.get(key);
     if (!bucket) continue;
@@ -707,7 +752,12 @@ export function useCashflow(months = 6) {
     bucket.saldo = bucket.receitas - bucket.despesas;
   }
 
-  return { data: [...buckets.values()], isLoading: transactions.isLoading };
+  return {
+    data: [...buckets.values()],
+    isLoading: transactions.isLoading,
+    isError: transactions.isError,
+    isTruncated: (transactions.data?.length ?? 0) >= 1000,
+  };
 }
 
 /** Histórico de patrimônio salvo em snapshots mensais. */
@@ -722,6 +772,7 @@ export function useNetWorthSeries() {
       if (error) throw error;
       return (data ?? []).map((row) => ({
         month: MONTH_LABELS[Number(row.month.slice(5, 7)) - 1] ?? row.month,
+        date: row.month,
         value: Number(row.net_worth),
       }));
     },
@@ -832,7 +883,10 @@ export function useUpdateTransactionCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, category }: { id: string; category: string }) => {
-      const { error } = await supabase.from("transactions").update({ category }).eq("id", id);
+      const { error } = await supabase.rpc("edit_transaction", {
+        p_id: id,
+        p_changes: { category },
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -857,9 +911,9 @@ export function useUpdateTransaction() {
       accountId?: string | null;
       occurredAt: string;
     }) => {
-      const { error } = await supabase
-        .from("transactions")
-        .update({
+      const { error } = await supabase.rpc("edit_transaction", {
+        p_id: input.id,
+        p_changes: {
           account_id: input.accountId ?? null,
           description: input.description,
           amount: input.amount,
@@ -867,8 +921,8 @@ export function useUpdateTransaction() {
           category: input.category,
           merchant: input.merchant ?? null,
           occurred_at: input.occurredAt,
-        })
-        .eq("id", input.id);
+        },
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -884,7 +938,10 @@ export function useDeleteTransaction() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("transactions").delete().eq("id", id);
+      const { error } = await supabase
+        .from("transactions")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

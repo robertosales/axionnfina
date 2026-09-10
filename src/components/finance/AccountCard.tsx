@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useSyncAccount } from "@/lib/finance-data";
+import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 
 const typeMeta = {
   CHECKING: { icon: Landmark, label: "Conta corrente" },
@@ -15,7 +17,8 @@ const typeMeta = {
   INVESTMENT: { icon: LineChart, label: "Investimentos" },
 } as const;
 
-function syncLabel(iso: string): string {
+function syncLabel(iso: string | null): string {
+  if (!iso || !Number.isFinite(Date.parse(iso))) return "não informada";
   const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
   if (minutes < 60) return `há ${Math.max(minutes, 1)} min`;
   const hours = Math.round(minutes / 60);
@@ -45,7 +48,12 @@ export function AccountCard({ account }: { account: Account }) {
           )}
         </div>
         <p className="break-words text-xs text-muted-foreground">
-           {meta.label}{account.branch ? ` · Ag. ${account.branch}` : ""}{account.accountNumber ? ` · Conta ${account.accountNumber}` : ""} · sync {syncLabel(account.lastSyncedAt)}
+          {meta.label} ·{" "}
+          {account.openFinance
+            ? `Sincronização ${syncLabel(account.lastSyncedAt)}`
+            : account.recordOrigin === "import"
+              ? "Importada"
+              : "Manual"}
         </p>
       </div>
 
@@ -62,12 +70,29 @@ export function AccountCard({ account }: { account: Account }) {
           variant="ghost"
           size="sm"
           className="mt-1 h-7 px-2 text-xs text-muted-foreground"
-          onClick={() => syncAccount.mutate(account.id)}
-          disabled={!account.openFinance || syncAccount.isPending}
-          title={account.openFinance ? "Sincronizar dados da conta" : "Ative o Open Finance para sincronizar"}
+          onClick={() =>
+            syncAccount.mutate(account.id, {
+              onError: () => toast.error("Não foi possível sincronizar. Verifique a conexão."),
+              onSuccess: () => toast.success("Sincronização solicitada."),
+            })
+          }
+          disabled={!account.openFinance || !account.connectionId || syncAccount.isPending}
+          title={
+            account.openFinance
+              ? "Sincronizar dados da conta"
+              : "Ative o Open Finance para sincronizar"
+          }
         >
           <RefreshCw className="size-3" /> Sincronizar
         </Button>
+        {account.openFinance && (
+          <Link
+            to="/wallet/connect"
+            className="focus-ring block rounded text-xs text-primary underline"
+          >
+            Gerenciar conexão
+          </Link>
+        )}
       </div>
     </Card>
   );

@@ -1,4 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Eye, EyeOff, Plus, Upload, Landmark, Target, Bot } from "lucide-react";
+import { DataState } from "@/components/finance/DataState";
+import { InvestmentPurpose } from "@/components/finance/InvestmentPurpose";
+import { wealthSummary, syncFreshness, snapshotChange } from "@/lib/wealth-summary";
 import { ArrowUpRight, CalendarClock, Shield, Sparkles, TrendingUp, Wallet } from "lucide-react";
 import {
   Area,
@@ -75,6 +81,9 @@ const severityTone = {
 
 function Dashboard() {
   const { name } = useSessionUser();
+  const queryClient = useQueryClient();
+  const [hidden, setHidden] = useState(false);
+  const [historyMonths, setHistoryMonths] = useState(6);
 
   // Realtime subscriptions
   useRealtimeAccounts();
@@ -85,12 +94,21 @@ function Dashboard() {
   const { daysSinceLastIncome } = useMoneyAge();
 
   const { data: accounts = [], isLoading: loadingAccounts, isError: accountsError } = useAccounts();
-  const { data: agentInsights = [] } = useInsights();
-  const { items: budgetItems } = useBudgets();
-  const { data: cashflow } = useCashflow();
-  const { data: netWorthSeries = [] } = useNetWorthSeries();
+  const {
+    data: agentInsights = [],
+    isLoading: loadingInsights,
+    isError: insightsError,
+  } = useInsights();
+  const { items: budgetItems, isLoading: loadingBudget, isError: budgetError } = useBudgets();
+  const { data: cashflow, isTruncated: cashflowTruncated } = useCashflow();
+  const {
+    data: netWorthSeries = [],
+    isLoading: loadingHistory,
+    isError: historyError,
+  } = useNetWorthSeries();
   const {
     allocation,
+    positions,
     total: totalInvestments,
     isLoading: loadingInvestments,
     isError: investmentsError,
@@ -102,14 +120,15 @@ function Dashboard() {
     isError: transactionsError,
   } = useTransactions(1000);
   const { data: goals = [], isLoading: loadingGoals, isError: goalsError } = useGoals();
-  const netWorth = accounts.reduce((total, account) => total + account.balance, 0);
-  const liquidity = accounts
-    .filter((account) => account.type === "CHECKING" || account.type === "SAVINGS")
-    .reduce((total, account) => total + account.balance, 0);
-  const totalDebts = accounts
-    .filter((account) => account.type === "CREDIT_CARD")
-    .reduce((total, account) => total + Math.abs(account.balance), 0);
-  const empty = !loadingAccounts && accounts.length === 0;
+  const {
+    netWorth,
+    liquidity,
+    debts: totalDebts,
+    usesInvestmentAccounts,
+  } = wealthSummary(accounts, totalInvestments);
+  const freshness = syncFreshness(accounts);
+  const monthlyChange = snapshotChange(netWorthSeries, 1);
+  const annualChange = snapshotChange(netWorthSeries, 12);
 
   const currentMonth = cashflow.at(-1);
   const previousMonth = cashflow.at(-2);
@@ -121,17 +140,13 @@ function Dashboard() {
     previousMonth && previousMonth.receitas > 0
       ? (previousMonth.saldo / previousMonth.receitas) * 100
       : 0;
-  const netWorthChange =
-    netWorthSeries.length > 1 && netWorthSeries[netWorthSeries.length - 2]!.value > 0
-      ? ((netWorth - netWorthSeries[netWorthSeries.length - 2]!.value) /
-          netWorthSeries[netWorthSeries.length - 2]!.value) *
-        100
-      : 0;
-  const openBills = upcomingBills.filter((bill) => bill.dbStatus !== "paid");
+  const openBills = upcomingBills.filter(
+    (bill) => bill.dbStatus === "pending" || bill.dbStatus === "overdue",
+  );
   const nextBill = openBills[0];
   const nextStep = analyzeFinancialReadiness({
     accounts,
-    transactions,
+    transactions: transactions.filter((transaction) => !transaction.pending),
     bills: openBills,
     goals,
     investmentTotal: totalInvestments,
@@ -170,344 +185,636 @@ function Dashboard() {
           <p className="text-sm text-muted-foreground">Olá, {name}</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Visão geral</h1>
         </div>
-        {empty && (
-          <Button size="sm" asChild>
-            <Link to="/wallet/connect">Conectar primeira conta</Link>
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          size="sm"
+          aria-pressed={hidden}
+          onClick={() => setHidden((value) => !value)}
+        >
+          {hidden ? (
+            <Eye className="size-4" aria-hidden />
+          ) : (
+            <EyeOff className="size-4" aria-hidden />
+          )}
+          {hidden ? "Mostrar valores" : "Ocultar valores"}
+        </Button>
       </header>
 
-      <FinancialNextStepCard
-        analysis={nextStep}
-        isLoading={loadingNextStep}
-        hasError={nextStepError}
-      />
+      <nav
+        aria-label="Ações rápidas"
+        className="mb-6 grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:flex sm:flex-wrap"
+      >
+        <Button asChild>
+          <Link to="/transactions" search={{ new: true }}>
+            <Plus className="size-4" aria-hidden />
+            Nova transação
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/wallet/imports">
+            <Upload className="size-4" aria-hidden />
+            Importar documento
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/wallet/connect">
+            <Landmark className="size-4" aria-hidden />
+            Conectar banco
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/goals" search={{ new: true }}>
+            <Target className="size-4" aria-hidden />
+            Criar meta
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/agent">
+            <Bot className="size-4" aria-hidden />
+            Perguntar ao agente
+          </Link>
+        </Button>
+      </nav>
 
-      {/* KPIs */}
-      <section aria-label="Indicadores" className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KPICard
-          label="Patrimônio líquido"
-          value={formatBRL(netWorth)}
-          change={Math.round(netWorthChange * 10) / 10}
-          icon={TrendingUp}
-          sparkline={netWorthSeries.map((p) => ({ value: p.value }))}
-        />
-        <KPICard
-          label="Liquidez imediata"
-          value={formatBRL(liquidity)}
-          change={
-            Math.round(
-              (currentMonth?.saldo ?? 0) > 0
-                ? 100 * (currentMonth!.saldo / Math.max(currentMonth!.receitas, 1))
-                : 0,
-            ) / 10
-          }
-          icon={Wallet}
-          sparkline={cashflow.map((p) => ({ value: p.saldo }))}
-        />
-        <KPICard
-          label="Taxa de poupança"
-          value={`${savingsRate.toFixed(1).replace(".", ",")}%`}
-          change={Math.round((savingsRate - previousSavingsRate) * 10) / 10}
-          icon={ArrowUpRight}
-          tone="success"
-        />
-        <KPICard
-          label="Próximo vencimento"
-          value={formatBRL(nextBill?.amount ?? 0)}
-          hint={
-            nextBill
-              ? `${nextBill.name} · ${formatShortDate(nextBill.dueDate)}`
-              : "Sem contas abertas"
-          }
-          icon={CalendarClock}
-          tone="danger"
-        />
-      </section>
-
-      {/* Health Score + Anomaly Detection */}
-      <section className="mt-6 grid gap-4 lg:grid-cols-3">
-        <HealthScore
-          score={healthScore}
-          breakdown={healthBreakdown}
-          confidence={healthConfidence}
-          sparkline={netWorthSeries.map((p) => ({ value: p.value }))}
-        />
-
-        <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
-          <div className="flex items-center gap-2">
-            <Shield className="size-4 text-primary" aria-hidden />
-            <h2 className="text-sm font-semibold">Deteção de anomalias</h2>
-          </div>
-          <div className="mt-4 space-y-3">
-            {anomalies.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Nenhuma anomalia detectada nos últimos meses.
-              </p>
-            ) : (
-              anomalies.slice(0, 3).map((anomaly) => (
-                <article
-                  key={anomaly.category}
-                  className={cn(
-                    "rounded-lg border p-3",
-                    anomaly.severity === "danger"
-                      ? "border-danger/40 bg-danger/5"
-                      : "border-warning/40 bg-warning/5",
-                  )}
-                >
-                  <h3 className="text-sm font-medium">{anomaly.category}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    {anomaly.message}
-                  </p>
-                </article>
-              ))
-            )}
-          </div>
+      {hidden ? (
+        <Card className="p-8 text-center text-muted-foreground">
+          <EyeOff className="mx-auto mb-3 size-6" aria-hidden />
+          <p>Informações financeiras ocultas.</p>
         </Card>
-
-        <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-primary" aria-hidden />
-            <h2 className="text-sm font-semibold">Insights do agente</h2>
-          </div>
-          <div className="mt-4 space-y-3">
-            {agentInsights.slice(0, 3).map((insight) => (
-              <article
-                key={insight.id}
-                className={cn("rounded-lg border p-3", severityTone[insight.severity])}
+      ) : (
+        <>
+          <section
+            aria-label="Resumo patrimonial"
+            className="mb-6 grid min-w-0 gap-4 lg:grid-cols-3"
+          >
+            <Card
+              className="min-w-0 rounded-2xl border-primary/20 p-5 sm:p-6 lg:col-span-2"
+              style={{ background: "var(--gradient-surface)" }}
+            >
+              <p className="text-sm font-medium text-muted-foreground">Patrimônio líquido</p>
+              <DataState
+                loading={loadingAccounts || loadingInvestments}
+                error={accountsError || investmentsError}
+                onRetry={() => {
+                  void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+                  void queryClient.invalidateQueries({ queryKey: ["investments"] });
+                }}
               >
-                <h3 className="text-sm font-medium">{insight.title}</h3>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{insight.body}</p>
-              </article>
-            ))}
-            {daysSinceLastIncome !== null && daysSinceLastIncome > 45 && (
-              <article className="rounded-lg border border-warning/40 bg-warning/5 p-3">
-                <h3 className="text-sm font-medium">
-                  Última receita há {daysSinceLastIncome} dias
-                </h3>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  Considere verificar se há receitas pendentes ou se o fluxo de renda está
-                  consistente.
+                <p className="numeric mt-2 break-words text-3xl font-semibold tracking-tight sm:text-4xl">
+                  {formatBRL(netWorth)}
                 </p>
-              </article>
-            )}
-          </div>
-        </Card>
-      </section>
-
-      {/* Charts */}
-      <section className="mt-6 grid gap-4 lg:grid-cols-3">
-        <ChartCard
-          title="Fluxo de caixa"
-          description="Receitas x despesas nos últimos 6 meses"
-          className="lg:col-span-2"
-        >
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={cashflow} margin={{ left: -18, right: 8, top: 8 }}>
-                <defs>
-                  <linearGradient id="grad-in" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--color-income)" stopOpacity={0.45} />
-                    <stop offset="100%" stopColor="var(--color-income)" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="grad-out" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--color-expense)" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="var(--color-expense)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="var(--color-border)"
-                  vertical={false}
-                />
-                <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
-                <YAxis
-                  tickFormatter={(v: number) => formatBRL(v, true)}
-                  tickLine={false}
-                  axisLine={false}
-                  fontSize={11}
-                  width={70}
-                />
-                <RTooltip
-                  formatter={(v: number) => formatBRL(v)}
-                  contentStyle={{
-                    background: "var(--color-popover)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                <Area
-                  type="monotone"
-                  isAnimationActive={false}
-                  dataKey="receitas"
-                  stroke="var(--color-income)"
-                  strokeWidth={2}
-                  fill="url(#grad-in)"
-                />
-                <Area
-                  type="monotone"
-                  isAnimationActive={false}
-                  dataKey="despesas"
-                  stroke="var(--color-expense)"
-                  strokeWidth={2}
-                  fill="url(#grad-out)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </ChartCard>
-
-        <ChartCard title="Alocação de investimentos" description="Carteira consolidada">
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={allocation}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={58}
-                  outerRadius={88}
-                  paddingAngle={3}
-                  isAnimationActive={false}
-                  stroke="none"
-                >
-                  {allocation.map((slice) => (
-                    <Cell key={slice.name} fill={slice.token} />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {usesInvestmentAccounts
+                    ? "Saldos das contas, incluindo contas de investimento."
+                    : "Saldos das contas e posições de investimento."}
+                </p>
+              </DataState>
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
+                <p>
+                  Snapshots: mês {monthlyChange === null ? "—" : `${monthlyChange.toFixed(1)}%`} ·
+                  ano {annualChange === null ? "—" : `${annualChange.toFixed(1)}%`}
+                </p>
+                <div className="flex gap-1" aria-label="Período do histórico">
+                  {[6, 12].map((months) => (
+                    <Button
+                      key={months}
+                      variant={historyMonths === months ? "secondary" : "ghost"}
+                      size="sm"
+                      aria-pressed={historyMonths === months}
+                      onClick={() => setHistoryMonths(months)}
+                    >
+                      {months} meses
+                    </Button>
                   ))}
-                </Pie>
-                <RTooltip
-                  formatter={(v: number) => formatBRL(v)}
-                  contentStyle={{
-                    background: "var(--color-popover)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
+                </div>
+              </div>
+              <DataState
+                loading={loadingHistory}
+                error={historyError}
+                empty={netWorthSeries.length === 0}
+              >
+                <div
+                  className="mt-4 h-44"
+                  role="img"
+                  aria-label="Evolução do patrimônio; valores disponíveis na tabela abaixo"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={netWorthSeries.slice(-historyMonths)} accessibilityLayer>
+                      <XAxis dataKey="month" axisLine={false} tickLine={false} fontSize={12} />
+                      <RTooltip formatter={(value: number) => formatBRL(value)} />
+                      <Area
+                        dataKey="value"
+                        name="Patrimônio"
+                        stroke="var(--color-primary)"
+                        fill="var(--color-primary)"
+                        fillOpacity={0.12}
+                        isAnimationActive={false}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <details className="mt-2 text-sm">
+                  <summary className="focus-ring cursor-pointer rounded text-muted-foreground">
+                    Consultar histórico em tabela
+                  </summary>
+                  <table className="mt-2 w-full">
+                    <caption className="sr-only">Snapshots patrimoniais</caption>
+                    <thead>
+                      <tr>
+                        <th className="text-left">Mês</th>
+                        <th className="text-right">Patrimônio</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {netWorthSeries.slice(-historyMonths).map((point) => (
+                        <tr key={point.date}>
+                          <td>{point.date.slice(0, 7)}</td>
+                          <td className="numeric text-right">{formatBRL(point.value)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </details>
+              </DataState>
+              <p className="mt-4 text-sm text-muted-foreground">
+                {freshness.connected === 0
+                  ? "Dados manuais ou importados. Atualização sob sua responsabilidade."
+                  : freshness.unknown > 0
+                    ? "Há contas sem data de sincronização informada."
+                    : `Sincronização mais antiga: ${freshness.oldest ? new Date(freshness.oldest).toLocaleString("pt-BR") : "não informada"}.`}
+                {freshness.stale && " Dados possivelmente desatualizados."}{" "}
+                <Link to="/wallet/connect" className="focus-ring rounded text-primary underline">
+                  Ver conexões
+                </Link>
+              </p>
+            </Card>
+            <div className="min-w-0 space-y-4">
+              <DataState loading={loadingNextStep} error={nextStepError}>
+                <HealthScore
+                  score={healthScore}
+                  breakdown={healthBreakdown}
+                  confidence={healthConfidence}
                 />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </ChartCard>
-      </section>
+              </DataState>
+              <Card className="p-5">
+                <h2 className="font-semibold">Sua próxima conquista</h2>
+                <DataState loading={loadingGoals} error={goalsError} empty={goals.length === 0}>
+                  {[...goals]
+                    .filter((goal) => goal.target > 0 && goal.current < goal.target)
+                    .sort((a, b) => b.current / b.target - a.current / a.target)
+                    .slice(0, 1)
+                    .map((goal) => (
+                      <div key={goal.id}>
+                        <p className="mt-3 text-sm">{goal.name}</p>
+                        <p className="numeric mt-1 text-lg font-semibold">
+                          {formatBRL(Math.max(0, goal.target - goal.current))} para chegar lá
+                        </p>
+                      </div>
+                    ))}
+                </DataState>
+                <Link
+                  to="/goals"
+                  className="focus-ring mt-3 inline-block rounded text-sm text-primary underline"
+                >
+                  Acompanhar metas
+                </Link>
+              </Card>
+            </div>
+          </section>
 
-      {/* Budget + Accounts + Bills */}
-      <section className="mt-6 grid gap-4 lg:grid-cols-3">
-        <ChartCard
-          title="Orçamento vs. realizado"
-          description="Categorias do mês corrente"
-          className="lg:col-span-2"
-        >
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={budgetItems} margin={{ left: -18, right: 8, top: 8 }}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="var(--color-border)"
-                  vertical={false}
-                />
-                <XAxis dataKey="category" tickLine={false} axisLine={false} fontSize={11} />
-                <YAxis
-                  tickFormatter={(v: number) => formatBRL(v, true)}
-                  tickLine={false}
-                  axisLine={false}
-                  fontSize={11}
-                  width={70}
-                />
-                <RTooltip
-                  formatter={(v: number) => formatBRL(v)}
-                  contentStyle={{
-                    background: "var(--color-popover)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                <Area
-                  type="monotone"
-                  isAnimationActive={false}
-                  dataKey="planned"
-                  name="Planejado"
-                  stroke="var(--color-chart-1)"
-                  fill="var(--color-chart-1)"
-                  fillOpacity={0.2}
-                />
-                <Area
-                  type="monotone"
-                  isAnimationActive={false}
-                  dataKey="spent"
-                  name="Realizado"
-                  stroke="var(--color-chart-3)"
-                  fill="var(--color-chart-3)"
-                  fillOpacity={0.2}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </ChartCard>
+          <FinancialNextStepCard
+            analysis={nextStep}
+            isLoading={loadingNextStep}
+            hasError={nextStepError}
+          />
 
-        <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
-          <h2 className="text-base font-semibold">Contas conectadas</h2>
-          <div className="mt-4 grid gap-3">
-            {accounts.map((account) => (
-              <AccountCard key={account.id} account={account} />
-            ))}
-          </div>
-        </Card>
-      </section>
+          {/* KPIs */}
+          <section
+            aria-label="Indicadores"
+            className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+          >
+            <KPICard
+              label="Dívidas nas contas"
+              value={
+                accountsError
+                  ? "Indisponível"
+                  : loadingAccounts
+                    ? "Carregando…"
+                    : formatBRL(totalDebts)
+              }
+              icon={TrendingUp}
+            />
+            <KPICard
+              label="Liquidez imediata"
+              value={
+                accountsError
+                  ? "Indisponível"
+                  : loadingAccounts
+                    ? "Carregando…"
+                    : formatBRL(liquidity)
+              }
+              icon={Wallet}
+              sparkline={cashflow.map((p) => ({ value: p.saldo }))}
+            />
+            <KPICard
+              label="Taxa de poupança"
+              value={
+                transactionsError
+                  ? "Indisponível"
+                  : loadingTransactions
+                    ? "Carregando…"
+                    : monthlyIncome > 0
+                      ? `${savingsRate.toFixed(1).replace(".", ",")}%`
+                      : "Sem receitas"
+              }
+              hint={
+                previousMonth && previousMonth.receitas > 0
+                  ? `${(savingsRate - previousSavingsRate).toFixed(1)} p.p. em relação ao mês anterior`
+                  : "Sem receitas anteriores para comparar"
+              }
+              icon={ArrowUpRight}
+              tone="success"
+            />
+            <KPICard
+              label="Próximo vencimento"
+              value={
+                billsError
+                  ? "Indisponível"
+                  : loadingBills
+                    ? "Carregando…"
+                    : formatBRL(nextBill?.amount ?? 0)
+              }
+              hint={
+                nextBill
+                  ? `${nextBill.name} · ${formatShortDate(nextBill.dueDate)}`
+                  : "Sem contas abertas"
+              }
+              icon={CalendarClock}
+              tone="danger"
+            />
+          </section>
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-3">
-        <div className="space-y-3 lg:col-span-2">
-          <h2 className="text-base font-semibold">Próximas contas</h2>
-          <Card className="rounded-xl border-border/60 p-0 shadow-elevation-1">
-            <ul className="divide-y divide-border/60">
-              {openBills.slice(0, 4).map((bill) => {
-                const days = daysUntil(bill.dueDate);
-                return (
-                  <li key={bill.id} className="flex items-center justify-between gap-3 p-4">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{bill.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatShortDate(bill.dueDate)} ·{" "}
-                        {days < 0 ? `${Math.abs(days)} d em atraso` : `em ${days} d`}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="numeric text-sm font-semibold">{formatBRL(bill.amount)}</p>
-                      <Badge
-                        variant="outline"
+          <section className="mt-6 grid gap-4 lg:grid-cols-3">
+            <div className="space-y-3 lg:col-span-2">
+              <h2 className="text-base font-semibold">Próximas contas</h2>
+              <Card className="rounded-xl border-border/60 p-0 shadow-elevation-1">
+                <DataState loading={loadingBills} error={billsError}>
+                  {!loadingBills && !billsError && openBills.length === 0 && (
+                    <p className="p-4 text-sm text-muted-foreground">Nenhuma conta em aberto.</p>
+                  )}
+                  <ul className="divide-y divide-border/60">
+                    {openBills.slice(0, 4).map((bill) => {
+                      const days = daysUntil(bill.dueDate);
+                      return (
+                        <li key={bill.id} className="flex items-center justify-between gap-3 p-4">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{bill.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatShortDate(bill.dueDate)} ·{" "}
+                              {days < 0 ? `${Math.abs(days)} d em atraso` : `em ${days} d`}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="numeric text-sm font-semibold">
+                              {formatBRL(bill.amount)}
+                            </p>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "mt-1 rounded-full text-[10px]",
+                                bill.status === "OVERDUE" && "border-danger/50 text-danger",
+                                bill.status === "SCHEDULED" && "border-success/50 text-success",
+                              )}
+                            >
+                              {bill.status === "OVERDUE"
+                                ? "Atrasada"
+                                : bill.status === "SCHEDULED"
+                                  ? "Agendada"
+                                  : "Pendente"}
+                            </Badge>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <Link
+                    to="/bills"
+                    className="focus-ring m-4 inline-block rounded text-sm text-primary underline"
+                  >
+                    Ver todas as contas
+                  </Link>
+                </DataState>
+              </Card>
+            </div>
+
+            <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+              <h3 className="text-sm font-semibold">Saúde do orçamento</h3>
+              <DataState
+                loading={loadingBudget}
+                error={budgetError}
+                empty={budgetItems.length === 0}
+              >
+                <div className="mt-4 space-y-4">
+                  {budgetItems.slice(0, 4).map((item) => (
+                    <BudgetProgress key={item.id} item={item} />
+                  ))}
+                </div>
+              </DataState>
+            </Card>
+          </section>
+
+          {/* Health Score + Anomaly Detection */}
+          <section className="mt-6 grid gap-4 lg:grid-cols-2">
+            <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+              <div className="flex items-center gap-2">
+                <Shield className="size-4 text-primary" aria-hidden />
+                <h2 className="text-sm font-semibold">Detecção de anomalias</h2>
+              </div>
+              <div className="mt-4 space-y-3">
+                <DataState loading={loadingTransactions} error={transactionsError}>
+                  {anomalies.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Nenhuma anomalia detectada nos últimos meses.
+                    </p>
+                  ) : (
+                    anomalies.slice(0, 3).map((anomaly) => (
+                      <article
+                        key={anomaly.category}
                         className={cn(
-                          "mt-1 rounded-full text-[10px]",
-                          bill.status === "OVERDUE" && "border-danger/50 text-danger",
-                          bill.status === "SCHEDULED" && "border-success/50 text-success",
+                          "rounded-lg border p-3",
+                          anomaly.severity === "danger"
+                            ? "border-danger/40 bg-danger/5"
+                            : "border-warning/40 bg-warning/5",
                         )}
                       >
-                        {bill.status === "OVERDUE"
-                          ? "Atrasada"
-                          : bill.status === "SCHEDULED"
-                            ? "Agendada"
-                            : "Pendente"}
-                      </Badge>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </Card>
-        </div>
+                        <h3 className="text-sm font-medium">{anomaly.category}</h3>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {anomaly.message}
+                        </p>
+                      </article>
+                    ))
+                  )}
+                </DataState>
+              </div>
+            </Card>
 
-        <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
-          <h3 className="text-sm font-semibold">Saúde do orçamento</h3>
-          <div className="mt-4 space-y-4">
-            {budgetItems.slice(0, 4).map((item) => (
-              <BudgetProgress key={item.id} item={item} />
-            ))}
-          </div>
-        </Card>
-      </section>
+            <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-4 text-primary" aria-hidden />
+                <h2 className="text-sm font-semibold">Insights do agente</h2>
+              </div>
+              <div className="mt-4 space-y-3">
+                <DataState
+                  loading={loadingInsights}
+                  error={insightsError}
+                  empty={agentInsights.length === 0}
+                >
+                  {agentInsights.slice(0, 3).map((insight) => (
+                    <article
+                      key={insight.id}
+                      className={cn("rounded-lg border p-3", severityTone[insight.severity])}
+                    >
+                      <h3 className="text-sm font-medium">{insight.title}</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        {insight.body}
+                      </p>
+                    </article>
+                  ))}
+                </DataState>
+                {daysSinceLastIncome !== null && daysSinceLastIncome > 45 && (
+                  <article className="rounded-lg border border-warning/40 bg-warning/5 p-3">
+                    <h3 className="text-sm font-medium">
+                      Última receita há {daysSinceLastIncome} dias
+                    </h3>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      Considere verificar se há receitas pendentes ou se o fluxo de renda está
+                      consistente.
+                    </p>
+                  </article>
+                )}
+              </div>
+            </Card>
+          </section>
+
+          {/* Charts */}
+          <section className="mt-6 grid gap-4 lg:grid-cols-3">
+            <ChartCard
+              title="Fluxo de caixa"
+              description={
+                cashflowTruncated
+                  ? "Amostra das últimas 1.000 transações; resultado parcial"
+                  : "Receitas e despesas nos últimos 6 meses, sem transferências"
+              }
+              className="lg:col-span-2"
+            >
+              <DataState
+                loading={loadingTransactions}
+                error={transactionsError}
+                empty={transactions.length === 0}
+              >
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      accessibilityLayer
+                      data={cashflow}
+                      margin={{ left: -18, right: 8, top: 8 }}
+                    >
+                      <defs>
+                        <linearGradient id="grad-in" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--color-income)" stopOpacity={0.45} />
+                          <stop offset="100%" stopColor="var(--color-income)" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="grad-out" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--color-expense)" stopOpacity={0.4} />
+                          <stop offset="100%" stopColor="var(--color-expense)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="var(--color-border)"
+                        vertical={false}
+                      />
+                      <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
+                      <YAxis
+                        tickFormatter={(v: number) => formatBRL(v, true)}
+                        tickLine={false}
+                        axisLine={false}
+                        fontSize={11}
+                        width={70}
+                      />
+                      <RTooltip
+                        formatter={(v: number) => formatBRL(v)}
+                        contentStyle={{
+                          background: "var(--color-popover)",
+                          border: "1px solid var(--color-border)",
+                          borderRadius: 12,
+                          fontSize: 12,
+                        }}
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                      <Area
+                        type="monotone"
+                        isAnimationActive={false}
+                        dataKey="receitas"
+                        stroke="var(--color-income)"
+                        strokeWidth={2}
+                        fill="url(#grad-in)"
+                      />
+                      <Area
+                        type="monotone"
+                        isAnimationActive={false}
+                        dataKey="despesas"
+                        stroke="var(--color-expense)"
+                        strokeWidth={2}
+                        fill="url(#grad-out)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <details className="mt-2 text-sm">
+                  <summary className="focus-ring cursor-pointer rounded">
+                    Ver valores do fluxo de caixa
+                  </summary>
+                  <table className="mt-2 w-full text-xs">
+                    <thead>
+                      <tr>
+                        <th>Mês</th>
+                        <th>Receitas</th>
+                        <th>Despesas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cashflow.map((month) => (
+                        <tr key={month.month}>
+                          <td>{month.month}</td>
+                          <td className="numeric">{formatBRL(month.receitas)}</td>
+                          <td className="numeric">{formatBRL(month.despesas)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </details>
+              </DataState>
+            </ChartCard>
+
+            <ChartCard title="Alocação de investimentos" description="Carteira consolidada">
+              <DataState
+                loading={loadingInvestments}
+                error={investmentsError}
+                empty={allocation.length === 0}
+              >
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={allocation}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={58}
+                        outerRadius={88}
+                        paddingAngle={3}
+                        isAnimationActive={false}
+                        stroke="none"
+                      >
+                        {allocation.map((slice) => (
+                          <Cell key={slice.name} fill={slice.token} />
+                        ))}
+                      </Pie>
+                      <RTooltip
+                        formatter={(v: number) => formatBRL(v)}
+                        contentStyle={{
+                          background: "var(--color-popover)",
+                          border: "1px solid var(--color-border)",
+                          borderRadius: 12,
+                          fontSize: 12,
+                        }}
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <ul className="space-y-2 text-sm">
+                  {allocation.map((item) => (
+                    <li key={item.name} className="flex flex-wrap justify-between gap-2">
+                      <span>{item.name}</span>
+                      <span className="numeric">{formatBRL(item.value)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </DataState>
+            </ChartCard>
+          </section>
+
+          <details className="mt-6 rounded-xl border border-border bg-card p-5">
+            <summary className="focus-ring cursor-pointer rounded font-semibold">
+              Investimentos: objetivos, riscos e próximos vencimentos
+            </summary>
+            <div className="mt-4">
+              <DataState loading={loadingInvestments} error={investmentsError}>
+                <InvestmentPurpose positions={positions} />
+              </DataState>
+            </div>
+          </details>
+
+          {/* Budget + Accounts + Bills */}
+          <section className="mt-6 grid gap-4 lg:grid-cols-3">
+            <ChartCard
+              title="Transações recentes"
+              description="Últimas movimentações registradas"
+              className="lg:col-span-2"
+            >
+              <DataState
+                loading={loadingTransactions}
+                error={transactionsError}
+                empty={transactions.length === 0}
+              >
+                <ul className="divide-y divide-border">
+                  {transactions.slice(0, 5).map((transaction) => (
+                    <li key={transaction.id} className="flex flex-wrap justify-between gap-3 py-3">
+                      <div className="min-w-0">
+                        <p className="break-words text-sm font-medium">{transaction.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatShortDate(transaction.date)} ·{" "}
+                          {transaction.kind === "income"
+                            ? "Receita"
+                            : transaction.kind === "expense"
+                              ? "Despesa"
+                              : "Transferência"}{" "}
+                          · {transaction.category}
+                        </p>
+                      </div>
+                      <p className="numeric text-sm font-semibold">
+                        {formatBRL(transaction.amount)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to="/transactions"
+                  className="focus-ring mt-3 inline-block rounded text-sm text-primary underline"
+                >
+                  Ver transações
+                </Link>
+              </DataState>
+            </ChartCard>
+
+            <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+              <h2 className="text-base font-semibold">Contas e origem dos dados</h2>
+              <DataState
+                loading={loadingAccounts}
+                error={accountsError}
+                empty={accounts.length === 0}
+              >
+                <div className="mt-4 grid gap-3">
+                  {accounts.map((account) => (
+                    <AccountCard key={account.id} account={account} />
+                  ))}
+                </div>
+              </DataState>
+            </Card>
+          </section>
+        </>
+      )}
     </AppShell>
   );
 }

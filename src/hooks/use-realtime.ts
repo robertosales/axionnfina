@@ -28,6 +28,7 @@ export function useRealtime({
   enabled = true,
 }: UseRealtimeOptions) {
   const queryClient = useQueryClient();
+  const queryKeySignature = JSON.stringify(queryKeys);
 
   useEffect(() => {
     if (!enabled) return;
@@ -43,11 +44,12 @@ export function useRealtime({
         },
         () => {
           // Invalida todas as query keys fornecidas
-          for (const key of queryKeys) {
+          const keys = JSON.parse(queryKeySignature) as string[][];
+          for (const key of keys) {
             void queryClient.invalidateQueries({ queryKey: key });
           }
           // Se nenhuma query key específica, invalida tudo
-          if (queryKeys.length === 0) {
+          if (keys.length === 0) {
             void queryClient.invalidateQueries();
           }
         },
@@ -57,7 +59,7 @@ export function useRealtime({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [table, schema, event, enabled, queryClient, queryKeys]);
+  }, [table, schema, event, enabled, queryClient, queryKeySignature]);
 }
 
 /**

@@ -13,6 +13,7 @@ import { InvestmentPlanSimulator } from "@/components/finance/InvestmentPlanSimu
 import { InvestmentPlanTracking } from "@/components/finance/InvestmentPlanTracking";
 import { PrivateFixedIncomeDesk } from "@/components/finance/PrivateFixedIncomeDesk";
 import { FgcExposurePanel } from "@/components/finance/FgcExposurePanel";
+import { InvestmentPurpose } from "@/components/finance/InvestmentPurpose";
 import { InvestmentMaturityLadder } from "@/components/finance/InvestmentMaturityLadder";
 import { PortfolioOnboardingCard } from "@/components/finance/PortfolioOnboardingCard";
 import { FirstInvestmentGuide } from "@/components/finance/FirstInvestmentGuide";
@@ -182,6 +183,7 @@ function InvestmentsPage() {
       {!showArchived && (
         <div className="space-y-6">
           <FirstInvestmentGuide />
+          <InvestmentPurpose positions={positions} />
           <PortfolioOnboardingCard onManual={() => openForm()} />
         </div>
       )}

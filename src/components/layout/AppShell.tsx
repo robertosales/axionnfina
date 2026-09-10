@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
+  CalendarClock,
   Bot,
   Coins,
   CreditCard,
@@ -46,22 +47,24 @@ type NavItem = {
   label: string;
   icon: typeof LayoutDashboard;
   highlight?: boolean;
+  group: string;
 };
 
 const navItems: NavItem[] = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/wallet", label: "Carteira", icon: Wallet },
-  { to: "/transactions", label: "Transações", icon: Receipt },
-  { to: "/wallet/imports", label: "Importar documentos", icon: FileText },
-  { to: "/budget", label: "Orçamento", icon: PiggyBank },
-  { to: "/investments", label: "Investimentos", icon: LineChart },
-  { to: "/taxes", label: "Impostos", icon: FileText },
-  { to: "/bills", label: "Contas", icon: CreditCard },
-  { to: "/goals", label: "Metas", icon: Target },
-  { to: "/insights", label: "Insights", icon: Sparkles },
-  { to: "/agent", label: "Agente IA", icon: Bot, highlight: true },
-  { to: "/security", label: "Segurança", icon: Shield },
-  { to: "/settings", label: "Configurações", icon: Settings },
+  { to: "/dashboard", label: "Início", icon: LayoutDashboard, group: "Visão geral" },
+  { to: "/insights", label: "Insights", icon: Sparkles, group: "Visão geral" },
+  { to: "/agent", label: "Agente", icon: Bot, highlight: true, group: "Visão geral" },
+  { to: "/wallet", label: "Carteira", icon: Wallet, group: "Vida financeira" },
+  { to: "/wallet/accounts", label: "Contas bancárias", icon: CreditCard, group: "Vida financeira" },
+  { to: "/transactions", label: "Transações", icon: Receipt, group: "Vida financeira" },
+  { to: "/bills", label: "Contas a pagar", icon: CalendarClock, group: "Vida financeira" },
+  { to: "/wallet/imports", label: "Importar documentos", icon: FileText, group: "Vida financeira" },
+  { to: "/investments", label: "Investimentos", icon: LineChart, group: "Investimentos" },
+  { to: "/goals", label: "Metas", icon: Target, group: "Planejamento" },
+  { to: "/budget", label: "Orçamento", icon: PiggyBank, group: "Planejamento" },
+  { to: "/taxes", label: "Impostos", icon: FileText, group: "Planejamento" },
+  { to: "/security", label: "Segurança", icon: Shield, group: "Sistema" },
+  { to: "/settings", label: "Configurações", icon: Settings, group: "Sistema" },
 ];
 
 function useTheme() {
@@ -121,13 +124,15 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
 
   return (
     <nav aria-label="Navegação principal" className="flex flex-col gap-1 px-3">
-      {navItems.map((item) => {
-        const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+      {navItems.map((item, index) => {
+        const active =
+          pathname === item.to || (item.to !== "/wallet" && pathname.startsWith(`${item.to}/`));
         const link = (
           <Link
             key={item.to}
             to={item.to}
             onClick={onNavigate}
+            aria-label={collapsed ? item.label : undefined}
             aria-current={active ? "page" : undefined}
             className={cn(
               "focus-ring group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
@@ -167,7 +172,17 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
           </Link>
         );
 
-        if (!collapsed) return link;
+        if (!collapsed)
+          return (
+            <div key={item.to}>
+              {navItems[index - 1]?.group !== item.group && (
+                <p className="px-3 pb-2 pt-4 text-xs font-semibold text-muted-foreground">
+                  {item.group}
+                </p>
+              )}
+              {link}
+            </div>
+          );
         return (
           <Tooltip key={item.to}>
             <TooltipTrigger asChild>{link}</TooltipTrigger>
@@ -180,6 +195,15 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1023px)");
+    const update = () => setMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
   const [collapsed, setCollapsed] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -289,7 +313,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
 
         <main className="min-h-[calc(100vh-4rem)] p-6 lg:p-10">
-          <div className="mx-auto w-full max-w-7xl">{children}</div>
+          <div className="mx-auto w-full max-w-7xl">{!mobile && children}</div>
         </main>
       </motion.div>
 
@@ -307,7 +331,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div className="flex h-16 items-center border-b border-sidebar-border px-4">
                 <Brand collapsed={false} />
               </div>
-              <div className="py-4">
+              <div className="overflow-y-auto py-4">
                 <NavList collapsed={false} onNavigate={() => setMobileOpen(false)} />
               </div>
             </SheetContent>
@@ -342,9 +366,39 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-4rem)] p-4">
-          <div className="mx-auto w-full max-w-7xl">{children}</div>
+        <main className="min-h-[calc(100vh-4rem)] p-4 pb-28">
+          <div className="mx-auto w-full max-w-7xl">{mobile && children}</div>
         </main>
+        <nav
+          aria-label="Navegação inferior"
+          className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border bg-background px-1 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+        >
+          {navItems
+            .filter((item) =>
+              ["/dashboard", "/wallet", "/investments", "/goals", "/agent"].includes(item.to),
+            )
+            .sort(
+              (a, b) =>
+                ["/dashboard", "/wallet", "/investments", "/goals", "/agent"].indexOf(a.to) -
+                ["/dashboard", "/wallet", "/investments", "/goals", "/agent"].indexOf(b.to),
+            )
+            .map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                aria-current={pathname === item.to ? "page" : undefined}
+                className={cn(
+                  "focus-ring flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-lg text-[10px]",
+                  pathname === item.to
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground",
+                )}
+              >
+                <item.icon className="size-5" aria-hidden />
+                <span>{item.label}</span>
+              </Link>
+            ))}
+        </nav>
       </div>
     </div>
   );

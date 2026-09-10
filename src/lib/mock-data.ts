@@ -12,7 +12,9 @@ export type Account = {
   name: string;
   type: AccountType;
   balance: number;
-  lastSyncedAt: string;
+  lastSyncedAt: string | null;
+  connectionId?: string | null;
+  recordOrigin?: "manual" | "open_finance" | "import" | "system";
   openFinance: boolean;
   branch?: string;
   accountNumber?: string;

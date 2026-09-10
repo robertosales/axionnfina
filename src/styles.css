@@ -88,9 +88,9 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.21 0.03 260);
 
-  --primary: oklch(0.51 0.21 273);
+  --primary: oklch(0.43 0.15 259);
   --primary-foreground: oklch(0.985 0.005 270);
-  --primary-glow: oklch(0.63 0.19 285);
+  --primary-glow: oklch(0.56 0.14 252);
 
   --secondary: oklch(0.95 0.008 255);
   --secondary-foreground: oklch(0.28 0.03 262);
@@ -102,14 +102,14 @@
   --destructive: oklch(0.58 0.21 18);
   --destructive-foreground: oklch(0.985 0.005 270);
 
-  --success: oklch(0.6 0.14 163);
+  --success: oklch(0.48 0.12 163);
   --success-foreground: oklch(0.985 0.005 270);
-  --warning: oklch(0.75 0.16 78);
+  --warning: oklch(0.5 0.12 65);
   --warning-foreground: oklch(0.24 0.04 60);
   --danger: oklch(0.58 0.21 18);
   --danger-foreground: oklch(0.985 0.005 270);
 
-  --income: oklch(0.68 0.12 183);
+  --income: oklch(0.47 0.1 175);
   --expense: oklch(0.63 0.21 17);
   --transfer: oklch(0.62 0.02 258);
   --investment: oklch(0.6 0.2 300);
@@ -234,8 +234,8 @@
 }
 
 @utility surface-elevated {
-  background: var(--gradient-surface);
-  box-shadow: var(--elevation-2);
+  background: var(--card);
+  box-shadow: var(--elevation-1);
 }
 
 @utility text-gradient-primary {
@@ -246,7 +246,7 @@
 }
 
 @utility numeric {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }

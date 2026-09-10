@@ -28,7 +28,7 @@ export function useAnomalyDetection(months = 3) {
     const byCategoryMonth = new Map<string, Map<string, number>>();
 
     for (const tx of transactions) {
-      if (tx.kind !== "expense") continue;
+      if (tx.kind !== "expense" || tx.pending) continue;
       const monthKey = tx.date.slice(0, 7);
       const category = tx.category;
 
@@ -57,7 +57,8 @@ export function useAnomalyDetection(months = 3) {
       if (historicalAmounts.length < 2) continue;
 
       const avg = historicalAmounts.reduce((s, v) => s + v, 0) / historicalAmounts.length;
-      const variance = historicalAmounts.reduce((s, v) => s + (v - avg) ** 2, 0) / historicalAmounts.length;
+      const variance =
+        historicalAmounts.reduce((s, v) => s + (v - avg) ** 2, 0) / historicalAmounts.length;
       const stdDev = Math.sqrt(variance);
 
       if (stdDev === 0) continue;
@@ -90,7 +91,7 @@ export function useMoneyAge() {
 
   const daysSinceLastIncome = useMemo(() => {
     const incomes = transactions
-      .filter((t) => t.kind === "income")
+      .filter((t) => t.kind === "income" && !t.pending)
       .sort((a, b) => b.date.localeCompare(a.date));
 
     if (incomes.length === 0) return null;

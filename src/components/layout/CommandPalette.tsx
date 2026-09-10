@@ -45,16 +45,26 @@ export function CommandPalette({ open, onOpenChange }: Props) {
       <CommandList>
         <CommandEmpty>Nenhum resultado.</CommandEmpty>
         <CommandGroup heading="Ações rápidas">
-          <CommandItem onSelect={() => run("Nova transação")}>
+          <CommandItem
+            onSelect={() =>
+              run("Nova transação", () => navigate({ to: "/transactions", search: { new: true } }))
+            }
+          >
             <Plus className="size-4" /> Nova transação
           </CommandItem>
-          <CommandItem onSelect={() => run("Novo Pix")}>
+          <CommandItem onSelect={() => run("Novo Pix", () => navigate({ to: "/agent" }))}>
             <Send className="size-4" /> Novo Pix
           </CommandItem>
-          <CommandItem onSelect={() => run("Sincronizar bancos")}>
+          <CommandItem
+            onSelect={() => run("Sincronizar bancos", () => navigate({ to: "/wallet/connect" }))}
+          >
             <RefreshCw className="size-4" /> Sincronizar bancos
           </CommandItem>
-          <CommandItem onSelect={() => run("Criar meta")}>
+          <CommandItem
+            onSelect={() =>
+              run("Criar meta", () => navigate({ to: "/goals", search: { new: true } }))
+            }
+          >
             <Target className="size-4" /> Criar meta
           </CommandItem>
         </CommandGroup>

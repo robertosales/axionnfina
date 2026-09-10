@@ -161,7 +161,7 @@ function ConnectPage() {
                 return (
                   <div
                     key={connection.id}
-                    className="flex items-center justify-between rounded-lg border border-border p-3"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
                   >
                     <div className="flex items-center gap-3">
                       <div
@@ -200,6 +200,7 @@ function ConnectPage() {
                         disabled={busy}
                         onClick={() => void handleSync(connection.id)}
                         title="Sincronizar agora"
+                        aria-label="Sincronizar agora"
                       >
                         <RefreshCw className={`size-4 ${busy ? "animate-spin" : ""}`} />
                       </Button>
@@ -210,9 +211,20 @@ function ConnectPage() {
                         disabled={busy}
                         onClick={() => void handleRevoke(connection.id)}
                         title="Revogar consentimento"
+                        aria-label="Revogar consentimento"
                       >
                         <Unplug className="size-4" />
                       </Button>
+                      {connection.status !== "active" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={busy || connecting}
+                          onClick={() => void handleConnect(connection.institution_id)}
+                        >
+                          Renovar conexão
+                        </Button>
+                      )}
                     </div>
                     {connection.error_message && (
                       <p className="mt-2 text-xs text-danger">{connection.error_message}</p>

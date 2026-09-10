@@ -12,6 +12,7 @@ import {
   type PluggyTransaction,
 } from "@/lib/pluggy.server";
 import { normalizeInvestmentPosition } from "@/lib/investment-import";
+import { logEvent } from "@/lib/observability.server";
 
 type AuthenticatedClient = SupabaseClient<Database>;
 
@@ -133,12 +134,22 @@ export async function syncPluggyConnection(
   const startedAt = Date.now();
   const { data: connection, error: connectionError } = await supabase
     .from("account_connections")
-    .select("id, institution_id, external_provider, metadata")
+    .select(
+      "id, institution_id, external_provider, metadata, status, consent_status, consent_expires_at",
+    )
     .eq("id", connectionId)
     .eq("user_id", userId)
     .single();
   if (connectionError || connection.external_provider !== "pluggy") {
     throw connectionError ?? new Error("Conexão Open Finance inválida.");
+  }
+  if (
+    connection.status === "inactive" ||
+    connection.consent_status === "revoked" ||
+    connection.consent_status === "expired" ||
+    (connection.consent_expires_at && Date.parse(connection.consent_expires_at) <= Date.now())
+  ) {
+    throw new Error("Renove o consentimento antes de sincronizar.");
   }
 
   const metadata = connection.metadata as Record<string, unknown> | null;
@@ -156,13 +167,15 @@ export async function syncPluggyConnection(
     let investmentTransactionsImported = 0;
 
     for (const account of accounts) {
+      if (!Number.isFinite(account.balance)) throw new Error("Invalid provider balance");
       const accountPayload = {
         user_id: userId,
         name: account.marketingName ?? account.name,
         institution: item.connector.name,
         institution_id: connection.institution_id,
         type: accountType(account),
-        balance: account.balance ?? 0,
+        balance: account.balance,
+        current_balance: account.balance,
         available_balance: account.creditData?.availableCreditLimit ?? account.balance ?? 0,
         credit_limit:
           account.creditData?.creditLimit ?? account.bankData?.overdraftContractedLimit ?? null,
@@ -194,46 +207,42 @@ export async function syncPluggyConnection(
       const accountId = accountWrite.data.id;
 
       const transactions = await getAllPluggyTransactions(account.id);
-      let latestTransactionBalance: { date: string; value: number } | null = null;
-      let newTransactionDelta = 0;
       for (const transaction of transactions) {
         const normalized = transactionValues(transaction);
-        if (
-          transaction.balance !== null &&
-          transaction.balance !== undefined &&
-          (!latestTransactionBalance || transaction.date > latestTransactionBalance.date)
-        ) {
-          latestTransactionBalance = { date: transaction.date, value: transaction.balance };
-        }
-        const { data: existing } = await supabase
+        const { data: existing, error: existingError } = await supabase
           .from("transactions")
           .select("id")
           .eq("user_id", userId)
           .eq("external_id", transaction.id)
           .maybeSingle();
+        if (existingError) throw existingError;
         if (existing) duplicatesSkipped += 1;
 
         const rawData = transaction as unknown as Json;
-        const { data: rawTransaction, error: rawError } = await supabase.from("external_transactions").upsert(
-          {
-            connection_id: connectionId,
-            account_id: accountId,
-            provider: "pluggy",
-            external_id: transaction.id,
-            external_account_id: account.id,
-            amount: normalized.amount,
-            currency: transaction.currencyCode ?? account.currencyCode ?? "BRL",
-            description: transaction.description ?? "Movimentação",
-            merchant_name: normalized.merchant,
-            mcc: transaction.mcc == null ? null : String(transaction.mcc),
-            posted_at: transaction.date,
-            authorized_at: transaction.createdAt ?? null,
-            status: normalized.status,
-            raw_data: rawData,
-            processed_at: new Date().toISOString(),
-          },
-          { onConflict: "provider,external_account_id,external_id" },
-        ).select("id").single();
+        const { data: rawTransaction, error: rawError } = await supabase
+          .from("external_transactions")
+          .upsert(
+            {
+              connection_id: connectionId,
+              account_id: accountId,
+              provider: "pluggy",
+              external_id: transaction.id,
+              external_account_id: account.id,
+              amount: normalized.amount,
+              currency: transaction.currencyCode ?? account.currencyCode ?? "BRL",
+              description: transaction.description ?? "Movimentação",
+              merchant_name: normalized.merchant,
+              mcc: transaction.mcc == null ? null : String(transaction.mcc),
+              posted_at: transaction.date,
+              authorized_at: transaction.createdAt ?? null,
+              status: normalized.status,
+              raw_data: rawData,
+              processed_at: null,
+            },
+            { onConflict: "provider,external_account_id,external_id" },
+          )
+          .select("id")
+          .single();
         if (rawError) throw rawError;
 
         const transactionPayload = {
@@ -259,42 +268,25 @@ export async function syncPluggyConnection(
               .eq("user_id", userId)
           : await supabase.from("transactions").insert(transactionPayload);
         if (transactionWrite.error) throw transactionWrite.error;
-        if (!existing) newTransactionDelta += normalized.amount;
+        const { error: processedError } = await supabase
+          .from("external_transactions")
+          .update({ processed_at: new Date().toISOString() })
+          .eq("id", rawTransaction.id);
+        if (processedError) throw processedError;
         transactionsImported += 1;
       }
 
-      if (latestTransactionBalance) {
-        const { error: balanceError } = await supabase
-          .from("accounts")
-          .update({
-            balance: latestTransactionBalance.value,
-            current_balance: latestTransactionBalance.value,
-            last_sync_at: new Date().toISOString(),
-          })
-          .eq("id", accountId)
-          .eq("user_id", userId);
-        if (balanceError) throw balanceError;
-      } else if (newTransactionDelta !== 0) {
-        const { data: currentAccount, error: currentAccountError } = await supabase
-          .from("accounts")
-          .select("balance, current_balance")
-          .eq("id", accountId)
-          .eq("user_id", userId)
-          .single();
-        if (currentAccountError) throw currentAccountError;
-
-        const reconciledBalance = Number(currentAccount.balance ?? 0) + newTransactionDelta;
-        const { error: balanceError } = await supabase
-          .from("accounts")
-          .update({
-            balance: reconciledBalance,
-            current_balance: reconciledBalance,
-            last_sync_at: new Date().toISOString(),
-          })
-          .eq("id", accountId)
-          .eq("user_id", userId);
-        if (balanceError) throw balanceError;
-      }
+      // Provider balance is authoritative; never add imported transactions again.
+      const { error: balanceError } = await supabase
+        .from("accounts")
+        .update({
+          balance: account.balance,
+          current_balance: account.balance,
+          last_sync_at: new Date().toISOString(),
+        })
+        .eq("id", accountId)
+        .eq("user_id", userId);
+      if (balanceError) throw balanceError;
     }
 
     const investments = await getAllPluggyInvestments(itemId);
@@ -413,9 +405,16 @@ export async function syncPluggyConnection(
       duration_ms: Date.now() - startedAt,
       errors: [],
     });
+    logEvent("info", "openfinance.sync.completed", {
+      durationMs: Date.now() - startedAt,
+      accountsImported: accounts.length,
+      transactionsImported,
+      duplicatesSkipped,
+    });
     return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Falha desconhecida";
+    logEvent("error", "openfinance.sync.failed", { durationMs: Date.now() - startedAt });
     await supabase
       .from("account_connections")
       .update({ status: "error", error_message: message, last_error_at: new Date().toISOString() })

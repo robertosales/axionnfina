@@ -20,6 +20,8 @@ import { Label } from "@/components/ui/label";
 import { useEntityLifecycle, useGoals, useUpsertGoal } from "@/lib/finance-data";
 
 export const Route = createFileRoute("/_authenticated/goals")({
+  validateSearch: (search: Record<string, unknown>): { new?: boolean } =>
+    search["new"] === true || search["new"] === "true" ? { new: true } : {},
   head: () => ({
     meta: [
       { title: "Metas — Axionn Finance" },
@@ -45,7 +47,7 @@ function GoalsPage() {
   const { data: goals = [], isLoading } = useGoals(showArchived);
   const upsert = useUpsertGoal();
   const lifecycle = useEntityLifecycle("goal");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(Route.useSearch().new));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [target, setTarget] = useState("");

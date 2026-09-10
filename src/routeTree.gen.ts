@@ -24,13 +24,17 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedTaxesRouteImport } from './routes/_authenticated/taxes'
 import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated/transactions'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiDocumentsRouteImport } from './routes/api/documents'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiInvestmentRadarRouteImport } from './routes/api/investment-radar'
 import { Route as ApiInvestmentRadarDailyRouteImport } from './routes/api/investment-radar-daily'
+import { Route as ApiTransactionsRouteImport } from './routes/api/transactions'
 import { Route as AuthenticatedWalletIndexRouteImport } from './routes/_authenticated/wallet/index'
 import { Route as AuthenticatedWalletAccountsRouteImport } from './routes/_authenticated/wallet/accounts'
 import { Route as AuthenticatedWalletConnectRouteImport } from './routes/_authenticated/wallet/connect'
 import { Route as AuthenticatedWalletImportsRouteImport } from './routes/_authenticated/wallet/imports'
+import { Route as ApiLedgerBalancesRouteImport } from './routes/api/ledger.balances'
+import { Route as ApiTransactionsSummaryRouteImport } from './routes/api/transactions.summary'
 import { Route as ApiWebhooksOpenfinanceProviderRouteImport } from './routes/api/webhooks/openfinance/$provider'
 
 const IndexRoute = IndexRouteImport.update({
@@ -109,6 +113,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDocumentsRoute = ApiDocumentsRouteImport.update({
+  id: '/api/documents',
+  path: '/api/documents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
@@ -122,6 +131,11 @@ const ApiInvestmentRadarRoute = ApiInvestmentRadarRouteImport.update({
 const ApiInvestmentRadarDailyRoute = ApiInvestmentRadarDailyRouteImport.update({
   id: '/api/investment-radar-daily',
   path: '/api/investment-radar-daily',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTransactionsRoute = ApiTransactionsRouteImport.update({
+  id: '/api/transactions',
+  path: '/api/transactions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedWalletIndexRoute =
@@ -148,6 +162,16 @@ const AuthenticatedWalletImportsRoute =
     path: '/wallet/imports',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiLedgerBalancesRoute = ApiLedgerBalancesRouteImport.update({
+  id: '/api/ledger/balances',
+  path: '/api/ledger/balances',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTransactionsSummaryRoute = ApiTransactionsSummaryRouteImport.update({
+  id: '/summary',
+  path: '/summary',
+  getParentRoute: () => ApiTransactionsRoute,
+} as any)
 const ApiWebhooksOpenfinanceProviderRoute =
   ApiWebhooksOpenfinanceProviderRouteImport.update({
     id: '/api/webhooks/openfinance/$provider',
@@ -170,12 +194,16 @@ export interface FileRoutesByFullPath {
   '/taxes': typeof AuthenticatedTaxesRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/documents': typeof ApiDocumentsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/investment-radar': typeof ApiInvestmentRadarRoute
   '/api/investment-radar-daily': typeof ApiInvestmentRadarDailyRoute
+  '/api/transactions': typeof ApiTransactionsRouteWithChildren
   '/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/wallet/imports': typeof AuthenticatedWalletImportsRoute
+  '/api/ledger/balances': typeof ApiLedgerBalancesRoute
+  '/api/transactions/summary': typeof ApiTransactionsSummaryRoute
   '/wallet/': typeof AuthenticatedWalletIndexRoute
   '/api/webhooks/openfinance/$provider': typeof ApiWebhooksOpenfinanceProviderRoute
 }
@@ -194,12 +222,16 @@ export interface FileRoutesByTo {
   '/taxes': typeof AuthenticatedTaxesRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/documents': typeof ApiDocumentsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/investment-radar': typeof ApiInvestmentRadarRoute
   '/api/investment-radar-daily': typeof ApiInvestmentRadarDailyRoute
+  '/api/transactions': typeof ApiTransactionsRouteWithChildren
   '/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/wallet/imports': typeof AuthenticatedWalletImportsRoute
+  '/api/ledger/balances': typeof ApiLedgerBalancesRoute
+  '/api/transactions/summary': typeof ApiTransactionsSummaryRoute
   '/wallet': typeof AuthenticatedWalletIndexRoute
   '/api/webhooks/openfinance/$provider': typeof ApiWebhooksOpenfinanceProviderRoute
 }
@@ -220,12 +252,16 @@ export interface FileRoutesById {
   '/_authenticated/taxes': typeof AuthenticatedTaxesRoute
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/documents': typeof ApiDocumentsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/investment-radar': typeof ApiInvestmentRadarRoute
   '/api/investment-radar-daily': typeof ApiInvestmentRadarDailyRoute
+  '/api/transactions': typeof ApiTransactionsRouteWithChildren
   '/_authenticated/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/_authenticated/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/_authenticated/wallet/imports': typeof AuthenticatedWalletImportsRoute
+  '/api/ledger/balances': typeof ApiLedgerBalancesRoute
+  '/api/transactions/summary': typeof ApiTransactionsSummaryRoute
   '/_authenticated/wallet/': typeof AuthenticatedWalletIndexRoute
   '/api/webhooks/openfinance/$provider': typeof ApiWebhooksOpenfinanceProviderRoute
 }
@@ -246,12 +282,16 @@ export interface FileRouteTypes {
     | '/taxes'
     | '/transactions'
     | '/api/chat'
+    | '/api/documents'
     | '/api/health'
     | '/api/investment-radar'
     | '/api/investment-radar-daily'
+    | '/api/transactions'
     | '/wallet/accounts'
     | '/wallet/connect'
     | '/wallet/imports'
+    | '/api/ledger/balances'
+    | '/api/transactions/summary'
     | '/wallet/'
     | '/api/webhooks/openfinance/$provider'
   fileRoutesByTo: FileRoutesByTo
@@ -270,12 +310,16 @@ export interface FileRouteTypes {
     | '/taxes'
     | '/transactions'
     | '/api/chat'
+    | '/api/documents'
     | '/api/health'
     | '/api/investment-radar'
     | '/api/investment-radar-daily'
+    | '/api/transactions'
     | '/wallet/accounts'
     | '/wallet/connect'
     | '/wallet/imports'
+    | '/api/ledger/balances'
+    | '/api/transactions/summary'
     | '/wallet'
     | '/api/webhooks/openfinance/$provider'
   id:
@@ -295,12 +339,16 @@ export interface FileRouteTypes {
     | '/_authenticated/taxes'
     | '/_authenticated/transactions'
     | '/api/chat'
+    | '/api/documents'
     | '/api/health'
     | '/api/investment-radar'
     | '/api/investment-radar-daily'
+    | '/api/transactions'
     | '/_authenticated/wallet/accounts'
     | '/_authenticated/wallet/connect'
     | '/_authenticated/wallet/imports'
+    | '/api/ledger/balances'
+    | '/api/transactions/summary'
     | '/_authenticated/wallet/'
     | '/api/webhooks/openfinance/$provider'
   fileRoutesById: FileRoutesById
@@ -310,9 +358,12 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiDocumentsRoute: typeof ApiDocumentsRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiInvestmentRadarRoute: typeof ApiInvestmentRadarRoute
   ApiInvestmentRadarDailyRoute: typeof ApiInvestmentRadarDailyRoute
+  ApiTransactionsRoute: typeof ApiTransactionsRouteWithChildren
+  ApiLedgerBalancesRoute: typeof ApiLedgerBalancesRoute
   ApiWebhooksOpenfinanceProviderRoute: typeof ApiWebhooksOpenfinanceProviderRoute
 }
 
@@ -423,6 +474,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/documents': {
+      id: '/api/documents'
+      path: '/api/documents'
+      fullPath: '/api/documents'
+      preLoaderRoute: typeof ApiDocumentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/health': {
       id: '/api/health'
       path: '/api/health'
@@ -442,6 +500,13 @@ declare module '@tanstack/react-router' {
       path: '/api/investment-radar-daily'
       fullPath: '/api/investment-radar-daily'
       preLoaderRoute: typeof ApiInvestmentRadarDailyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/transactions': {
+      id: '/api/transactions'
+      path: '/api/transactions'
+      fullPath: '/api/transactions'
+      preLoaderRoute: typeof ApiTransactionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/wallet/': {
@@ -471,6 +536,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/wallet/imports'
       preLoaderRoute: typeof AuthenticatedWalletImportsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/ledger/balances': {
+      id: '/api/ledger/balances'
+      path: '/api/ledger/balances'
+      fullPath: '/api/ledger/balances'
+      preLoaderRoute: typeof ApiLedgerBalancesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/transactions/summary': {
+      id: '/api/transactions/summary'
+      path: '/summary'
+      fullPath: '/api/transactions/summary'
+      preLoaderRoute: typeof ApiTransactionsSummaryRouteImport
+      parentRoute: typeof ApiTransactionsRoute
     }
     '/api/webhooks/openfinance/$provider': {
       id: '/api/webhooks/openfinance/$provider'
@@ -521,14 +600,29 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface ApiTransactionsRouteChildren {
+  ApiTransactionsSummaryRoute: typeof ApiTransactionsSummaryRoute
+}
+
+const ApiTransactionsRouteChildren: ApiTransactionsRouteChildren = {
+  ApiTransactionsSummaryRoute: ApiTransactionsSummaryRoute,
+}
+
+const ApiTransactionsRouteWithChildren = ApiTransactionsRoute._addFileChildren(
+  ApiTransactionsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiDocumentsRoute: ApiDocumentsRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiInvestmentRadarRoute: ApiInvestmentRadarRoute,
   ApiInvestmentRadarDailyRoute: ApiInvestmentRadarDailyRoute,
+  ApiTransactionsRoute: ApiTransactionsRouteWithChildren,
+  ApiLedgerBalancesRoute: ApiLedgerBalancesRoute,
   ApiWebhooksOpenfinanceProviderRoute: ApiWebhooksOpenfinanceProviderRoute,
 }
 export const routeTree = rootRouteImport

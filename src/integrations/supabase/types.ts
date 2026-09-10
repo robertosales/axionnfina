@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      transaction_overrides: {
+        Row: { transaction_id: string; user_id: string; category: string | null; description: string | null; merchant: string | null; updated_at: string }
+        Insert: { transaction_id: string; user_id: string; category?: string | null; description?: string | null; merchant?: string | null; updated_at?: string }
+        Update: { category?: string | null; description?: string | null; merchant?: string | null; updated_at?: string }
+        Relationships: []
+      }
+      investment_goal_links: {
+        Row: { position_id: string; goal_id: string; user_id: string; created_at: string }
+        Insert: { position_id: string; goal_id: string; user_id: string; created_at?: string }
+        Update: { goal_id?: string }
+        Relationships: []
+      }
       ai_daily_usage: {
         Row: {
           request_count: number
@@ -2489,6 +2501,7 @@ export type Database = {
       }
     }
     Functions: {
+      edit_transaction: { Args: { p_id: string; p_changes: Json }; Returns: undefined }
       create_manual_transaction: { Args: { p_data: Json }; Returns: string }
       confirm_credit_invoice: { Args: { p_invoice_id: string }; Returns: number }
       create_credit_invoice_review: {

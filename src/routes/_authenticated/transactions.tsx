@@ -52,6 +52,8 @@ declare module "@tanstack/react-table" {
 }
 
 export const Route = createFileRoute("/_authenticated/transactions")({
+  validateSearch: (search: Record<string, unknown>): { new?: boolean } =>
+    search["new"] === true || search["new"] === "true" ? { new: true } : {},
   head: () => ({
     meta: [
       { title: "Transações — Axionn Finance" },
@@ -99,8 +101,11 @@ function TransactionsPage() {
   const updateCategory = useUpdateTransactionCategory();
   const lifecycle = useEntityLifecycle("transaction");
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(Route.useSearch().new));
   const [editTransactionId, setEditTransactionId] = useState<string | null>(null);
+  const importedEdit = transactions.find((transaction) => transaction.id === editTransactionId);
+  const financialFieldsLocked =
+    importedEdit?.recordOrigin === "open_finance" || importedEdit?.recordOrigin === "import";
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importRows, setImportRows] = useState<StatementRow[]>([]);
@@ -147,47 +152,56 @@ function TransactionsPage() {
     setOpen(true);
   }, []);
 
-  const readStatement = useCallback(async (file?: File) => {
-    if (!file) return;
-    const extension = file.name.toLowerCase().split(".").pop();
-    if (file.size > 10 * 1024 * 1024 || !["csv", "xml", "pdf"].includes(extension ?? "")) {
-      toast.error("Selecione um arquivo CSV, XML ou PDF de até 10 MB.");
-      return;
-    }
-    const accountId = importAccountId || accounts[0]?.id || "";
-    if (!accountId) {
-      toast.error("Cadastre ou selecione uma conta antes de importar.");
-      return;
-    }
-    let rows: StatementRow[];
-    if (extension === "pdf") {
-      const data = new FormData();
-      data.append("file", file);
-      data.append("kind", "statement");
-      data.append("owner_id", accountId);
-      const response = await fetch("/api/documents", { method: "POST", body: data });
-      const result = (await response.json()) as { error?: string; rows?: StatementRow[] };
-      if (!response.ok || !result.rows) throw new Error(result.error ?? "Não foi possível interpretar o PDF.");
-      rows = result.rows;
-    } else {
-      const content = await file.text();
-      rows = extension === "xml" ? parseStatementXml(content, accountId) : parseStatementCsv(content, accountId);
-    }
-    if (!rows.length) {
-      toast.error("O arquivo não contém linhas de extrato.");
-      return;
-    }
-    setImportAccountId(accountId);
-    setImportRows(rows);
-    setImportOpen(true);
-  }, [accounts, importAccountId]);
+  const readStatement = useCallback(
+    async (file?: File) => {
+      if (!file) return;
+      const extension = file.name.toLowerCase().split(".").pop();
+      if (file.size > 10 * 1024 * 1024 || !["csv", "xml", "pdf"].includes(extension ?? "")) {
+        toast.error("Selecione um arquivo CSV, XML ou PDF de até 10 MB.");
+        return;
+      }
+      const accountId = importAccountId || accounts[0]?.id || "";
+      if (!accountId) {
+        toast.error("Cadastre ou selecione uma conta antes de importar.");
+        return;
+      }
+      let rows: StatementRow[];
+      if (extension === "pdf") {
+        const data = new FormData();
+        data.append("file", file);
+        data.append("kind", "statement");
+        data.append("owner_id", accountId);
+        const response = await fetch("/api/documents", { method: "POST", body: data });
+        const result = (await response.json()) as { error?: string; rows?: StatementRow[] };
+        if (!response.ok || !result.rows)
+          throw new Error(result.error ?? "Não foi possível interpretar o PDF.");
+        rows = result.rows;
+      } else {
+        const content = await file.text();
+        rows =
+          extension === "xml"
+            ? parseStatementXml(content, accountId)
+            : parseStatementCsv(content, accountId);
+      }
+      if (!rows.length) {
+        toast.error("O arquivo não contém linhas de extrato.");
+        return;
+      }
+      setImportAccountId(accountId);
+      setImportRows(rows);
+      setImportOpen(true);
+    },
+    [accounts, importAccountId],
+  );
 
   const confirmImport = useCallback(() => {
     importTransactions.mutate(
       { accountId: importAccountId, rows: importRows },
       {
         onSuccess: (result) => {
-          toast.success(`${result.imported} lançamento(s) importado(s); ${result.ignored} ignorado(s).`);
+          toast.success(
+            `${result.imported} lançamento(s) importado(s); ${result.ignored} ignorado(s).`,
+          );
           setImportOpen(false);
           setImportRows([]);
         },
@@ -218,7 +232,12 @@ function TransactionsPage() {
     }
     const payload = {
       description: form.description.trim(),
-      amount: form.type === "income" ? value : -value,
+      amount:
+        financialFieldsLocked && importedEdit
+          ? importedEdit.amount
+          : form.type === "income"
+            ? value
+            : -value,
       type: form.type,
       category: form.category.trim() || "Outros",
       merchant: form.merchant.trim() || form.description.trim(),
@@ -240,7 +259,14 @@ function TransactionsPage() {
     } else {
       createTransaction.mutate(payload, options);
     }
-  }, [form, editTransactionId, createTransaction, updateTransaction]);
+  }, [
+    form,
+    editTransactionId,
+    createTransaction,
+    updateTransaction,
+    financialFieldsLocked,
+    importedEdit,
+  ]);
 
   const exportCsv = useCallback(() => {
     const header = "data;descricao;estabelecimento;categoria;tipo;valor";
@@ -461,7 +487,12 @@ function TransactionsPage() {
             className="sr-only"
             onChange={(event) => void readStatement(event.target.files?.[0])}
           />
-          <Button variant="outline" size="sm" onClick={() => importInputRef.current?.click()} disabled={showArchived}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => importInputRef.current?.click()}
+            disabled={showArchived}
+          >
             <Upload className="size-4" /> Importar CSV
           </Button>
           <Button size="sm" onClick={openNewTransaction} disabled={showArchived}>
@@ -516,6 +547,7 @@ function TransactionsPage() {
                 <Label htmlFor="amount">Valor</Label>
                 <Input
                   id="amount"
+                  disabled={financialFieldsLocked}
                   value={form.amount}
                   onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
                 />
@@ -524,6 +556,7 @@ function TransactionsPage() {
                 <Label htmlFor="date">Data</Label>
                 <Input
                   id="date"
+                  disabled={financialFieldsLocked}
                   type="date"
                   value={form.occurredAt}
                   onChange={(e) => setForm((p) => ({ ...p, occurredAt: e.target.value }))}
@@ -535,6 +568,7 @@ function TransactionsPage() {
                 <Label>Tipo</Label>
                 <Select
                   value={form.type}
+                  disabled={financialFieldsLocked}
                   onValueChange={(v) => setForm((p) => ({ ...p, type: v as typeof p.type }))}
                 >
                   <SelectTrigger>
@@ -565,7 +599,13 @@ function TransactionsPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Categorias de {form.type === "income" ? "receita" : form.type === "expense" ? "despesa" : "transferência"}.
+                  Categorias de{" "}
+                  {form.type === "income"
+                    ? "receita"
+                    : form.type === "expense"
+                      ? "despesa"
+                      : "transferência"}
+                  .
                 </p>
               </div>
             </div>
@@ -574,6 +614,7 @@ function TransactionsPage() {
                 <Label>Conta</Label>
                 <Select
                   value={form.accountId}
+                  disabled={financialFieldsLocked}
                   onValueChange={(v) => setForm((p) => ({ ...p, accountId: v }))}
                 >
                   <SelectTrigger>
@@ -612,22 +653,49 @@ function TransactionsPage() {
           </DialogHeader>
           <div className="space-y-3">
             <Select value={importAccountId} onValueChange={setImportAccountId}>
-              <SelectTrigger><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a conta" />
+              </SelectTrigger>
               <SelectContent>
-                {accounts.map((account) => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}
+                {accounts.map((account) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[38rem] text-left text-xs">
-                <thead className="bg-muted/40"><tr><th className="p-2">Linha</th><th>Data</th><th>Descrição</th><th>Valor</th><th>Status</th></tr></thead>
+                <thead className="bg-muted/40">
+                  <tr>
+                    <th className="p-2">Linha</th>
+                    <th>Data</th>
+                    <th>Descrição</th>
+                    <th>Valor</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
                 <tbody className="divide-y divide-border">
-                  {importRows.map((row) => <tr key={row.rowNumber}><td className="p-2">{row.rowNumber}</td><td>{row.date || "-"}</td><td>{row.description || "-"}</td><td>{row.amount ? formatBRL(row.amount) : "-"}</td><td className={row.valid ? "text-success" : "text-danger"}>{row.valid ? "Pronta" : row.errors.join(", ")}</td></tr>)}
+                  {importRows.map((row) => (
+                    <tr key={row.rowNumber}>
+                      <td className="p-2">{row.rowNumber}</td>
+                      <td>{row.date || "-"}</td>
+                      <td>{row.description || "-"}</td>
+                      <td>{row.amount ? formatBRL(row.amount) : "-"}</td>
+                      <td className={row.valid ? "text-success" : "text-danger"}>
+                        {row.valid ? "Pronta" : row.errors.join(", ")}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={confirmImport} disabled={importTransactions.isPending || !importRows.some((row) => row.valid)}>
+            <Button
+              onClick={confirmImport}
+              disabled={importTransactions.isPending || !importRows.some((row) => row.valid)}
+            >
               {importTransactions.isPending ? "Importando…" : "Confirmar importação"}
             </Button>
           </DialogFooter>

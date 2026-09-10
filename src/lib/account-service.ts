@@ -185,6 +185,8 @@ export async function upsertAccount(data: {
   open_finance?: boolean;
   external_id?: string;
   metadata?: Record<string, unknown>;
+  branch?: string;
+  account_number?: string;
 }): Promise<string | null> {
   if (data.id) {
     const { id, metadata, ...changes } = data;
@@ -205,12 +207,53 @@ export async function upsertAccount(data: {
     return updated.id;
   }
 
+  if (!data.external_id) {
+    const { data: session, error: sessionError } = await supabase.auth.getUser();
+    if (sessionError || !session.user) throw new Error("Sessão expirada");
+    const { data: created, error: createError } = await supabase
+      .from("accounts")
+      .insert({
+        user_id: session.user.id,
+        name: data.name ?? "Nova conta",
+        institution: data.institution ?? "",
+        type: data.type ?? "checking",
+        balance: data.balance ?? 0,
+        current_balance: data.balance ?? 0,
+        branch: data.branch ?? null,
+        account_number: data.account_number ?? null,
+        currency: data.currency ?? "BRL",
+        is_manual: data.is_manual ?? true,
+        is_primary: data.is_primary ?? false,
+        open_finance: data.open_finance ?? false,
+        institution_id: data.institution_id ?? null,
+        available_balance: data.available_balance ?? null,
+        credit_limit: data.credit_limit ?? null,
+        subtype: data.subtype ?? null,
+        metadata: (data.metadata ?? {}) as Json,
+      })
+      .select("id")
+      .single();
+    if (createError) throw createError;
+    return created.id;
+  }
+
   const { data: id, error } = await supabase.rpc("upsert_account", {
     p_data: data as unknown as Json,
   });
 
   if (error) {
     throw new Error(`Nao foi possivel salvar a conta: ${error.message}`);
+  }
+
+  if (data.branch !== undefined || data.account_number !== undefined) {
+    const { error: detailError } = await supabase
+      .from("accounts")
+      .update({
+        ...(data.branch !== undefined ? { branch: data.branch } : {}),
+        ...(data.account_number !== undefined ? { account_number: data.account_number } : {}),
+      })
+      .eq("id", id as string);
+    if (detailError) throw detailError;
   }
 
   return id as string;

@@ -226,8 +226,12 @@ function TransactionsPage() {
 
   const submit = useCallback(() => {
     const value = Math.abs(Number(form.amount.replace(",", ".")));
-    if (!form.description.trim() || !Number.isFinite(value) || value === 0) {
-      toast.error("Informe descrição e valor");
+    if (!form.description.trim()) {
+      toast.error("Informe a descrição da transação");
+      return;
+    }
+    if (!Number.isFinite(value) || value === 0) {
+      toast.error("Informe um valor válido maior que zero");
       return;
     }
     const payload = {
@@ -542,6 +546,16 @@ function TransactionsPage() {
             <DialogTitle>{editTransactionId ? "Editar transação" : "Nova transação"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="description">Descrição</Label>
+              <Input
+                id="description"
+                required
+                placeholder="Ex.: Parcela do financiamento"
+                value={form.description}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="amount">Valor</Label>

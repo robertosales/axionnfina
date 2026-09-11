@@ -35,6 +35,8 @@ Contas e origem dos dados + detalhe de investimentos (expansível)
 
 Zonas separadas por espaçamento maior e um leve fundo alternado nas faixas de destaque (patrimônio e insights).
 
+7. **Zona 6 recolhida**: "Contas e origem dos dados" e o detalhe de investimentos ficam dentro de um bloco expansível, fechado por padrão — informação de bastidor, sem competir com a zona 5.
+
 ## Arquivos tocados
 
 - `src/routes/_authenticated/dashboard.tsx` — reordenação das seções, nova grade de duas colunas, tons semânticos nos KPIs, aviso único de estado vazio, destaque violeta no bloco de insights.

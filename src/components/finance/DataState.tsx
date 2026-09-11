@@ -8,12 +8,15 @@ export function DataState({
   empty,
   children,
   onRetry,
+  suppressEmpty,
 }: {
   loading?: boolean;
   error?: unknown;
   empty?: boolean;
   children: ReactNode;
   onRetry?: () => void;
+  /** When true, renders nothing instead of the default empty message. */
+  suppressEmpty?: boolean;
 }) {
   if (loading)
     return (
@@ -44,7 +47,8 @@ export function DataState({
         )}
       </div>
     );
-  if (empty)
+  if (empty) {
+    if (suppressEmpty) return null;
     return (
       <div className="flex flex-col items-center gap-3 px-4 py-10 text-center text-sm text-muted-foreground">
         <Inbox className="size-8" aria-hidden />

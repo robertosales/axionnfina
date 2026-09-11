@@ -1,4 +1,4 @@
-import { DashboardCharts } from "@/components/finance/DashboardCharts";
+import { AllocationSection, CashflowSection } from "@/components/finance/DashboardCharts";
 import { DataState } from "@/components/finance/DataState";
 import { InvestmentPurpose } from "@/components/finance/InvestmentPurpose";
 import { snapshotChange, syncFreshness, wealthSummary } from "@/lib/wealth-summary";
@@ -179,6 +179,27 @@ function Dashboard() {
     transactionCount: transactions.length,
   });
 
+  // No real data yet: show a single call-to-action instead of repeating
+  // empty messages inside each card.
+  const baseDataLoaded = !loadingAccounts && !loadingTransactions;
+  const hasData = accounts.length > 0 || transactions.length > 0;
+  const showEmptyCta = baseDataLoaded && !hasData && !accountsError && !transactionsError;
+
+  // Semantic tones for the KPI strip
+  const debtsTone = totalDebts > 0 ? "danger" : "success";
+  const liquidityTone = liquidity > 0 ? "success" : liquidity < 0 ? "danger" : "default";
+  const savingsTone =
+    monthlyIncome <= 0 ? "default" : savingsRate > 0 ? "success" : savingsRate < 0 ? "danger" : "default";
+  const nextBillDays = nextBill ? daysUntil(nextBill.dueDate) : null;
+  const billTone =
+    nextBill === undefined || nextBillDays === null
+      ? "default"
+      : nextBillDays < 0
+        ? "danger"
+        : nextBillDays <= 7
+          ? "warning"
+          : "default";
+
   return (
     <AppShell>
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -244,10 +265,28 @@ function Dashboard() {
         </Card>
       ) : (
         <>
-          {/* KPIs */}
+          {/* Chamada única de estado vazio */}
+          {showEmptyCta && (
+            <Card className="mb-8 flex flex-col items-center gap-3 rounded-2xl border-primary/30 bg-primary/5 p-8 text-center">
+              <Sparkles className="size-8 text-primary" aria-hidden />
+              <h2 className="text-lg font-semibold">Comece conectando suas contas</h2>
+              <p className="max-w-md text-sm text-muted-foreground">
+                Assim que houver dados, este painel mostra patrimônio, fluxo de caixa, orçamento e
+                insights do agente automaticamente.
+              </p>
+              <Button asChild className="mt-2">
+                <Link to="/wallet/connect">
+                  <Landmark className="size-4" aria-hidden />
+                  Conectar contas
+                </Link>
+              </Button>
+            </Card>
+          )}
+
+          {/* Zona 1 — KPIs */}
           <section
             aria-label="Indicadores"
-            className="mb-6 grid gap-4 sm:grid-cols-2 2xl:grid-cols-4"
+            className="mb-8 grid gap-4 sm:grid-cols-2 2xl:grid-cols-4"
           >
             <KPICard
               label="Dívidas nas contas"
@@ -259,6 +298,7 @@ function Dashboard() {
                     : formatBRL(totalDebts)
               }
               icon={TrendingUp}
+              tone={loadingAccounts || accountsError ? "default" : debtsTone}
             />
             <KPICard
               label="Liquidez imediata"
@@ -271,6 +311,7 @@ function Dashboard() {
               }
               icon={Wallet}
               sparkline={cashflow.map((p) => ({ value: p.saldo }))}
+              tone={loadingAccounts || accountsError ? "default" : liquidityTone}
             />
             <KPICard
               label="Taxa de poupança"
@@ -289,7 +330,7 @@ function Dashboard() {
                   : "Sem receitas anteriores para comparar"
               }
               icon={ArrowUpRight}
-              tone="success"
+              tone={loadingTransactions || transactionsError ? "default" : savingsTone}
             />
             <KPICard
               label="Próximo vencimento"
@@ -306,15 +347,13 @@ function Dashboard() {
                   : "Sem contas abertas"
               }
               icon={CalendarClock}
-              tone="danger"
+              tone={loadingBills || billsError ? "default" : billTone}
             />
           </section>
 
-          <section
-            aria-label="Resumo patrimonial"
-            className="mb-6 grid min-w-0 gap-4 lg:grid-cols-3"
-          >
-            <Card className="min-w-0 rounded-2xl border-primary/20 p-5 sm:p-6 lg:col-span-2">
+          {/* Zona 2 — Hero: patrimônio líquido */}
+          <section aria-label="Resumo patrimonial" className="mb-8">
+            <Card className="min-w-0 rounded-2xl border-primary/20 bg-primary/[0.03] p-5 sm:p-6">
               <p className="text-sm font-medium text-muted-foreground">Patrimônio líquido</p>
               <DataState
                 loading={loadingAccounts || loadingInvestments}
@@ -356,6 +395,7 @@ function Dashboard() {
                 loading={loadingHistory}
                 error={historyError}
                 empty={netWorthSeries.length === 0}
+                suppressEmpty={showEmptyCta}
               >
                 <div
                   className="mt-4 h-44"
@@ -420,171 +460,26 @@ function Dashboard() {
                 </Link>
               </p>
             </Card>
-            <div className="min-w-0 space-y-4">
-              <DataState loading={loadingNextStep} error={nextStepError}>
-                <HealthScore
-                  score={healthScore}
-                  breakdown={healthBreakdown}
-                  confidence={healthConfidence}
-                />
-              </DataState>
-              <Card className="p-5">
-                <h2 className="font-semibold">Sua próxima conquista</h2>
-                <DataState loading={loadingGoals} error={goalsError} empty={goals.length === 0}>
-                  {[...goals]
-                    .filter((goal) => goal.target > 0 && goal.current < goal.target)
-                    .sort((a, b) => b.current / b.target - a.current / a.target)
-                    .slice(0, 1)
-                    .map((goal) => (
-                      <div key={goal.id}>
-                        <p className="mt-3 text-sm">{goal.name}</p>
-                        <p className="numeric mt-1 text-lg font-semibold">
-                          {formatBRL(Math.max(0, goal.target - goal.current))} para chegar lá
-                        </p>
-                      </div>
-                    ))}
-                </DataState>
-                <Link
-                  to="/goals"
-                  className="focus-ring mt-3 inline-block rounded text-sm text-primary underline"
-                >
-                  Acompanhar metas
-                </Link>
-              </Card>
-            </div>
           </section>
 
-          <FinancialNextStepCard
-            analysis={nextStep}
-            isLoading={loadingNextStep}
-            hasError={nextStepError}
-          />
-
-          <section className="mt-6 grid gap-4 lg:grid-cols-3">
-            <div className="space-y-3 lg:col-span-2">
-              <h2 className="text-base font-semibold">Próximas contas</h2>
-              <Card className="rounded-xl border-border/60 p-0 shadow-elevation-1">
-                <DataState loading={loadingBills} error={billsError}>
-                  {!loadingBills && !billsError && openBills.length === 0 && (
-                    <p className="p-4 text-sm text-muted-foreground">Nenhuma conta em aberto.</p>
-                  )}
-                  <ul className="divide-y divide-border/60">
-                    {openBills.slice(0, 4).map((bill) => {
-                      const days = daysUntil(bill.dueDate);
-                      return (
-                        <li key={bill.id} className="flex items-center justify-between gap-3 p-4">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">{bill.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatShortDate(bill.dueDate)} ·{" "}
-                              {days < 0 ? `${Math.abs(days)} d em atraso` : `em ${days} d`}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="numeric text-sm font-semibold">
-                              {formatBRL(bill.amount)}
-                            </p>
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "mt-1 rounded-full text-[10px]",
-                                bill.status === "OVERDUE" && "border-danger/50 text-danger",
-                                bill.status === "SCHEDULED" && "border-success/50 text-success",
-                              )}
-                            >
-                              {bill.status === "OVERDUE"
-                                ? "Atrasada"
-                                : bill.status === "SCHEDULED"
-                                  ? "Agendada"
-                                  : "Pendente"}
-                            </Badge>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <Link
-                    to="/bills"
-                    className="focus-ring m-4 inline-block rounded text-sm text-primary underline"
-                  >
-                    Ver todas as contas
-                  </Link>
-                </DataState>
-              </Card>
-            </div>
-
-            <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
-              <h3 className="text-sm font-semibold">Saúde do orçamento</h3>
-              <DataState
-                loading={loadingBudget}
-                error={budgetError}
-                empty={budgetItems.length === 0}
-              >
-                <div className="mt-4 space-y-4">
-                  {budgetItems.slice(0, 4).map((item) => (
-                    <BudgetProgress key={item.id} item={item} />
-                  ))}
-                </div>
-              </DataState>
-            </Card>
-          </section>
-
-          <DashboardCharts
-            cashflowTruncated={cashflowTruncated}
-            cashflow={cashflow}
-            loadingTransactions={loadingTransactions}
-            transactionsError={transactionsError}
-            transactions={transactions}
-            loadingInvestments={loadingInvestments}
-            investmentsError={investmentsError}
-            allocation={allocation}
-          />
-
-          {/* Health Score + Anomaly Detection */}
-          <section className="mt-6 grid gap-4 lg:grid-cols-2">
-            <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+          {/* Zona 3 — Insights do agente (IA) */}
+          <section aria-label="Insights do agente" className="mb-8">
+            <Card className="rounded-2xl border-primary/50 bg-primary/[0.04] p-5 shadow-elevation-1 sm:p-6">
               <div className="flex items-center gap-2">
-                <Shield className="size-4 text-primary" aria-hidden />
-                <h2 className="text-sm font-semibold">Detecção de anomalias</h2>
+                <span className="grid size-8 place-items-center rounded-lg bg-primary/15 text-primary">
+                  <Sparkles className="size-4" aria-hidden />
+                </span>
+                <h2 className="text-base font-semibold">Insights do agente</h2>
+                <Badge variant="outline" className="rounded-full border-primary/40 text-primary">
+                  IA
+                </Badge>
               </div>
-              <div className="mt-4 space-y-3">
-                <DataState loading={loadingTransactions} error={transactionsError}>
-                  {anomalies.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      Nenhuma anomalia detectada nos últimos meses.
-                    </p>
-                  ) : (
-                    anomalies.slice(0, 3).map((anomaly) => (
-                      <article
-                        key={anomaly.category}
-                        className={cn(
-                          "rounded-lg border p-3",
-                          anomaly.severity === "danger"
-                            ? "border-danger/40 bg-danger/5"
-                            : "border-warning/40 bg-warning/5",
-                        )}
-                      >
-                        <h3 className="text-sm font-medium">{anomaly.category}</h3>
-                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                          {anomaly.message}
-                        </p>
-                      </article>
-                    ))
-                  )}
-                </DataState>
-              </div>
-            </Card>
-
-            <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
-              <div className="flex items-center gap-2">
-                <Sparkles className="size-4 text-primary" aria-hidden />
-                <h2 className="text-sm font-semibold">Insights do agente</h2>
-              </div>
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 <DataState
                   loading={loadingInsights}
                   error={insightsError}
                   empty={agentInsights.length === 0}
+                  suppressEmpty={showEmptyCta}
                 >
                   {agentInsights.slice(0, 3).map((insight) => (
                     <article
@@ -613,74 +508,257 @@ function Dashboard() {
             </Card>
           </section>
 
-          <details className="mt-6 rounded-xl border border-border bg-card p-5">
-            <summary className="focus-ring cursor-pointer rounded font-semibold">
-              Investimentos: objetivos, riscos e próximos vencimentos
-            </summary>
-            <div className="mt-4">
-              <DataState loading={loadingInvestments} error={investmentsError}>
-                <InvestmentPurpose positions={positions} />
-              </DataState>
-            </div>
-          </details>
+          {/* Zona 4 — Seu próximo passo */}
+          <div className="mb-8">
+            <FinancialNextStepCard
+              analysis={nextStep}
+              isLoading={loadingNextStep}
+              hasError={nextStepError}
+              compact={hasData}
+            />
+          </div>
 
-          {/* Budget + Accounts + Bills */}
-          <section className="mt-6 grid gap-4 lg:grid-cols-3">
-            <ChartCard
-              title="Transações recentes"
-              description="Últimas movimentações registradas"
-              className="lg:col-span-2"
-            >
-              <DataState
-                loading={loadingTransactions}
-                error={transactionsError}
-                empty={transactions.length === 0}
+          {/* Zona 5 — Duas colunas */}
+          <section aria-label="Detalhes" className="mb-8 grid min-w-0 gap-6 lg:grid-cols-3">
+            {/* Coluna principal */}
+            <div className="min-w-0 space-y-6 lg:col-span-2">
+              <CashflowSection
+                cashflowTruncated={cashflowTruncated}
+                cashflow={cashflow}
+                loadingTransactions={loadingTransactions}
+                transactionsError={transactionsError}
+                transactions={transactions}
+                suppressEmpty={showEmptyCta}
+              />
+
+              <div>
+                <h2 className="mb-3 text-base font-semibold">Próximas contas</h2>
+                <Card className="rounded-xl border-border/60 p-0 shadow-elevation-1">
+                  <DataState loading={loadingBills} error={billsError}>
+                    {!loadingBills && !billsError && openBills.length === 0 && (
+                      <p className="p-4 text-sm text-muted-foreground">Nenhuma conta em aberto.</p>
+                    )}
+                    <ul className="divide-y divide-border/60">
+                      {openBills.slice(0, 4).map((bill) => {
+                        const days = daysUntil(bill.dueDate);
+                        return (
+                          <li key={bill.id} className="flex items-center justify-between gap-3 p-4">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">{bill.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatShortDate(bill.dueDate)} ·{" "}
+                                {days < 0 ? `${Math.abs(days)} d em atraso` : `em ${days} d`}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="numeric text-sm font-semibold">
+                                {formatBRL(bill.amount)}
+                              </p>
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "mt-1 rounded-full text-[10px]",
+                                  bill.status === "OVERDUE" && "border-danger/50 text-danger",
+                                  bill.status === "SCHEDULED" && "border-success/50 text-success",
+                                )}
+                              >
+                                {bill.status === "OVERDUE"
+                                  ? "Atrasada"
+                                  : bill.status === "SCHEDULED"
+                                    ? "Agendada"
+                                    : "Pendente"}
+                              </Badge>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <Link
+                      to="/bills"
+                      className="focus-ring m-4 inline-block rounded text-sm text-primary underline"
+                    >
+                      Ver todas as contas
+                    </Link>
+                  </DataState>
+                </Card>
+              </div>
+
+              <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+                <h3 className="text-sm font-semibold">Saúde do orçamento</h3>
+                <DataState
+                  loading={loadingBudget}
+                  error={budgetError}
+                  empty={budgetItems.length === 0}
+                  suppressEmpty={showEmptyCta}
+                >
+                  <div className="mt-4 space-y-4">
+                    {budgetItems.slice(0, 4).map((item) => (
+                      <BudgetProgress key={item.id} item={item} />
+                    ))}
+                  </div>
+                </DataState>
+              </Card>
+
+              <ChartCard
+                title="Transações recentes"
+                description="Últimas movimentações registradas"
               >
-                <ul className="divide-y divide-border">
-                  {transactions.slice(0, 5).map((transaction) => (
-                    <li key={transaction.id} className="flex flex-wrap justify-between gap-3 py-3">
-                      <div className="min-w-0">
-                        <p className="break-words text-sm font-medium">{transaction.description}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatShortDate(transaction.date)} ·{" "}
-                          {transaction.kind === "income"
-                            ? "Receita"
-                            : transaction.kind === "expense"
-                              ? "Despesa"
-                              : "Transferência"}{" "}
-                          · {transaction.category}
+                <DataState
+                  loading={loadingTransactions}
+                  error={transactionsError}
+                  empty={transactions.length === 0}
+                  suppressEmpty={showEmptyCta}
+                >
+                  <ul className="divide-y divide-border">
+                    {transactions.slice(0, 5).map((transaction) => (
+                      <li
+                        key={transaction.id}
+                        className="flex flex-wrap justify-between gap-3 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="break-words text-sm font-medium">
+                            {transaction.description}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatShortDate(transaction.date)} ·{" "}
+                            {transaction.kind === "income"
+                              ? "Receita"
+                              : transaction.kind === "expense"
+                                ? "Despesa"
+                                : "Transferência"}{" "}
+                            · {transaction.category}
+                          </p>
+                        </div>
+                        <p className="numeric text-sm font-semibold">
+                          {formatBRL(transaction.amount)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    to="/transactions"
+                    className="focus-ring mt-3 inline-block rounded text-sm text-primary underline"
+                  >
+                    Ver transações
+                  </Link>
+                </DataState>
+              </ChartCard>
+            </div>
+
+            {/* Coluna lateral */}
+            <div className="min-w-0 space-y-6">
+              <DataState loading={loadingNextStep} error={nextStepError}>
+                <HealthScore
+                  score={healthScore}
+                  breakdown={healthBreakdown}
+                  confidence={healthConfidence}
+                />
+              </DataState>
+
+              <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+                <h2 className="font-semibold">Sua próxima conquista</h2>
+                <DataState
+                  loading={loadingGoals}
+                  error={goalsError}
+                  empty={goals.length === 0}
+                  suppressEmpty={showEmptyCta}
+                >
+                  {[...goals]
+                    .filter((goal) => goal.target > 0 && goal.current < goal.target)
+                    .sort((a, b) => b.current / b.target - a.current / a.target)
+                    .slice(0, 1)
+                    .map((goal) => (
+                      <div key={goal.id}>
+                        <p className="mt-3 text-sm">{goal.name}</p>
+                        <p className="numeric mt-1 text-lg font-semibold">
+                          {formatBRL(Math.max(0, goal.target - goal.current))} para chegar lá
                         </p>
                       </div>
-                      <p className="numeric text-sm font-semibold">
-                        {formatBRL(transaction.amount)}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
+                    ))}
+                </DataState>
                 <Link
-                  to="/transactions"
+                  to="/goals"
                   className="focus-ring mt-3 inline-block rounded text-sm text-primary underline"
                 >
-                  Ver transações
+                  Acompanhar metas
                 </Link>
-              </DataState>
-            </ChartCard>
+              </Card>
 
-            <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
-              <h2 className="text-base font-semibold">Contas e origem dos dados</h2>
-              <DataState
-                loading={loadingAccounts}
-                error={accountsError}
-                empty={accounts.length === 0}
-              >
-                <div className="mt-4 grid gap-3">
-                  {accounts.map((account) => (
-                    <AccountCard key={account.id} account={account} />
-                  ))}
+              <AllocationSection
+                loadingInvestments={loadingInvestments}
+                investmentsError={investmentsError}
+                allocation={allocation}
+                suppressEmpty={showEmptyCta}
+              />
+
+              <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+                <div className="flex items-center gap-2">
+                  <Shield className="size-4 text-primary" aria-hidden />
+                  <h2 className="text-sm font-semibold">Detecção de anomalias</h2>
                 </div>
-              </DataState>
-            </Card>
+                <div className="mt-4 space-y-3">
+                  <DataState loading={loadingTransactions} error={transactionsError}>
+                    {anomalies.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        Nenhuma anomalia detectada nos últimos meses.
+                      </p>
+                    ) : (
+                      anomalies.slice(0, 3).map((anomaly) => (
+                        <article
+                          key={anomaly.category}
+                          className={cn(
+                            "rounded-lg border p-3",
+                            anomaly.severity === "danger"
+                              ? "border-danger/40 bg-danger/5"
+                              : "border-warning/40 bg-warning/5",
+                          )}
+                        >
+                          <h3 className="text-sm font-medium">{anomaly.category}</h3>
+                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                            {anomaly.message}
+                          </p>
+                        </article>
+                      ))
+                    )}
+                  </DataState>
+                </div>
+              </Card>
+            </div>
           </section>
+
+          {/* Zona 6 — Bastidores (recolhido por padrão) */}
+          <details className="rounded-2xl border border-border bg-card p-5">
+            <summary className="focus-ring cursor-pointer rounded font-semibold">
+              Contas, origem dos dados e detalhes de investimentos
+            </summary>
+            <div className="mt-6 grid gap-6 lg:grid-cols-3">
+              <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1 lg:col-span-1">
+                <h2 className="text-base font-semibold">Contas e origem dos dados</h2>
+                <DataState
+                  loading={loadingAccounts}
+                  error={accountsError}
+                  empty={accounts.length === 0}
+                  suppressEmpty={showEmptyCta}
+                >
+                  <div className="mt-4 grid gap-3">
+                    {accounts.map((account) => (
+                      <AccountCard key={account.id} account={account} />
+                    ))}
+                  </div>
+                </DataState>
+              </Card>
+              <div className="lg:col-span-2">
+                <h2 className="text-base font-semibold">
+                  Investimentos: objetivos, riscos e próximos vencimentos
+                </h2>
+                <div className="mt-4">
+                  <DataState loading={loadingInvestments} error={investmentsError}>
+                    <InvestmentPurpose positions={positions} />
+                  </DataState>
+                </div>
+              </div>
+            </div>
+          </details>
         </>
       )}
     </AppShell>

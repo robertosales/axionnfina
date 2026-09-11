@@ -41,6 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
 import { parseStatementXml } from "@/lib/document-import";
 import {
   useAccounts,
@@ -244,7 +245,14 @@ function TransactionsPage() {
         data.append("file", file);
         data.append("kind", "statement");
         data.append("owner_id", accountId);
-        const response = await fetch("/api/documents", { method: "POST", body: data });
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) throw new Error("Sessão expirada");
+        const response = await fetch("/api/documents", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: data,
+        });
         const result = (await response.json()) as { error?: string; rows?: StatementRow[] };
         if (!response.ok || !result.rows)
           throw new Error(result.error ?? "Não foi possível interpretar o PDF.");

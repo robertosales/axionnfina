@@ -75,7 +75,14 @@ function InvoiceImportPage() {
         data.append("file", file);
         data.append("kind", "credit_invoice");
         data.append("owner_id", resolvedId);
-        const response = await fetch("/api/documents", { method: "POST", body: data });
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) throw new Error("Sessão expirada");
+        const response = await fetch("/api/documents", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: data,
+        });
         const result = (await response.json()) as { rows?: DocumentRow[] };
         if (!response.ok || !result.rows) throw new Error("Invalid document");
         parsed = result.rows;

@@ -13,14 +13,20 @@ type FinancialNextStepCardProps = {
   analysis: FinancialReadiness;
   isLoading?: boolean;
   hasError?: boolean;
+  /** Compact one-line variant for users who already have real data. */
+  compact?: boolean;
 };
 
 export function FinancialNextStepCard({
   analysis,
   isLoading,
   hasError,
+  compact,
 }: FinancialNextStepCardProps) {
   if (isLoading) {
+    if (compact) {
+      return <Skeleton className="h-12 w-full rounded-xl" />;
+    }
     return (
       <Card className="overflow-hidden rounded-2xl border-border/60 shadow-elevation-1">
         <div className="space-y-5 p-5 sm:p-6">

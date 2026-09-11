@@ -68,6 +68,28 @@ export function FinancialNextStepCard({
   const currentIndex = FINANCIAL_JOURNEY.findIndex((item) => item.id === analysis.stage);
   const isEstimate = analysis.confidence.label === "Baixa";
 
+  if (compact) {
+    return (
+      <Card className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-border/60 p-4 shadow-elevation-1">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+            <Compass className="size-4" aria-hidden />
+          </span>
+          <p className="truncate text-sm">
+            <span className="font-medium">Próximo passo: </span>
+            <span className="text-muted-foreground">{analysis.title}</span>
+          </p>
+        </div>
+        <Button asChild variant="ghost" size="sm" className="shrink-0">
+          <Link to={analysis.href}>
+            {analysis.ctaLabel}
+            <ArrowRight aria-hidden />
+          </Link>
+        </Button>
+      </Card>
+    );
+  }
+
   return (
     <Card className="overflow-hidden rounded-2xl border-primary/20 shadow-elevation-1">
       <div className="border-b border-border/60 px-5 py-4 sm:px-6">

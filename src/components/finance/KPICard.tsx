@@ -72,6 +72,24 @@ export function KPICard({
               aria-hidden="true"
             />
             {label}
+            {description && (
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-grid size-4 place-items-center rounded-full text-muted-foreground/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      aria-label={`O que é ${label}?`}
+                    >
+                      <Info className="size-3" aria-hidden />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    {description}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </p>
           <p className="numeric mt-1 break-words text-xl font-semibold tracking-tight sm:text-2xl">
             {value}

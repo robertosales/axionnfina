@@ -1,9 +1,10 @@
 import type { LucideIcon } from "lucide-react";
-import { TrendingDown, TrendingUp } from "lucide-react";
+import { Info, TrendingDown, TrendingUp } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,7 @@ type Props = {
   icon: LucideIcon;
   change?: number;
   hint?: string;
+  description?: string;
   sparkline?: Array<{ value: number }>;
   tone?: "default" | "success" | "warning" | "danger";
 };

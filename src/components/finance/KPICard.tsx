@@ -4,7 +4,6 @@ import { Area, AreaChart, ResponsiveContainer } from "recharts";
 
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -19,10 +18,10 @@ type Props = {
 };
 
 const toneRing: Record<NonNullable<Props["tone"]>, string> = {
-  default: "text-primary",
-  success: "text-success",
-  warning: "text-warning",
-  danger: "text-danger",
+  default: "bg-primary/15 text-primary",
+  success: "bg-success/15 text-success",
+  warning: "bg-warning/15 text-warning",
+  danger: "bg-danger/15 text-danger",
 };
 
 export function KPICard({
@@ -37,24 +36,22 @@ export function KPICard({
   const positive = (change ?? 0) >= 0;
 
   return (
-    <Card className="surface-elevated relative gap-0 overflow-hidden rounded-xl border-border/60 p-5 transition-[transform,box-shadow] duration-150 ease-out motion-safe:hover:-translate-y-0.5 hover:shadow-elevation-3">
-      <div className="flex items-start justify-between gap-3">
-        <span className="text-sm font-medium text-muted-foreground">{label}</span>
-        <span className={cn("rounded-lg bg-muted/60 p-2", toneRing[tone])}>
-          <Icon className="size-4" aria-hidden />
+    <Card className="surface-elevated relative h-full rounded-2xl border-border/40 p-5">
+      <div className="flex items-center gap-4">
+        <span
+          className={cn("grid size-12 shrink-0 place-items-center rounded-full", toneRing[tone])}
+        >
+          <Icon className="size-6" aria-hidden />
         </span>
-      </div>
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <p className="numeric mt-3 cursor-default text-2xl font-semibold tracking-tight">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <p className="numeric mt-1 break-words text-xl font-semibold tracking-tight sm:text-2xl">
             {value}
           </p>
-        </TooltipTrigger>
-        <TooltipContent>{hint ?? label}</TooltipContent>
-      </Tooltip>
+        </div>
+      </div>
 
-      <div className="mt-2 flex items-end justify-between gap-4">
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         {change !== undefined ? (
           <span
             className={cn(
@@ -71,7 +68,7 @@ export function KPICard({
         )}
 
         {sparkline && (
-          <div className="h-8 w-24">
+          <div className="h-8 w-24 shrink-0" aria-hidden="true">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={sparkline}>
                 <defs>
@@ -81,6 +78,7 @@ export function KPICard({
                   </linearGradient>
                 </defs>
                 <Area
+                  isAnimationActive={false}
                   type="monotone"
                   dataKey="value"
                   stroke="var(--color-primary)"

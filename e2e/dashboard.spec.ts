@@ -110,6 +110,45 @@ test.beforeEach(async ({ page }) => {
     const url = new URL(route.request().url());
     if (url.hostname !== "example.supabase.co") return route.abort();
     if (url.pathname === "/auth/v1/user") return route.fulfill({ json: user });
+    if (url.pathname === "/rest/v1/rpc/get_wallet_summary")
+      return route.fulfill({
+        json: {
+          totals: {
+            total_accounts: 1,
+            checking_count: 1,
+            savings_count: 0,
+            credit_count: 0,
+            investment_count: 0,
+            total_balance: 18420.55,
+            liquid_balance: 18420.55,
+            investment_balance: 0,
+            total_credit_limit: 0,
+            total_available_credit: 0,
+          },
+          by_institution: [
+            { name: "Banco de teste", logo_color: null, account_count: 1, balance: 18420.55 },
+          ],
+          accounts: [
+            {
+              id: "account-1",
+              name: "Conta principal",
+              institution_name: "Banco de teste",
+              logo_color: null,
+              type: "checking",
+              balance: 18420.55,
+              available_balance: 18420.55,
+              is_primary: true,
+              is_manual: true,
+              open_finance: false,
+              card_last_four: null,
+              card_brand: null,
+              last_sync_at: null,
+              currency: "BRL",
+              record_origin: "manual",
+            },
+          ],
+        },
+      });
     const table = url.pathname.split("/").at(-1) ?? "";
     return route.fulfill({ json: rows[table] ?? [] });
   });
@@ -132,7 +171,7 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-for (const width of [320, 768, 1440]) {
+for (const width of [320, 768, 1440, 1920]) {
   test(`dashboard e privacidade em ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto("/dashboard");
@@ -328,7 +367,19 @@ test("tabela permite ordenação por teclado e edição de categoria", async ({ 
 for (const width of [320, 1440]) {
   test(`telas financeiras sem overflow em ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 });
-    for (const path of ["transactions", "bills", "budget", "goals", "reports", "reconciliation"]) {
+    for (const path of [
+      "transactions",
+      "bills",
+      "budget",
+      "goals",
+      "reports",
+      "reconciliation",
+      "settings",
+      "investments",
+      "wallet/accounts",
+      "wallet",
+      "taxes",
+    ]) {
       await page.goto(`/${path}`);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       await expect(page.getByText("Carregando dados…", { exact: true })).toHaveCount(0);
@@ -336,7 +387,99 @@ for (const width of [320, 1440]) {
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
         path,
       ).toBe(true);
-      await page.screenshot({ path: `test-results/${path}-${width}.png`, fullPage: true });
+      await page.screenshot({
+        path: `test-results/${path.replaceAll("/", "-")}-${width}.png`,
+        fullPage: true,
+      });
     }
   });
 }
+
+test("menu recolhido persiste ao navegar e recarregar, com acesso por teclado", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/dashboard");
+  await page.getByRole("button", { name: "Recolher menu", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Expandir menu", exact: true })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  const sidebar = page.getByRole("complementary", { name: "Menu lateral" });
+  await expect(sidebar).toHaveCSS("width", "80px");
+  await page.screenshot({ path: "test-results/sidebar-collapsed.png", fullPage: true });
+  await sidebar.getByRole("link", { name: "Relatórios", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Relatórios", exact: true })).toBeVisible();
+  await expect(sidebar).toHaveCSS("width", "80px");
+  await page.reload();
+  await expect(sidebar).toHaveCSS("width", "80px");
+  await page.getByRole("button", { name: "Expandir menu", exact: true }).click();
+  await expect(sidebar).toHaveCSS("width", "264px");
+});
+
+test("novo lançamento na lateral reabre formulário e preserva preenchimento ao redimensionar", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/transactions");
+  await page.getByRole("button", { name: "Novo lançamento", exact: true }).click();
+  await page.getByLabel("Descrição", { exact: true }).fill("Rascunho preservado");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByLabel("Descrição", { exact: true })).toHaveValue("Rascunho preservado");
+  await page.getByRole("button", { name: "Fechar", exact: true }).click();
+  await page.getByRole("button", { name: "Abrir menu", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Novo lançamento", exact: true })
+    .filter({ visible: true })
+    .click();
+  await expect(page.getByRole("heading", { name: "Nova transação", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Descrição", { exact: true })).toHaveValue("");
+});
+
+test("relatório mantém período, valores e exportação com o gráfico", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/reports");
+  await page.getByLabel("Período", { exact: true }).selectOption("3");
+  const table = page.getByRole("table");
+  await expect(table.locator("tbody tr")).toHaveCount(3);
+  await expect(table.locator("tbody tr").last()).toContainText("R$ 5.000,00");
+  await expect(page.getByRole("img", { name: /Receitas e despesas por mês/ })).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exportar relatório" }).click();
+  const stream = await (await download).createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream!) chunks.push(Buffer.from(chunk));
+  const csv = Buffer.concat(chunks).toString("utf8");
+  expect(csv.trim().split("\r\n")).toHaveLength(4);
+  expect(csv).toContain("5000,00;0,00;5000,00");
+  await expect(page.getByRole("link", { name: "Novo lançamento", exact: true })).toHaveText(
+    "Novo lançamento",
+  );
+  await page.screenshot({
+    path: "test-results/reports-wide.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  await page.getByRole("button", { name: "Alternar tema" }).click();
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
+  await expect(
+    page.getByRole("button", { name: "Buscar ou perguntar ao agente…", exact: true }),
+  ).toHaveCSS("background-color", /^(oklch\(1 0 0\)|rgb\(255, 255, 255\))$/);
+  await page.screenshot({
+    path: "test-results/reports-light.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+});
+
+test("filtros ativos são visíveis e limpeza restaura a listagem", async ({ page }) => {
+  await page.goto("/transactions");
+  await page.getByLabel("Buscar transações").fill("Sem correspondência");
+  await expect(page.getByLabel("Filtros ativos")).toContainText("Sem correspondência");
+  await expect(page.getByText("Nenhum resultado encontrado.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Limpar filtros", exact: true }).click();
+  await expect(page.getByLabel("Filtros ativos")).toHaveCount(0);
+  await expect(page.getByText("Receita de teste", { exact: true })).toBeVisible();
+});

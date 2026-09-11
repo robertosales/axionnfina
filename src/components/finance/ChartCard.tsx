@@ -12,8 +12,8 @@ type Props = {
 
 export function ChartCard({ title, description, action, children, className }: Props) {
   return (
-    <Card className={`min-w-0 rounded-xl border-border/60 shadow-elevation-1 ${className ?? ""}`}>
-      <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
+    <Card className={`min-w-0 rounded-2xl border-border/40 shadow-elevation-1 ${className ?? ""}`}>
+      <CardHeader className="flex-row flex-wrap items-start justify-between gap-4 space-y-0">
         <div>
           <CardTitle className="text-base">{title}</CardTitle>
           {description && <CardDescription className="mt-1">{description}</CardDescription>}

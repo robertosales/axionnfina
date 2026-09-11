@@ -116,7 +116,7 @@ function AuthPage() {
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center gap-3">
           <span
-            className="grid size-11 place-items-center rounded-xl text-primary-foreground"
+            className="grid size-11 place-items-center rounded-xl text-action-foreground"
             style={{ background: "var(--gradient-primary)" }}
           >
             <Coins className="size-6" aria-hidden />

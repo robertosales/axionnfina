@@ -67,9 +67,14 @@ export function DataTable<TData, TValue>({
     initialState: { pagination: { pageSize } },
   });
   return (
-    <div className={cn("min-w-0 rounded-xl border border-border/60 shadow-elevation-1", className)}>
+    <div
+      className={cn(
+        "min-w-0 overflow-hidden rounded-2xl border border-border/50 bg-card shadow-elevation-1",
+        className,
+      )}
+    >
       {(enableFiltering || toolbar) && (
-        <div className="flex flex-wrap gap-3 border-b p-3">
+        <div className="flex flex-wrap gap-3 border-b p-4">
           {enableFiltering && (
             <Input
               aria-label="Filtrar tabela"
@@ -104,7 +109,7 @@ export function DataTable<TData, TValue>({
                         : undefined
                   }
                   className={cn(
-                    "px-3 py-3 text-xs font-medium text-muted-foreground",
+                    "px-4 py-4 text-xs font-semibold text-foreground",
                     header.id === "amount" && "text-right",
                   )}
                 >
@@ -156,7 +161,7 @@ export function DataTable<TData, TValue>({
                       <td
                         key={cell.id}
                         className={cn(
-                          "px-3 py-3",
+                          "px-4 py-4",
                           cell.column.id === "amount" && "whitespace-nowrap text-right",
                         )}
                       >
@@ -191,7 +196,7 @@ export function DataTable<TData, TValue>({
           </tbody>
         </table>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t p-3 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-xs text-muted-foreground">
         <span role="status">
           {table.getFilteredRowModel().rows.length} registros · Página{" "}
           {table.getState().pagination.pageIndex + 1} de {Math.max(1, table.getPageCount())}

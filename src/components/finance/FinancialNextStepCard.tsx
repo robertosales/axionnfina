@@ -63,7 +63,7 @@ export function FinancialNextStepCard({
   const isEstimate = analysis.confidence.label === "Baixa";
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card to-card shadow-elevation-1">
+    <Card className="overflow-hidden rounded-2xl border-primary/20 shadow-elevation-1">
       <div className="border-b border-border/60 px-5 py-4 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">

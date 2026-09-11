@@ -244,14 +244,77 @@ function Dashboard() {
         </Card>
       ) : (
         <>
+          {/* KPIs */}
+          <section
+            aria-label="Indicadores"
+            className="mb-6 grid gap-4 sm:grid-cols-2 2xl:grid-cols-4"
+          >
+            <KPICard
+              label="Dívidas nas contas"
+              value={
+                accountsError
+                  ? "Indisponível"
+                  : loadingAccounts
+                    ? "Carregando…"
+                    : formatBRL(totalDebts)
+              }
+              icon={TrendingUp}
+            />
+            <KPICard
+              label="Liquidez imediata"
+              value={
+                accountsError
+                  ? "Indisponível"
+                  : loadingAccounts
+                    ? "Carregando…"
+                    : formatBRL(liquidity)
+              }
+              icon={Wallet}
+              sparkline={cashflow.map((p) => ({ value: p.saldo }))}
+            />
+            <KPICard
+              label="Taxa de poupança"
+              value={
+                transactionsError
+                  ? "Indisponível"
+                  : loadingTransactions
+                    ? "Carregando…"
+                    : monthlyIncome > 0
+                      ? formatPercent(savingsRate)
+                      : "Sem receitas"
+              }
+              hint={
+                previousMonth && previousMonth.receitas > 0
+                  ? `${formatPercent(savingsRate - previousSavingsRate).replace("%", "")} p.p. em relação ao mês anterior`
+                  : "Sem receitas anteriores para comparar"
+              }
+              icon={ArrowUpRight}
+              tone="success"
+            />
+            <KPICard
+              label="Próximo vencimento"
+              value={
+                billsError
+                  ? "Indisponível"
+                  : loadingBills
+                    ? "Carregando…"
+                    : formatBRL(nextBill?.amount ?? 0)
+              }
+              hint={
+                nextBill
+                  ? `${nextBill.name} · ${formatShortDate(nextBill.dueDate)}`
+                  : "Sem contas abertas"
+              }
+              icon={CalendarClock}
+              tone="danger"
+            />
+          </section>
+
           <section
             aria-label="Resumo patrimonial"
             className="mb-6 grid min-w-0 gap-4 lg:grid-cols-3"
           >
-            <Card
-              className="min-w-0 rounded-2xl border-primary/20 p-5 sm:p-6 lg:col-span-2"
-              style={{ background: "var(--gradient-surface)" }}
-            >
+            <Card className="min-w-0 rounded-2xl border-primary/20 p-5 sm:p-6 lg:col-span-2">
               <p className="text-sm font-medium text-muted-foreground">Patrimônio líquido</p>
               <DataState
                 loading={loadingAccounts || loadingInvestments}
@@ -302,7 +365,15 @@ function Dashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={netWorthSeries.slice(-historyMonths)} accessibilityLayer>
                       <XAxis dataKey="month" axisLine={false} tickLine={false} fontSize={12} />
-                      <RTooltip formatter={(value: number) => formatBRL(value)} />
+                      <RTooltip
+                        formatter={(value: number) => formatBRL(value)}
+                        contentStyle={{
+                          background: "var(--popover)",
+                          color: "var(--foreground)",
+                          border: "1px solid var(--border)",
+                          borderRadius: 16,
+                        }}
+                      />
                       <Area
                         dataKey="value"
                         name="Patrimônio"
@@ -389,72 +460,6 @@ function Dashboard() {
             hasError={nextStepError}
           />
 
-          {/* KPIs */}
-          <section
-            aria-label="Indicadores"
-            className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-          >
-            <KPICard
-              label="Dívidas nas contas"
-              value={
-                accountsError
-                  ? "Indisponível"
-                  : loadingAccounts
-                    ? "Carregando…"
-                    : formatBRL(totalDebts)
-              }
-              icon={TrendingUp}
-            />
-            <KPICard
-              label="Liquidez imediata"
-              value={
-                accountsError
-                  ? "Indisponível"
-                  : loadingAccounts
-                    ? "Carregando…"
-                    : formatBRL(liquidity)
-              }
-              icon={Wallet}
-              sparkline={cashflow.map((p) => ({ value: p.saldo }))}
-            />
-            <KPICard
-              label="Taxa de poupança"
-              value={
-                transactionsError
-                  ? "Indisponível"
-                  : loadingTransactions
-                    ? "Carregando…"
-                    : monthlyIncome > 0
-                      ? formatPercent(savingsRate)
-                      : "Sem receitas"
-              }
-              hint={
-                previousMonth && previousMonth.receitas > 0
-                  ? `${formatPercent(savingsRate - previousSavingsRate).replace("%", "")} p.p. em relação ao mês anterior`
-                  : "Sem receitas anteriores para comparar"
-              }
-              icon={ArrowUpRight}
-              tone="success"
-            />
-            <KPICard
-              label="Próximo vencimento"
-              value={
-                billsError
-                  ? "Indisponível"
-                  : loadingBills
-                    ? "Carregando…"
-                    : formatBRL(nextBill?.amount ?? 0)
-              }
-              hint={
-                nextBill
-                  ? `${nextBill.name} · ${formatShortDate(nextBill.dueDate)}`
-                  : "Sem contas abertas"
-              }
-              icon={CalendarClock}
-              tone="danger"
-            />
-          </section>
-
           <section className="mt-6 grid gap-4 lg:grid-cols-3">
             <div className="space-y-3 lg:col-span-2">
               <h2 className="text-base font-semibold">Próximas contas</h2>
@@ -523,6 +528,17 @@ function Dashboard() {
               </DataState>
             </Card>
           </section>
+
+          <DashboardCharts
+            cashflowTruncated={cashflowTruncated}
+            cashflow={cashflow}
+            loadingTransactions={loadingTransactions}
+            transactionsError={transactionsError}
+            transactions={transactions}
+            loadingInvestments={loadingInvestments}
+            investmentsError={investmentsError}
+            allocation={allocation}
+          />
 
           {/* Health Score + Anomaly Detection */}
           <section className="mt-6 grid gap-4 lg:grid-cols-2">
@@ -596,17 +612,6 @@ function Dashboard() {
               </div>
             </Card>
           </section>
-
-          <DashboardCharts
-            cashflowTruncated={cashflowTruncated}
-            cashflow={cashflow}
-            loadingTransactions={loadingTransactions}
-            transactionsError={transactionsError}
-            transactions={transactions}
-            loadingInvestments={loadingInvestments}
-            investmentsError={investmentsError}
-            allocation={allocation}
-          />
 
           <details className="mt-6 rounded-xl border border-border bg-card p-5">
             <summary className="focus-ring cursor-pointer rounded font-semibold">

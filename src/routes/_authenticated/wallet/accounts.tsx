@@ -238,11 +238,13 @@ function AccountsPage() {
                     key={account.id}
                     className="flex flex-wrap items-center justify-between gap-3 p-4"
                   >
-                    <div className="flex items-center gap-4">
-                      <Icon className="size-5 text-muted-foreground" />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{account.name}</p>
+                    <div className="flex min-w-0 items-center gap-4">
+                      <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary/15 text-primary">
+                        <Icon className="size-5" aria-hidden />
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="break-words font-medium">{account.name}</p>
                           {account.is_primary && (
                             <Badge variant="secondary" className="gap-1 text-[10px]">
                               <Star className="size-3" /> Principal
@@ -260,8 +262,10 @@ function AccountsPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <p className="text-lg font-semibold">{formatBRL(account.balance)}</p>
+                    <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-3">
+                      <p className="numeric break-words text-lg font-semibold">
+                        {formatBRL(account.balance)}
+                      </p>
                       {!showArchived && !account.is_primary && (
                         <Button
                           variant="ghost"

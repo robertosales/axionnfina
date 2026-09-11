@@ -33,8 +33,8 @@ export function AccountCard({ account }: { account: Account }) {
   const negative = account.balance < 0;
 
   return (
-    <Card className="flex min-w-0 flex-row flex-wrap items-center gap-3 rounded-xl border-border/60 p-4 shadow-elevation-1 transition-[box-shadow,transform] duration-150 ease-out motion-safe:hover:-translate-y-0.5 hover:shadow-elevation-2">
-      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted text-foreground/80">
+    <Card className="flex min-w-0 flex-row flex-wrap items-center gap-4 rounded-2xl border-border/40 p-5 shadow-elevation-1">
+      <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary/15 text-primary">
         <Icon className="size-5" aria-hidden />
       </span>
 
@@ -57,10 +57,10 @@ export function AccountCard({ account }: { account: Account }) {
         </p>
       </div>
 
-      <div className="ml-auto shrink-0 text-right">
+      <div className="ml-auto min-w-0 max-w-full text-right">
         <p
           className={cn(
-            "numeric text-sm font-semibold",
+            "numeric break-words text-lg font-semibold",
             negative ? "text-expense" : "text-foreground",
           )}
         >

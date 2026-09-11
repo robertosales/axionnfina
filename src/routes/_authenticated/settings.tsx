@@ -1,4 +1,5 @@
 import { FinancialForm } from "@/components/finance/FinancialForm";
+import { DataState } from "@/components/finance/DataState";
 import { MoneyInput } from "@/components/finance/MoneyInput";
 import { ValidatedInput } from "@/components/finance/ValidatedInput";
 import { parseFinancialInput } from "@/lib/financial-input";
@@ -175,8 +176,8 @@ function SettingsPage() {
         </p>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
-        <div className="space-y-3">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-5">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-base font-semibold">Minhas contas</h2>
             <Button size="sm" onClick={() => setOpen(true)}>
@@ -193,34 +194,40 @@ function SettingsPage() {
             ))}
           </div>
 
-          <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+          <Card className="rounded-2xl border-border/50 p-5 shadow-elevation-1">
             <div className="flex items-center gap-2">
               <Tags className="size-4 text-primary" aria-hidden />
-              <h2 className="text-sm font-semibold">Categorias</h2>
+              <h2 className="text-lg font-semibold">Categorias</h2>
             </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_150px_auto]">
-              <Label className="sr-only" htmlFor="category-label">
-                Nome da categoria
-              </Label>
-              <Input
-                id="category-label"
-                value={categoryLabel}
-                onChange={(event) => setCategoryLabel(event.target.value)}
-                placeholder="Nova categoria"
-              />
-              <Select
-                value={categoryKind}
-                onValueChange={(value) => setCategoryKind(value as "income" | "expense")}
-              >
-                <SelectTrigger aria-label="Tipo da categoria">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="expense">Despesa</SelectItem>
-                  <SelectItem value="income">Receita</SelectItem>
-                  <SelectItem value="transfer">Transferência</SelectItem>
-                </SelectContent>
-              </Select>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Organize os nomes usados nos seus lançamentos.
+            </p>
+            <div className="mt-5 grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_150px_auto]">
+              <div className="space-y-2">
+                <Label htmlFor="category-label">Nome da categoria</Label>
+                <Input
+                  id="category-label"
+                  value={categoryLabel}
+                  onChange={(event) => setCategoryLabel(event.target.value)}
+                  placeholder="Nova categoria"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category-kind">Tipo</Label>
+                <Select
+                  value={categoryKind}
+                  onValueChange={(value) => setCategoryKind(value as "income" | "expense")}
+                >
+                  <SelectTrigger id="category-kind" aria-label="Tipo da categoria">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="expense">Despesa</SelectItem>
+                    <SelectItem value="income">Receita</SelectItem>
+                    <SelectItem value="transfer">Transferência</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button
                 onClick={saveCategory}
                 disabled={createCategory.isPending || !categoryLabel.trim()}
@@ -228,86 +235,99 @@ function SettingsPage() {
                 <Plus className="size-4" /> Adicionar
               </Button>
             </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {(categoriesQuery.data ?? []).map((category) => (
-                <div key={category.id} className="space-y-2">
-                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm">{category.label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {category.kind === "income"
-                          ? "Receita"
-                          : category.kind === "expense"
-                            ? "Despesa"
-                            : "Sistema"}
-                      </p>
+            <DataState
+              loading={categoriesQuery.isLoading}
+              error={categoriesQuery.error}
+              empty={!categoriesQuery.data?.length}
+              onRetry={() => void categoriesQuery.refetch()}
+            >
+              <div className="mt-5 overflow-hidden rounded-xl border border-border/60">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 bg-muted px-4 py-3 text-xs font-semibold">
+                  <span>Nome e tipo</span>
+                  <span>Ações</span>
+                </div>
+                {(categoriesQuery.data ?? []).map((category) => (
+                  <div key={category.id} className="border-t border-border/60">
+                    <div className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-muted/30">
+                      <div className="min-w-0">
+                        <p className="break-words text-sm font-medium">{category.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {category.kind === "income"
+                            ? "Receita"
+                            : category.kind === "expense"
+                              ? "Despesa"
+                              : "Sistema"}
+                        </p>
+                      </div>
+                      {!category.isSystem && (
+                        <div className="flex shrink-0 gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-10"
+                            title="Editar categoria"
+                            aria-label={`Editar categoria ${category.label}`}
+                            onClick={() => {
+                              setEditingCategoryId(category.id);
+                              setEditingCategoryLabel(category.label);
+                            }}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-10"
+                            title="Arquivar categoria"
+                            aria-label={`Arquivar categoria ${category.label}`}
+                            onClick={() =>
+                              archiveCategory.mutate(category.id, {
+                                onSuccess: () => toast.success("Categoria arquivada"),
+                                onError: (error) =>
+                                  toast.error(
+                                    "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                                  ),
+                              })
+                            }
+                          >
+                            <Archive className="size-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                    {!category.isSystem && (
-                      <div className="flex shrink-0 gap-1">
+                    {editingCategoryId === category.id && (
+                      <div className="flex flex-wrap gap-2 bg-muted/20 p-4">
+                        <Input
+                          value={editingCategoryLabel}
+                          onChange={(event) => setEditingCategoryLabel(event.target.value)}
+                          aria-label="Novo nome da categoria"
+                        />
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8"
-                          title="Editar categoria"
-                          onClick={() => {
-                            setEditingCategoryId(category.id);
-                            setEditingCategoryLabel(category.label);
-                          }}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8"
-                          title="Arquivar categoria"
+                          size="sm"
                           onClick={() =>
-                            archiveCategory.mutate(category.id, {
-                              onSuccess: () => toast.success("Categoria arquivada"),
-                              onError: (error) =>
-                                toast.error(
-                                  "Não foi possível concluir a operação. Confira os dados e tente novamente.",
-                                ),
-                            })
+                            updateCategory.mutate(
+                              { id: category.id, label: editingCategoryLabel },
+                              {
+                                onSuccess: () => {
+                                  setEditingCategoryId(null);
+                                  toast.success("Categoria atualizada");
+                                },
+                                onError: (error) =>
+                                  toast.error(
+                                    "Não foi possível concluir a operação. Confira os dados e tente novamente.",
+                                  ),
+                              },
+                            )
                           }
                         >
-                          <Archive className="size-4" />
+                          Salvar
                         </Button>
                       </div>
                     )}
                   </div>
-                  {editingCategoryId === category.id && (
-                    <div className="flex gap-2">
-                      <Input
-                        value={editingCategoryLabel}
-                        onChange={(event) => setEditingCategoryLabel(event.target.value)}
-                        aria-label="Novo nome da categoria"
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          updateCategory.mutate(
-                            { id: category.id, label: editingCategoryLabel },
-                            {
-                              onSuccess: () => {
-                                setEditingCategoryId(null);
-                                toast.success("Categoria atualizada");
-                              },
-                              onError: (error) =>
-                                toast.error(
-                                  "Não foi possível concluir a operação. Confira os dados e tente novamente.",
-                                ),
-                            },
-                          )
-                        }
-                      >
-                        Salvar
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </DataState>
           </Card>
         </div>
 

@@ -41,10 +41,10 @@ export function HealthScore({ score, breakdown, confidence, sparkline }: HealthS
   const offset = circumference * (1 - score / 100);
 
   return (
-    <Card className="surface-elevated relative gap-0 overflow-hidden rounded-xl border-border/60 p-5 transition-[transform,box-shadow] duration-150 ease-out motion-safe:hover:-translate-y-0.5 hover:shadow-elevation-3">
+    <Card className="surface-elevated relative gap-0 overflow-hidden rounded-2xl border-border/40 p-5">
       <div className="flex items-start justify-between gap-3">
         <span className="text-sm font-medium text-muted-foreground">Saúde financeira</span>
-        <span className={cn("rounded-lg bg-muted/60 p-2", level.color)}>
+        <span className={cn("rounded-full bg-muted/60 p-2", level.color)}>
           <Activity className="size-4" aria-hidden />
         </span>
       </div>

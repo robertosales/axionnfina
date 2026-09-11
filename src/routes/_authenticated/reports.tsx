@@ -1,4 +1,5 @@
 import { DataState } from "@/components/finance/DataState";
+import { CashflowChart } from "@/components/finance/CashflowChart";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -77,43 +78,54 @@ function ReportsPage() {
         onRetry={() => void cashflow.refetch()}
       >
         <Card className="overflow-hidden">
-          <div
-            role="region"
-            aria-label="Fluxo de caixa mensal"
-            tabIndex={0}
-            className="overflow-auto"
-          >
-            <table className="w-full min-w-[480px] text-sm">
-              <caption className="p-4 text-left font-semibold">
-                Fluxo de caixa · últimos {months} meses, incluindo o mês atual
-              </caption>
-              <thead>
-                <tr>
-                  <th className="p-3 text-left" scope="col">
-                    Mês/ano
-                  </th>
-                  {["Receitas", "Despesas", "Resultado"].map((label) => (
-                    <th key={label} className="p-3 text-right" scope="col">
-                      {label}
+          <div className="border-b border-border/60 px-5 py-5 sm:px-6">
+            <h2 className="text-lg font-semibold">Receitas e despesas</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Últimos {months} meses, incluindo o mês atual
+            </p>
+          </div>
+          <div className="grid min-w-0 2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+            <div className="min-w-0 p-3 sm:p-6">
+              <CashflowChart data={cashflow.data} />
+            </div>
+            <div
+              role="region"
+              aria-label="Fluxo de caixa mensal"
+              tabIndex={0}
+              className="min-w-0 overflow-auto border-t border-border/60 2xl:border-l 2xl:border-t-0"
+            >
+              <table className="w-full min-w-[480px] text-sm">
+                <caption className="p-4 text-left font-semibold">
+                  Fluxo de caixa · últimos {months} meses, incluindo o mês atual
+                </caption>
+                <thead>
+                  <tr>
+                    <th className="p-3 text-left" scope="col">
+                      Mês/ano
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {cashflow.data.map((row) => (
-                  <tr key={row.month} className="border-t">
-                    <th className="p-3 text-left font-normal" scope="row">
-                      {row.month}
-                    </th>
-                    {[row.receitas, row.despesas, row.saldo].map((value, index) => (
-                      <td key={index} className="numeric whitespace-nowrap p-3 text-right">
-                        {formatBRL(value)}
-                      </td>
+                    {["Receitas", "Despesas", "Resultado"].map((label) => (
+                      <th key={label} className="p-3 text-right" scope="col">
+                        {label}
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {cashflow.data.map((row) => (
+                    <tr key={row.month} className="border-t">
+                      <th className="p-3 text-left font-normal" scope="row">
+                        {row.month}
+                      </th>
+                      {[row.receitas, row.despesas, row.saldo].map((value, index) => (
+                        <td key={index} className="numeric whitespace-nowrap p-3 text-right">
+                          {formatBRL(value)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </Card>
       </DataState>

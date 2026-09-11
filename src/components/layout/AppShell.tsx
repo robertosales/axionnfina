@@ -1,7 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { AnimatePresence, motion } from "framer-motion";
 import {
-  Bell,
   Bot,
   CalendarClock,
   Coins,
@@ -14,6 +12,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   PiggyBank,
+  Plus,
   Receipt,
   Search,
   Settings,
@@ -23,7 +22,7 @@ import {
   Target,
   Wallet,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -74,61 +73,59 @@ const navItems: NavItem[] = [
   { to: "/settings", label: "Configurações", icon: Settings, group: "Sistema" },
 ];
 
+function readPreference(key: string) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function savePreference(key: string, value: string) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Preferences remain usable for this session if browser storage is unavailable.
+  }
+}
+
 function useTheme() {
   const [dark, setDark] = useState(true);
-
   useEffect(() => {
-    const stored = window.localStorage.getItem("axionn-theme");
-    const isDark = stored ? stored === "dark" : true;
+    const isDark = readPreference("axionn-theme") !== "light";
     setDark(isDark);
     document.documentElement.classList.toggle("dark", isDark);
   }, []);
-
   const toggle = () => {
-    setDark((prev) => {
-      const next = !prev;
-      document.documentElement.classList.toggle("dark", next);
-      window.localStorage.setItem("axionn-theme", next ? "dark" : "light");
-      return next;
-    });
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    savePreference("axionn-theme", next ? "dark" : "light");
   };
-
   return { dark, toggle };
 }
 
 function Brand({ collapsed }: { collapsed: boolean }) {
   return (
-    <Link to="/dashboard" className="focus-ring flex items-center gap-2.5 rounded-lg px-1 py-1">
-      <motion.span
-        layout
-        className="grid size-9 shrink-0 place-items-center rounded-xl text-primary-foreground"
-        style={{ background: "var(--gradient-primary)" }}
-      >
-        <Coins className="size-5" aria-hidden />
-      </motion.span>
-      <AnimatePresence mode="wait">
-        {!collapsed && (
-          <motion.span
-            initial={{ opacity: 0, width: 0 }}
-            animate={{ opacity: 1, width: "auto" }}
-            exit={{ opacity: 0, width: 0 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="flex overflow-hidden whitespace-nowrap"
-          >
-            <span className="flex flex-col leading-tight">
-              <span className="text-sm font-semibold tracking-tight">Axionn</span>
-              <span className="text-[11px] text-muted-foreground">Finance</span>
-            </span>
-          </motion.span>
-        )}
-      </AnimatePresence>
+    <Link
+      to="/dashboard"
+      aria-label="Axionn Finance — início"
+      className="focus-ring flex min-w-0 items-center gap-3 rounded-xl"
+    >
+      <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-action text-action-foreground">
+        <Coins className="size-6" aria-hidden />
+      </span>
+      {!collapsed && (
+        <span className="whitespace-nowrap text-xl font-semibold tracking-tight">
+          Axionn<span className="font-normal text-muted-foreground">Fina</span>
+        </span>
+      )}
     </Link>
   );
 }
 
 function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-
   return (
     <nav aria-label="Navegação principal" className="flex flex-col gap-1 px-3">
       {navItems.map((item, index) => {
@@ -136,41 +133,23 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
           pathname === item.to || (item.to !== "/wallet" && pathname.startsWith(`${item.to}/`));
         const link = (
           <Link
-            key={item.to}
             to={item.to}
             onClick={onNavigate}
             aria-label={collapsed ? item.label : undefined}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "focus-ring group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
-              "transition-[color,background-color,box-shadow] duration-150 ease-out",
+              "focus-ring relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
               active
-                ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-elevation-1"
-                : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground before:absolute before:-left-3 before:h-6 before:w-1 before:rounded-r-full before:bg-action"
+                : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
               collapsed && "justify-center px-0",
             )}
           >
             <item.icon
-              className={cn(
-                "size-[18px] shrink-0",
-                item.highlight && !active && "text-primary",
-                active && "text-sidebar-primary",
-              )}
+              className={cn("size-[19px] shrink-0", active && "text-sidebar-primary")}
               aria-hidden
             />
-            <AnimatePresence mode="wait">
-              {!collapsed && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: "auto" }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                  className="overflow-hidden whitespace-nowrap"
-                >
-                  {item.label}
-                </motion.span>
-              )}
-            </AnimatePresence>
+            {!collapsed && <span className="min-w-0 leading-snug">{item.label}</span>}
             {!collapsed && item.highlight && (
               <Badge variant="secondary" className="ml-auto rounded-full text-[10px]">
                 beta
@@ -178,186 +157,195 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
             )}
           </Link>
         );
-
-        if (!collapsed)
-          return (
-            <div key={item.to}>
-              {navItems[index - 1]?.group !== item.group && (
-                <p className="px-3 pb-2 pt-4 text-xs font-semibold text-muted-foreground">
+        return (
+          <div key={item.to}>
+            {navItems[index - 1]?.group !== item.group &&
+              (collapsed ? (
+                index > 0 && <div className="mx-3 my-3 border-t border-sidebar-border" />
+              ) : (
+                <p className="px-3 pb-2 pt-5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                   {item.group}
                 </p>
-              )}
-              {link}
-            </div>
-          );
-        return (
-          <Tooltip key={item.to}>
-            <TooltipTrigger asChild>{link}</TooltipTrigger>
-            <TooltipContent side="right">{item.label}</TooltipContent>
-          </Tooltip>
+              ))}
+            {collapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>{link}</TooltipTrigger>
+                <TooltipContent side="right">{item.label}</TooltipContent>
+              </Tooltip>
+            ) : (
+              link
+            )}
+          </div>
         );
       })}
     </nav>
   );
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  onNewTransaction,
+  newTransactionDisabled = false,
+}: {
+  children: ReactNode;
+  onNewTransaction?: () => void;
+  newTransactionDisabled?: boolean;
+}) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [mobile, setMobile] = useState(false);
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 1023px)");
-    const update = () => setMobile(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
   const [collapsed, setCollapsed] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { dark, toggle } = useTheme();
   const { name, initials, signOut } = useSessionUser();
 
-  return (
-    <div className="min-h-screen bg-background">
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+  useEffect(() => {
+    setCollapsed(readPreference("axionn-sidebar") === "collapsed");
+  }, []);
 
-      {/* Desktop Sidebar */}
-      <motion.aside
-        animate={{ width: collapsed ? 80 : 256 }}
-        transition={{ duration: 0.2, ease: "easeOut" }}
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-sidebar-border bg-sidebar",
-          "lg:flex",
-        )}
+  const toggleSidebar = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    savePreference("axionn-sidebar", next ? "collapsed" : "expanded");
+  };
+
+  const newAction = (compact: boolean, closeMobile = false) => (
+    <Button
+      asChild={!onNewTransaction}
+      disabled={newTransactionDisabled}
+      className={cn("h-12", compact ? "w-12 px-0" : "w-full justify-start px-5")}
+      aria-label="Novo lançamento"
+      title={compact ? "Novo lançamento" : undefined}
+      onClick={
+        onNewTransaction
+          ? () => {
+              if (closeMobile) setMobileOpen(false);
+              onNewTransaction();
+            }
+          : undefined
+      }
+    >
+      {onNewTransaction ? (
+        <>
+          <Plus aria-hidden />
+          {!compact && "Novo lançamento"}
+        </>
+      ) : (
+        <Link
+          to="/transactions"
+          search={{ new: true }}
+          onClick={() => closeMobile && setMobileOpen(false)}
+        >
+          <Plus aria-hidden />
+          {!compact && "Novo lançamento"}
+        </Link>
+      )}
+    </Button>
+  );
+
+  return (
+    <div
+      className="min-h-screen bg-background"
+      style={{ "--sidebar-width": collapsed ? "80px" : "264px" } as CSSProperties}
+    >
+      <a
+        href="#main-content"
+        className="sr-only fixed left-4 top-4 z-50 rounded-xl bg-action px-4 py-3 text-action-foreground focus:not-sr-only"
+      >
+        Ir para o conteúdo
+      </a>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <aside
+        id="desktop-sidebar"
+        aria-label="Menu lateral"
+        className="fixed inset-y-0 left-0 z-40 hidden w-[var(--sidebar-width)] flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 lg:flex"
       >
         <div
-          className={cn(
-            "flex h-16 items-center border-b border-sidebar-border px-4",
-            collapsed && "justify-center px-0",
-          )}
+          className={cn("flex h-24 shrink-0 items-center px-6", collapsed && "justify-center px-0")}
         >
           <Brand collapsed={collapsed} />
         </div>
-        <div className="flex-1 overflow-y-auto py-4">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={toggleSidebar}
+          className="absolute -right-4 top-8 size-8 bg-sidebar text-muted-foreground"
+          aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+          aria-expanded={!collapsed}
+          aria-controls="desktop-sidebar"
+        >
+          {collapsed ? <PanelLeftOpen aria-hidden /> : <PanelLeftClose aria-hidden />}
+        </Button>
+        <div className={cn("px-5 pb-2", collapsed && "px-4")}>{newAction(collapsed)}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-5">
           <NavList collapsed={collapsed} />
         </div>
-        <div className="border-t border-sidebar-border p-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCollapsed((v) => !v)}
-            className="w-full justify-center text-muted-foreground"
-            aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
-          >
-            {collapsed ? (
-              <PanelLeftOpen className="size-4" />
-            ) : (
-              <>
-                <PanelLeftClose className="size-4" /> Recolher
-              </>
-            )}
-          </Button>
-        </div>
-      </motion.aside>
+      </aside>
 
-      {/* Main content */}
-      <motion.div
-        animate={{ paddingLeft: collapsed ? 80 : 256 }}
-        transition={{ duration: 0.2, ease: "easeOut" }}
-        className="hidden lg:block"
-      >
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md lg:px-10">
-          <button
-            type="button"
-            onClick={() => setPaletteOpen(true)}
-            className="focus-ring hidden h-9 w-full max-w-sm items-center gap-2 rounded-lg border border-input bg-muted/40 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted sm:flex"
-          >
-            <Search className="size-4" aria-hidden />
-            <span>Buscar ou perguntar ao agente…</span>
-            <kbd className="numeric ml-auto rounded border border-border bg-background px-1.5 py-0.5 text-[10px]">
-              ⌘K
-            </kbd>
-          </button>
-
-          <div className="ml-auto flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="sm:hidden"
-              onClick={() => setPaletteOpen(true)}
-              aria-label="Buscar"
-            >
-              <Search className="size-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema">
-              {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
-            </Button>
-            <Button variant="ghost" size="icon" className="relative" aria-label="Notificações">
-              <Bell className="size-5" />
-              <span className="absolute right-2 top-2 size-2 rounded-full bg-danger ring-2 ring-background" />
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="ml-1" aria-label="Menu do perfil">
-                  <Avatar className="size-8">
-                    <AvatarFallback className="bg-accent text-xs text-accent-foreground">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="truncate">{name}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/settings">Configurações</Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => void signOut()}>Sair</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
-
-        <main className="min-h-[calc(100vh-4rem)] p-6 lg:p-10">
-          <div className="mx-auto w-full max-w-7xl">{!mobile && children}</div>
-        </main>
-      </motion.div>
-
-      {/* Mobile Header */}
-      <div className="lg:hidden">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md">
+      <div className="transition-[padding-left] duration-200 lg:pl-[var(--sidebar-width)]">
+        <header className="sticky top-0 z-30 flex h-20 items-center gap-3 border-b border-border/50 bg-background px-4 sm:px-6 lg:px-8">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Abrir menu">
-                <Menu className="size-5" />
+              <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menu">
+                <Menu aria-hidden />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 bg-sidebar p-0">
+            <SheetContent
+              side="left"
+              className="flex w-[min(300px,calc(100vw-2rem))] flex-col gap-0 bg-sidebar p-0"
+            >
               <SheetTitle className="sr-only">Menu</SheetTitle>
-              <div className="flex h-16 items-center border-b border-sidebar-border px-4">
+              <div className="flex h-20 shrink-0 items-center px-5">
                 <Brand collapsed={false} />
               </div>
-              <div className="overflow-y-auto py-4">
+              <div className="px-5 pb-2">{newAction(false, true)}</div>
+              <div className="min-h-0 flex-1 overflow-y-auto pb-6">
                 <NavList collapsed={false} onNavigate={() => setMobileOpen(false)} />
               </div>
             </SheetContent>
           </Sheet>
-
-          <Brand collapsed />
-
-          <div className="ml-auto flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema">
-              {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+          <div className="hidden sm:block lg:hidden">
+            <Brand collapsed />
+          </div>
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            className="focus-ring hidden h-11 min-w-0 flex-1 max-w-sm items-center gap-3 rounded-full bg-card px-4 text-sm text-muted-foreground transition-colors hover:bg-muted md:flex"
+          >
+            <Search className="size-4 shrink-0" aria-hidden />
+            <span className="truncate">Buscar ou perguntar ao agente…</span>
+          </button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setPaletteOpen(true)}
+            aria-label="Buscar"
+          >
+            <Search aria-hidden />
+          </Button>
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggle}
+              aria-label="Alternar tema"
+              title={dark ? "Usar tema claro" : "Usar tema escuro"}
+            >
+              {dark ? <Sun aria-hidden /> : <Moon aria-hidden />}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="ml-1" aria-label="Menu do perfil">
-                  <Avatar className="size-8">
+                <Button
+                  variant="ghost"
+                  className="max-w-60 gap-3 px-2 sm:px-3"
+                  aria-label="Menu do perfil"
+                >
+                  <Avatar className="size-9 shrink-0">
                     <AvatarFallback className="bg-accent text-xs text-accent-foreground">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
+                  <span className="hidden max-w-40 truncate lg:block">{name}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -372,41 +360,37 @@ export function AppShell({ children }: { children: ReactNode }) {
             </DropdownMenu>
           </div>
         </header>
-
-        <main className="min-h-[calc(100vh-4rem)] p-4 pb-28">
-          <div className="mx-auto w-full max-w-7xl">{mobile && children}</div>
-        </main>
-        <nav
-          aria-label="Navegação inferior"
-          className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border bg-background px-1 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="min-h-[calc(100vh-5rem)] px-4 py-6 pb-28 outline-none sm:px-6 lg:px-8 lg:py-8 lg:pb-10"
         >
-          {navItems
-            .filter((item) =>
-              ["/dashboard", "/wallet", "/investments", "/goals", "/agent"].includes(item.to),
-            )
-            .sort(
-              (a, b) =>
-                ["/dashboard", "/wallet", "/investments", "/goals", "/agent"].indexOf(a.to) -
-                ["/dashboard", "/wallet", "/investments", "/goals", "/agent"].indexOf(b.to),
-            )
-            .map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                aria-current={pathname === item.to ? "page" : undefined}
-                className={cn(
-                  "focus-ring flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-lg text-[10px]",
-                  pathname === item.to
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground",
-                )}
-              >
-                <item.icon className="size-5" aria-hidden />
-                <span>{item.label}</span>
-              </Link>
-            ))}
-        </nav>
+          <div className="app-page mx-auto w-full min-w-0 max-w-[1600px]">{children}</div>
+        </main>
       </div>
+
+      <nav
+        aria-label="Navegação inferior"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border bg-sidebar px-1 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
+      >
+        {["/dashboard", "/wallet", "/investments", "/goals", "/agent"].map((to) => {
+          const item = navItems.find((entry) => entry.to === to)!;
+          return (
+            <Link
+              key={to}
+              to={to}
+              aria-current={pathname === to ? "page" : undefined}
+              className={cn(
+                "focus-ring flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[10px]",
+                pathname === to ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+              )}
+            >
+              <item.icon className="size-5" aria-hidden />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

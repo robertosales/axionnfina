@@ -1,17 +1,6 @@
+import { CashflowChart } from "@/components/finance/CashflowChart";
 import { DataState } from "@/components/finance/DataState";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip as RTooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip as RTooltip } from "recharts";
 
 import { ChartCard } from "@/components/finance/ChartCard";
 import { useCashflow, useInvestments, useTransactions } from "@/lib/finance-data";
@@ -56,65 +45,7 @@ export function DashboardCharts({
             error={transactionsError}
             empty={transactions.length === 0}
           >
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  accessibilityLayer
-                  data={cashflow}
-                  margin={{ left: -18, right: 8, top: 8 }}
-                >
-                  <defs>
-                    <linearGradient id="grad-in" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--color-income)" stopOpacity={0.45} />
-                      <stop offset="100%" stopColor="var(--color-income)" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="grad-out" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--color-expense)" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="var(--color-expense)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="var(--color-border)"
-                    vertical={false}
-                  />
-                  <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
-                  <YAxis
-                    tickFormatter={(v: number) => formatBRL(v, true)}
-                    tickLine={false}
-                    axisLine={false}
-                    fontSize={11}
-                    width={70}
-                  />
-                  <RTooltip
-                    formatter={(v: number) => formatBRL(v)}
-                    contentStyle={{
-                      background: "var(--color-popover)",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: 12,
-                      fontSize: 12,
-                    }}
-                  />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                  <Area
-                    type="monotone"
-                    isAnimationActive={false}
-                    dataKey="receitas"
-                    stroke="var(--color-income)"
-                    strokeWidth={2}
-                    fill="url(#grad-in)"
-                  />
-                  <Area
-                    type="monotone"
-                    isAnimationActive={false}
-                    dataKey="despesas"
-                    stroke="var(--color-expense)"
-                    strokeWidth={2}
-                    fill="url(#grad-out)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            <CashflowChart data={cashflow} />
             <details className="mt-2 text-sm">
               <summary className="focus-ring cursor-pointer rounded">
                 Ver valores do fluxo de caixa

@@ -59,7 +59,7 @@ function Landing() {
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
         <span className="flex items-center gap-2.5">
           <span
-            className="grid size-9 place-items-center rounded-xl text-primary-foreground"
+            className="grid size-9 place-items-center rounded-xl text-action-foreground"
             style={{ background: "var(--gradient-primary)" }}
           >
             <Coins className="size-5" aria-hidden />

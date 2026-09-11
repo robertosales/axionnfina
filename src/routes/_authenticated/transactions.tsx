@@ -7,7 +7,7 @@ import { localDateInput, parseFinancialInput } from "@/lib/financial-input";
 import { filterTransactions, transactionCsv, transactionKindLabel } from "@/lib/transaction-view";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ColumnDef } from "@tanstack/react-table";
-import { Download, Plus, Upload } from "lucide-react";
+import { Download, Plus, SlidersHorizontal, Upload } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -15,6 +15,7 @@ import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { CopyButton, DataTable } from "@/components/ui/data-table";
 import {
   Dialog,
@@ -549,7 +550,7 @@ function TransactionsPage() {
   );
 
   return (
-    <AppShell>
+    <AppShell onNewTransaction={openNewTransaction} newTransactionDisabled={showArchived}>
       {confirmation}
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -612,83 +613,129 @@ function TransactionsPage() {
         </div>
       </header>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div>
-          <Label htmlFor="transaction-search">Buscar transações</Label>
-          <Input
-            id="transaction-search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Descrição, estabelecimento ou categoria"
-          />
+      <section
+        aria-label="Filtros de transações"
+        className="mb-5 rounded-2xl border border-border/50 bg-card p-4 sm:p-5"
+      >
+        <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
+          <SlidersHorizontal className="size-4 text-primary" aria-hidden /> Filtrar transações
         </div>
-        <div>
-          <Label htmlFor="filter-account">Conta</Label>
-          <select
-            id="filter-account"
-            className="h-9 w-full rounded-md border bg-background px-2"
-            value={accountFilter}
-            onChange={(e) => setAccountFilter(e.target.value)}
-          >
-            <option value="all">Todas as contas</option>
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="filter-category">Categoria</Label>
-          <select
-            id="filter-category"
-            className="h-9 w-full rounded-md border bg-background px-2"
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-          >
-            <option value="all">Todas as categorias</option>
-            {Array.from(new Set(transactions.map((t) => t.category)))
-              .sort()
-              .map((category) => (
-                <option key={category}>{category}</option>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 [&>div]:space-y-2">
+          <div>
+            <Label htmlFor="transaction-search">Buscar transações</Label>
+            <Input
+              id="transaction-search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Descrição, estabelecimento ou categoria"
+            />
+          </div>
+          <div>
+            <Label htmlFor="filter-account">Conta</Label>
+            <select
+              id="filter-account"
+              className="h-9 w-full rounded-md border bg-background px-2"
+              value={accountFilter}
+              onChange={(e) => setAccountFilter(e.target.value)}
+            >
+              <option value="all">Todas as contas</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
               ))}
-          </select>
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="filter-category">Categoria</Label>
+            <select
+              id="filter-category"
+              className="h-9 w-full rounded-md border bg-background px-2"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="all">Todas as categorias</option>
+              {Array.from(new Set(transactions.map((t) => t.category)))
+                .sort()
+                .map((category) => (
+                  <option key={category}>{category}</option>
+                ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="filter-from">De</Label>
+            <Input
+              id="filter-from"
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="filter-to">Até</Label>
+            <Input
+              id="filter-to"
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </div>
+          <Button
+            variant="outline"
+            className="self-end"
+            onClick={() => {
+              setSearch("");
+              setKind("all");
+              setAccountFilter("all");
+              setCategoryFilter("all");
+              setDateFrom("");
+              setDateTo("");
+            }}
+          >
+            Limpar filtros
+          </Button>
         </div>
-        <div>
-          <Label htmlFor="filter-from">De</Label>
-          <Input
-            id="filter-from"
-            type="date"
-            value={dateFrom}
-            max={dateTo || undefined}
-            onChange={(e) => setDateFrom(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label htmlFor="filter-to">Até</Label>
-          <Input
-            id="filter-to"
-            type="date"
-            value={dateTo}
-            min={dateFrom || undefined}
-            onChange={(e) => setDateTo(e.target.value)}
-          />
-        </div>
-        <Button
-          variant="outline"
-          className="self-end"
-          onClick={() => {
-            setSearch("");
-            setKind("all");
-            setAccountFilter("all");
-            setCategoryFilter("all");
-            setDateFrom("");
-            setDateTo("");
-          }}
-        >
-          Limpar filtros
-        </Button>
-      </div>
+        {(search ||
+          kind !== "all" ||
+          accountFilter !== "all" ||
+          categoryFilter !== "all" ||
+          dateFrom ||
+          dateTo ||
+          showArchived) && (
+          <div
+            className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/60 pt-4"
+            aria-label="Filtros ativos"
+          >
+            <span className="text-xs text-muted-foreground">Exibindo:</span>
+            {search && (
+              <Badge variant="secondary" className="max-w-full break-all whitespace-normal">
+                Busca: {search}
+              </Badge>
+            )}
+            {kind !== "all" && (
+              <Badge variant="secondary">
+                {filters.find((filter) => filter.key === kind)?.label}
+              </Badge>
+            )}
+            {accountFilter !== "all" && (
+              <Badge variant="secondary" className="max-w-full break-words whitespace-normal">
+                Conta:{" "}
+                {accounts.find((account) => account.id === accountFilter)?.name ?? accountFilter}
+              </Badge>
+            )}
+            {categoryFilter !== "all" && (
+              <Badge variant="secondary" className="max-w-full break-words whitespace-normal">
+                Categoria: {categoryFilter}
+              </Badge>
+            )}
+            {dateFrom && <Badge variant="secondary">De: {formatDate(dateFrom)}</Badge>}
+            {dateTo && <Badge variant="secondary">Até: {formatDate(dateTo)}</Badge>}
+            {showArchived && <Badge variant="outline">Arquivadas</Badge>}
+          </div>
+        )}
+      </section>
       <DataState loading={isLoading} error={queryError || isError} onRetry={() => void refetch()}>
         <DataTable
           columns={columns}

@@ -46,6 +46,7 @@ export function KPICard({
   icon: Icon,
   change,
   hint,
+  description,
   sparkline,
   tone = "default",
 }: Props) {

@@ -18,10 +18,24 @@ type Props = {
 };
 
 const toneRing: Record<NonNullable<Props["tone"]>, string> = {
-  default: "bg-primary/15 text-primary",
+  default: "bg-muted text-muted-foreground",
   success: "bg-success/15 text-success",
   warning: "bg-warning/15 text-warning",
   danger: "bg-danger/15 text-danger",
+};
+
+const toneBorder: Record<NonNullable<Props["tone"]>, string> = {
+  default: "border-l-border",
+  success: "border-l-success/70",
+  warning: "border-l-warning/70",
+  danger: "border-l-danger/70",
+};
+
+const toneDot: Record<NonNullable<Props["tone"]>, string> = {
+  default: "bg-muted-foreground/50",
+  success: "bg-success",
+  warning: "bg-warning",
+  danger: "bg-danger",
 };
 
 export function KPICard({
@@ -36,7 +50,12 @@ export function KPICard({
   const positive = (change ?? 0) >= 0;
 
   return (
-    <Card className="surface-elevated relative h-full rounded-2xl border-border/40 p-5">
+    <Card
+      className={cn(
+        "surface-elevated relative h-full rounded-2xl border-border/40 border-l-4 p-5",
+        toneBorder[tone],
+      )}
+    >
       <div className="flex items-center gap-4">
         <span
           className={cn("grid size-12 shrink-0 place-items-center rounded-full", toneRing[tone])}
@@ -44,7 +63,13 @@ export function KPICard({
           <Icon className="size-6" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <span
+              className={cn("size-2 shrink-0 rounded-full", toneDot[tone])}
+              aria-hidden="true"
+            />
+            {label}
+          </p>
           <p className="numeric mt-1 break-words text-xl font-semibold tracking-tight sm:text-2xl">
             {value}
           </p>

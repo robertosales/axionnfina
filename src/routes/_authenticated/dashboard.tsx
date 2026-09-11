@@ -289,7 +289,8 @@ function Dashboard() {
             className="mb-8 grid gap-4 sm:grid-cols-2 2xl:grid-cols-4"
           >
             <KPICard
-              label="Dívidas nas contas"
+              label="Quanto você deve"
+              description="Soma dos saldos negativos e cartões de crédito. Zero é o ideal."
               value={
                 accountsError
                   ? "Indisponível"
@@ -301,7 +302,8 @@ function Dashboard() {
               tone={loadingAccounts || accountsError ? "default" : debtsTone}
             />
             <KPICard
-              label="Liquidez imediata"
+              label="Dinheiro disponível"
+              description="Dinheiro em conta corrente/poupança que você pode usar hoje, sem contar investimentos."
               value={
                 accountsError
                   ? "Indisponível"
@@ -314,7 +316,8 @@ function Dashboard() {
               tone={loadingAccounts || accountsError ? "default" : liquidityTone}
             />
             <KPICard
-              label="Taxa de poupança"
+              label="Sobra do mês"
+              description="Percentual da renda que sobrou depois das despesas deste mês. Quanto maior, melhor."
               value={
                 transactionsError
                   ? "Indisponível"
@@ -333,7 +336,8 @@ function Dashboard() {
               tone={loadingTransactions || transactionsError ? "default" : savingsTone}
             />
             <KPICard
-              label="Próximo vencimento"
+              label="Próxima conta a pagar"
+              description="Valor e data da conta em aberto mais próxima do vencimento."
               value={
                 billsError
                   ? "Indisponível"

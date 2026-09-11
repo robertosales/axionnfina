@@ -1,9 +1,10 @@
 import type { LucideIcon } from "lucide-react";
-import { TrendingDown, TrendingUp } from "lucide-react";
+import { Info, TrendingDown, TrendingUp } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,7 @@ type Props = {
   icon: LucideIcon;
   change?: number;
   hint?: string;
+  description?: string;
   sparkline?: Array<{ value: number }>;
   tone?: "default" | "success" | "warning" | "danger";
 };
@@ -44,6 +46,7 @@ export function KPICard({
   icon: Icon,
   change,
   hint,
+  description,
   sparkline,
   tone = "default",
 }: Props) {
@@ -69,6 +72,24 @@ export function KPICard({
               aria-hidden="true"
             />
             {label}
+            {description && (
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-grid size-4 place-items-center rounded-full text-muted-foreground/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      aria-label={`O que é ${label}?`}
+                    >
+                      <Info className="size-3" aria-hidden />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    {description}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </p>
           <p className="numeric mt-1 break-words text-xl font-semibold tracking-tight sm:text-2xl">
             {value}

@@ -10,6 +10,7 @@ import {
   getAccountConnections,
   createConnection,
   getCreditCards,
+  getInvoiceCardOptions,
   type WalletSummary,
   type AccountBalance,
   type AccountConnection,
@@ -63,6 +64,7 @@ export function useUpsertAccount() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["wallet-summary"] });
       qc.invalidateQueries({ queryKey: ["accounts"] });
+      qc.invalidateQueries({ queryKey: ["invoice-card-options"] });
     },
   });
 }
@@ -74,6 +76,7 @@ export function useArchiveAccount() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["wallet-summary"] });
       qc.invalidateQueries({ queryKey: ["accounts"] });
+      qc.invalidateQueries({ queryKey: ["invoice-card-options"] });
     },
   });
 }
@@ -85,6 +88,7 @@ export function useSetPrimaryAccount() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["wallet-summary"] });
       qc.invalidateQueries({ queryKey: ["accounts"] });
+      qc.invalidateQueries({ queryKey: ["invoice-card-options"] });
     },
   });
 }
@@ -156,4 +160,8 @@ export function useCreditCards() {
     queryKey: ["credit-cards"],
     queryFn: getCreditCards,
   });
+}
+
+export function useInvoiceCardOptions() {
+  return useQuery({ queryKey: ["invoice-card-options"], queryFn: getInvoiceCardOptions });
 }

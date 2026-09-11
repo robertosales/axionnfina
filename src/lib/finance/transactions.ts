@@ -47,6 +47,7 @@ export function useTransactions(limit: number | null = 200, showArchived = false
         merchant: corrections.get(row.id)?.merchant ?? row.merchant ?? "",
         category: corrections.get(row.id)?.category ?? row.category,
         pending: row.status === "pending",
+        status: row.status,
         kind: row.type as DbTransactionType,
         amount: Number(row.amount),
         date: row.occurred_at,
@@ -287,5 +288,45 @@ export function useUpdateTransactionCategoryDefinition() {
       }
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["transaction-categories"] }),
+  });
+}
+
+export function useChangeTransactionStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      previousStatus: "pending" | "settled";
+      status: "pending" | "settled";
+    }) => {
+      const userId = await requireUserId();
+      // O banco aplica as movimentações de saldo e diário pelos triggers existentes.
+      // posted_at é vinculado a occurred_at por um trigger de compatibilidade;
+      // alterar a situação não deve mudar a data original do lançamento.
+      // O filtro do estado anterior impede confirmar uma versão já alterada em outra sessão.
+      const { data, error } = await supabase
+        .from("transactions")
+        .update({ status: input.status })
+        .eq("id", input.id)
+        .eq("user_id", userId)
+        .eq("status", input.previousStatus)
+        .in("record_origin", ["manual", "import"])
+        .is("archived_at", null)
+        .select("id")
+        .single();
+      if (error || !data)
+        throw new Error("Não foi possível alterar a situação. Atualize a lista e tente novamente.");
+    },
+    onSuccess: () => {
+      for (const key of [
+        "transactions",
+        "budgets",
+        "accounts",
+        "wallet-summary",
+        "account-reconciliation",
+      ]) {
+        void queryClient.invalidateQueries({ queryKey: [key] });
+      }
+    },
   });
 }

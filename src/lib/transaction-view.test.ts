@@ -1,6 +1,12 @@
 import type { Transaction } from "@/shared/finance-types";
 import { expect, it } from "vitest";
-import { emptyTransactionFilters, filterTransactions, transactionCsv } from "./transaction-view";
+import {
+  emptyTransactionFilters,
+  filterTransactions,
+  transactionCsv,
+  transactionStatusText,
+  canChangeTransactionStatus,
+} from "./transaction-view";
 const rows: Transaction[] = [
   {
     id: "1",
@@ -52,3 +58,35 @@ it("preserva limites inclusivos e nenhum resultado", () => {
 });
 it("neutraliza fórmulas de planilha nos campos textuais", () =>
   expect(transactionCsv([{ ...rows[0]!, description: "=1+1" }])).toContain("'=1+1"));
+
+it("filtra e exporta a situação real, inclusive cancelamento, falha e estorno", () => {
+  const transactions = (["pending", "settled", "cancelled", "failed", "reversed"] as const).map(
+    (status) => ({ ...rows[0]!, id: status, status }),
+  );
+  expect(transactions.map(transactionStatusText)).toEqual([
+    "Pendente",
+    "Confirmada",
+    "Cancelada",
+    "Falhou",
+    "Estornada",
+  ]);
+  const filtered = filterTransactions(transactions, {
+    ...emptyTransactionFilters,
+    status: "pending",
+  });
+  expect(filtered.map((row) => row.id)).toEqual(["pending"]);
+  expect(transactionCsv(filtered)).toContain('"Pendente"');
+  expect(transactionCsv(filtered)).not.toContain('"Confirmada"');
+  expect(transactionStatusText(rows[0]!)).toBe("Não informada");
+});
+it("oferece alteração só em lançamentos locais ativos com situação reversível", () => {
+  const row = { ...rows[0]!, status: "pending" as const, recordOrigin: "manual" as const };
+  expect(canChangeTransactionStatus(row)).toBe(true);
+  expect(canChangeTransactionStatus({ ...row, status: "settled", recordOrigin: "import" })).toBe(
+    true,
+  );
+  expect(canChangeTransactionStatus({ ...row, recordOrigin: "open_finance" })).toBe(false);
+  expect(canChangeTransactionStatus({ ...row, archivedAt: "2026-09-11" })).toBe(false);
+  expect(canChangeTransactionStatus({ ...row, status: "reversed" })).toBe(false);
+  expect(canChangeTransactionStatus({ ...rows[0]!, recordOrigin: "manual" })).toBe(false);
+});

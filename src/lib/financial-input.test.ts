@@ -9,6 +9,8 @@ describe("entrada financeira", () => {
     ["0", 0],
     ["-12,34", -12.34],
     ["R$ 1.234,56", 1234.56],
+    ["-R$ 1.234,56", -1234.56],
+    ["R$\u00a06.000,00", 6000],
   ])("interpreta %s sem perder centavos", (input, expected) =>
     expect(parseFinancialInput(input)).toBe(expected),
   );

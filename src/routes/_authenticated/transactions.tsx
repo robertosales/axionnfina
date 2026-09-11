@@ -4,7 +4,14 @@ import { MoneyInput } from "@/components/finance/MoneyInput";
 import { useFinancialConfirmation } from "@/components/finance/use-financial-confirmation";
 import { ValidatedInput } from "@/components/finance/ValidatedInput";
 import { localDateInput, parseFinancialInput } from "@/lib/financial-input";
-import { filterTransactions, transactionCsv, transactionKindLabel } from "@/lib/transaction-view";
+import {
+  filterTransactions,
+  transactionCsv,
+  transactionKindLabel,
+  transactionStatusLabel,
+  transactionStatusText,
+  canChangeTransactionStatus,
+} from "@/lib/transaction-view";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ColumnDef } from "@tanstack/react-table";
 import { Download, Plus, SlidersHorizontal, Upload } from "lucide-react";
@@ -38,6 +45,7 @@ import { parseStatementXml } from "@/lib/document-import";
 import {
   useAccounts,
   useCreateTransaction,
+  useChangeTransactionStatus,
   useEntityLifecycle,
   useImportStatementTransactions,
   useTransactionCategories,
@@ -58,8 +66,10 @@ declare module "@tanstack/react-table" {
 }
 
 export const Route = createFileRoute("/_authenticated/transactions")({
-  validateSearch: (search: Record<string, unknown>): { new?: boolean } =>
-    search["new"] === true || search["new"] === "true" ? { new: true } : {},
+  validateSearch: (search: Record<string, unknown>): { new?: boolean; import?: boolean } => ({
+    ...(search["new"] === true || search["new"] === "true" ? { new: true } : {}),
+    ...(search["import"] === true || search["import"] === "true" ? { import: true } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Transações — Axionn Finance" },
@@ -108,6 +118,7 @@ function TransactionsPage() {
   } = useTransactions(null, showArchived);
   const [search, setSearch] = useState("");
   const [accountFilter, setAccountFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -115,6 +126,38 @@ function TransactionsPage() {
   const { data: accounts = [] } = useAccounts();
   const { data: transactionCategories = [] } = useTransactionCategories();
   const createTransaction = useCreateTransaction();
+  const changeStatus = useChangeTransactionStatus();
+  const statusOperation = useRef(false);
+  const [changingStatus, setChangingStatus] = useState(false);
+  const toggleStatus = useCallback(
+    async (transaction: Transaction) => {
+      if (statusOperation.current || !canChangeTransactionStatus(transaction)) return;
+      const previousStatus = transaction.status;
+      if (previousStatus !== "pending" && previousStatus !== "settled") return;
+      const status = previousStatus === "pending" ? "settled" : "pending";
+      statusOperation.current = true;
+      setChangingStatus(true);
+      try {
+        if (
+          !(await confirm(
+            `${status === "settled" ? "Confirmar" : "Marcar como pendente"} “${transaction.description}”, ${formatBRL(transaction.amount)}, conta ${transaction.accountName}, data ${formatDate(transaction.date)}? ${status === "settled" ? "O lançamento passará a compor o saldo confirmado." : "O lançamento deixará de compor o saldo confirmado até uma nova confirmação."}${transaction.isRecurring ? " Somente este lançamento será alterado." : ""}`,
+          ))
+        )
+          return;
+        await changeStatus.mutateAsync({ id: transaction.id, previousStatus, status });
+        toast.success(
+          status === "settled" ? "Transação confirmada" : "Transação marcada como pendente",
+        );
+      } catch {
+        toast.error("Não foi possível alterar a situação. Atualize a lista e tente novamente.");
+        void refetch();
+      } finally {
+        statusOperation.current = false;
+        setChangingStatus(false);
+      }
+    },
+    [changeStatus, confirm, refetch],
+  );
   const importTransactions = useImportStatementTransactions();
   const updateTransaction = useUpdateTransaction();
   const updateCategory = useUpdateTransactionCategory();
@@ -126,8 +169,10 @@ function TransactionsPage() {
   const financialFieldsLocked =
     importedEdit?.recordOrigin === "open_finance" || importedEdit?.recordOrigin === "import";
   const importInputRef = useRef<HTMLInputElement>(null);
-  const [importOpen, setImportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(Boolean(Route.useSearch().import));
   const [readingImport, setReadingImport] = useState(false);
+  const [confirmingImport, setConfirmingImport] = useState(false);
+  const statementOperation = useRef(false);
   const [importRows, setImportRows] = useState<StatementRow[]>([]);
   const [importAccountId, setImportAccountId] = useState("");
   const [form, setForm] = useState({
@@ -155,10 +200,11 @@ function TransactionsPage() {
       kind,
       account: accountFilter,
       category: categoryFilter,
+      status: statusFilter,
       from: dateFrom,
       to: dateTo,
     });
-  }, [transactions, kind, search, accountFilter, categoryFilter, dateFrom, dateTo]);
+  }, [transactions, kind, search, accountFilter, categoryFilter, statusFilter, dateFrom, dateTo]);
 
   const total = useMemo(
     () => filteredTransactions.reduce((sum, t) => sum + t.amount, 0),
@@ -187,7 +233,7 @@ function TransactionsPage() {
         toast.error("Selecione um arquivo CSV, XML ou PDF de até 10 MB.");
         return;
       }
-      const accountId = importAccountId || accounts[0]?.id || "";
+      const accountId = importAccountId;
       if (!accountId) {
         toast.error("Cadastre ou selecione uma conta antes de importar.");
         return;
@@ -218,25 +264,37 @@ function TransactionsPage() {
       setImportRows(rows);
       setImportOpen(true);
     },
-    [accounts, importAccountId],
+    [importAccountId],
   );
 
-  const confirmImport = useCallback(() => {
-    importTransactions.mutate(
-      { accountId: importAccountId, rows: importRows },
-      {
-        onSuccess: (result) => {
-          toast.success(
-            `${result.imported} lançamento(s) importado(s); ${result.ignored} ignorado(s).`,
-          );
-          setImportOpen(false);
-          setImportRows([]);
-        },
-        onError: (error) =>
-          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
-      },
-    );
-  }, [importAccountId, importRows, importTransactions]);
+  const confirmImport = useCallback(async () => {
+    if (statementOperation.current || !importAccountId || !importRows.some((row) => row.valid))
+      return;
+    statementOperation.current = true;
+    setConfirmingImport(true);
+    try {
+      if (
+        !(await confirm(
+          `Importar ${importRows.filter((row) => row.valid).length} lançamento(s) para ${accounts.find((account) => account.id === importAccountId)?.name ?? "a conta selecionada"}? Confira os valores na prévia. Os lançamentos atualizarão o saldo da conta.`,
+        ))
+      )
+        return;
+      const result = await importTransactions.mutateAsync({
+        accountId: importAccountId,
+        rows: importRows,
+      });
+      toast.success(
+        `${result.imported} lançamento(s) importado(s); ${result.ignored} ignorado(s).`,
+      );
+      setImportOpen(false);
+      setImportRows([]);
+    } catch {
+      toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente.");
+    } finally {
+      statementOperation.current = false;
+      setConfirmingImport(false);
+    }
+  }, [accounts, confirm, importAccountId, importRows, importTransactions]);
 
   const openEditTransaction = useCallback((transaction: Transaction) => {
     setEditTransactionId(transaction.id);
@@ -440,6 +498,40 @@ function TransactionsPage() {
         ),
       },
       {
+        id: "status",
+        accessorFn: transactionStatusText,
+        header: "Situação",
+        size: 190,
+        cell: ({ row }) => (
+          <div className="flex flex-col items-start gap-1">
+            <Badge
+              variant="outline"
+              className={
+                row.original.status === "pending"
+                  ? "text-warning"
+                  : row.original.status === "settled"
+                    ? "text-success"
+                    : ""
+              }
+            >
+              {transactionStatusText(row.original)}
+            </Badge>
+            {canChangeTransactionStatus(row.original) ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={changingStatus}
+                onClick={() => void toggleStatus(row.original)}
+              >
+                {row.original.status === "pending" ? "Confirmar transação" : "Marcar como pendente"}
+              </Button>
+            ) : row.original.recordOrigin === "open_finance" ? (
+              <span className="text-xs text-muted-foreground">Informada pela instituição</span>
+            ) : null}
+          </div>
+        ),
+      },
+      {
         id: "actions",
         header: "",
         size: 60,
@@ -492,7 +584,7 @@ function TransactionsPage() {
         ),
       },
     ],
-    [updateCategory, lifecycle, openEditTransaction],
+    [updateCategory, lifecycle, openEditTransaction, toggleStatus, changingStatus],
   );
 
   /* Sub-componente expandido */
@@ -534,7 +626,7 @@ function TransactionsPage() {
         </div>
         <div>
           <dt className="text-muted-foreground">Situação</dt>
-          <dd>{row.original.pending ? "Pendente" : "Confirmada"}</dd>
+          <dd>{transactionStatusText(row.original)}</dd>
         </div>
         <div>
           <dt className="text-muted-foreground">Recorrência</dt>
@@ -561,7 +653,7 @@ function TransactionsPage() {
               : isLoading
                 ? "Carregando transações…"
                 : `${filteredTransactions.length} lançamentos`}{" "}
-            · saldo do filtro{" "}
+            · total dos lançamentos do filtro{" "}
             <span className="numeric font-medium text-foreground">
               {isError || isLoading ? "—" : formatBRL(total)}
             </span>
@@ -588,13 +680,16 @@ function TransactionsPage() {
             onChange={async (event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
-              if (!file || readingImport) return;
+              if (!file || statementOperation.current) return;
+              statementOperation.current = true;
+              setImportRows([]);
               setReadingImport(true);
               try {
                 await readStatement(file);
               } catch {
                 toast.error("Não foi possível ler o extrato. Confira o arquivo e tente novamente.");
               } finally {
+                statementOperation.current = false;
                 setReadingImport(false);
               }
             }}
@@ -602,7 +697,7 @@ function TransactionsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => importInputRef.current?.click()}
+            onClick={() => setImportOpen(true)}
             disabled={showArchived || readingImport}
           >
             <Upload className="size-4" /> {readingImport ? "Lendo extrato…" : "Importar extrato"}
@@ -663,6 +758,22 @@ function TransactionsPage() {
             </select>
           </div>
           <div>
+            <Label htmlFor="filter-status">Situação</Label>
+            <select
+              id="filter-status"
+              className="h-9 w-full rounded-md border bg-background px-2"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+            >
+              <option value="all">Todas as situações</option>
+              {Object.entries(transactionStatusLabel).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
             <Label htmlFor="filter-from">De</Label>
             <Input
               id="filter-from"
@@ -690,6 +801,7 @@ function TransactionsPage() {
               setKind("all");
               setAccountFilter("all");
               setCategoryFilter("all");
+              setStatusFilter("all");
               setDateFrom("");
               setDateTo("");
             }}
@@ -701,6 +813,7 @@ function TransactionsPage() {
           kind !== "all" ||
           accountFilter !== "all" ||
           categoryFilter !== "all" ||
+          statusFilter !== "all" ||
           dateFrom ||
           dateTo ||
           showArchived) && (
@@ -728,6 +841,12 @@ function TransactionsPage() {
             {categoryFilter !== "all" && (
               <Badge variant="secondary" className="max-w-full break-words whitespace-normal">
                 Categoria: {categoryFilter}
+              </Badge>
+            )}
+            {statusFilter !== "all" && (
+              <Badge variant="secondary">
+                Situação:{" "}
+                {transactionStatusLabel[statusFilter as keyof typeof transactionStatusLabel]}
               </Badge>
             )}
             {dateFrom && <Badge variant="secondary">De: {formatDate(dateFrom)}</Badge>}
@@ -912,14 +1031,28 @@ function TransactionsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+      <Dialog
+        open={importOpen}
+        onOpenChange={(value) => {
+          if (!readingImport && !confirmingImport && !importTransactions.isPending)
+            setImportOpen(value);
+        }}
+      >
         <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle>Conferir extrato antes de importar</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <Select value={importAccountId} onValueChange={setImportAccountId}>
-              <SelectTrigger>
+            <Label htmlFor="statement-account">Conta do extrato</Label>
+            <Select
+              value={importAccountId}
+              disabled={readingImport || confirmingImport || importTransactions.isPending}
+              onValueChange={(value) => {
+                setImportAccountId(value);
+                setImportRows([]);
+              }}
+            >
+              <SelectTrigger id="statement-account">
                 <SelectValue placeholder="Selecione a conta" />
               </SelectTrigger>
               <SelectContent>
@@ -930,6 +1063,24 @@ function TransactionsPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              onClick={() => importInputRef.current?.click()}
+              disabled={
+                !importAccountId ||
+                readingImport ||
+                confirmingImport ||
+                importTransactions.isPending
+              }
+            >
+              <Upload className="size-4" />{" "}
+              {readingImport ? "Lendo extrato…" : "Selecionar CSV, XML ou PDF"}
+            </Button>
+            {!importRows.length && (
+              <p className="text-sm text-muted-foreground">
+                Selecione a conta e o arquivo para conferir os lançamentos.
+              </p>
+            )}
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[38rem] text-left text-xs">
                 <thead className="bg-muted/40">
@@ -945,9 +1096,9 @@ function TransactionsPage() {
                   {importRows.map((row) => (
                     <tr key={row.rowNumber}>
                       <td className="p-2">{row.rowNumber}</td>
-                      <td>{row.date || "-"}</td>
+                      <td>{row.date ? row.date.split("-").reverse().join("/") : "—"}</td>
                       <td>{row.description || "-"}</td>
-                      <td>{row.amount ? formatBRL(row.amount) : "-"}</td>
+                      <td>{Number.isFinite(row.amount) ? formatBRL(row.amount) : "—"}</td>
                       <td className={row.valid ? "text-success" : "text-danger"}>
                         {row.valid ? "Pronta" : row.errors.join(", ")}
                       </td>
@@ -960,7 +1111,13 @@ function TransactionsPage() {
           <DialogFooter>
             <Button
               onClick={confirmImport}
-              disabled={importTransactions.isPending || !importRows.some((row) => row.valid)}
+              disabled={
+                readingImport ||
+                confirmingImport ||
+                !importAccountId ||
+                importTransactions.isPending ||
+                !importRows.some((row) => row.valid)
+              }
             >
               {importTransactions.isPending ? "Importando…" : "Confirmar importação"}
             </Button>

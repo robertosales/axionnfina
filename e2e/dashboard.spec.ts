@@ -272,7 +272,7 @@ test("erro de gravação preserva dados e rejeita entrada monetária inválida",
     page.getByText("Não foi possível concluir a operação. Confira os dados e tente novamente."),
   ).toBeVisible();
   await expect(page.getByLabel("Descrição", { exact: true })).toHaveValue("Manter preenchimento");
-  await expect(page.getByLabel("Valor", { exact: true })).toHaveValue("1570,50");
+  await expect(page.getByLabel("Valor", { exact: true })).toHaveValue(/R\$\s1\.570,50/);
   await expect(page.getByText("internal fixture failure")).toHaveCount(0);
 });
 
@@ -482,4 +482,332 @@ test("filtros ativos são visíveis e limpeza restaura a listagem", async ({ pag
   await page.getByRole("button", { name: "Limpar filtros", exact: true }).click();
   await expect(page.getByLabel("Filtros ativos")).toHaveCount(0);
   await expect(page.getByText("Receita de teste", { exact: true })).toBeVisible();
+});
+
+for (const width of [320, 1440]) {
+  test(`saldo recebe moeda automaticamente e salva centavos em ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const writes: Record<string, unknown>[] = [];
+    await page.route("**/rest/v1/accounts?*", (route) => {
+      if (route.request().method() === "POST") {
+        writes.push(route.request().postDataJSON());
+        return route.fulfill({ json: { id: "new-account" } });
+      }
+      return route.fulfill({ json: rows["accounts"] });
+    });
+    await page.goto("/wallet/accounts");
+    await page.getByRole("button", { name: "Nova Conta", exact: true }).click();
+    await page.getByLabel("Nome", { exact: true }).fill("Visa Infinit");
+    const balance = page.getByLabel("Saldo", { exact: true });
+    await balance.fill("6000,00");
+    await balance.press("Tab");
+    await expect(balance).toHaveValue(/R\$\s6\.000,00/);
+    await page.screenshot({ path: `test-results/account-currency-${width}.png`, fullPage: true });
+    await page.getByRole("button", { name: "Salvar", exact: true }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toMatchObject({ balance: 6000, current_balance: 6000 });
+  });
+}
+
+test("situação confirma, cancela, filtra e impede gravações duplicadas", async ({ page }) => {
+  let status = "pending";
+  const writes: Record<string, unknown>[] = [];
+  await page.route("**/rest/v1/transactions?*", async (route) => {
+    if (route.request().method() === "PATCH") {
+      const payload = route.request().postDataJSON();
+      expect(new URL(route.request().url()).searchParams.get("status")).toBe(`eq.${status}`);
+      writes.push(payload);
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      status = payload.status;
+      return route.fulfill({ json: { id: "transaction-1" } });
+    }
+    return route.fulfill({ json: [{ ...(rows["transactions"]![0] as object), status }] });
+  });
+  await page.goto("/transactions");
+  await page.getByLabel("Situação", { exact: true }).selectOption("pending");
+  await page.getByRole("button", { name: "Confirmar transação", exact: true }).click();
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toContainText("Receita de teste");
+  await expect(dialog).toContainText("R$ 5.000,00");
+  await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  expect(writes).toHaveLength(0);
+  await page.getByRole("button", { name: "Confirmar transação", exact: true }).click();
+  await dialog.getByRole("button", { name: "Confirmar", exact: true }).evaluate((button) => {
+    button.click();
+    button.click();
+  });
+  await expect(page.getByText("Transação confirmada", { exact: true })).toBeVisible();
+  expect(writes).toHaveLength(1);
+  expect(writes[0]).toEqual({ status: "settled" });
+  await expect(page.getByText("Nenhum resultado encontrado.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Limpar filtros", exact: true }).click();
+  await expect(page.getByRole("table")).toContainText("Confirmada");
+  await page.getByRole("button", { name: "Marcar como pendente", exact: true }).click();
+  await dialog.getByRole("button", { name: "Confirmar", exact: true }).click();
+  await expect(page.getByText("Transação marcada como pendente", { exact: true })).toBeVisible();
+  expect(writes).toHaveLength(2);
+  expect(writes[1]).toEqual({ status: "pending" });
+  await page.screenshot({ path: "test-results/transaction-status.png", fullPage: true });
+});
+
+test("erro de confirmação preserva pendência e status bancários não oferecem alteração", async ({
+  page,
+}) => {
+  await page.route("**/rest/v1/transactions?*", (route) => {
+    if (route.request().method() === "PATCH")
+      return route.fulfill({ status: 409, json: { message: "internal fixture" } });
+    return route.fulfill({
+      json: [
+        { ...(rows["transactions"]![0] as object), status: "pending" },
+        {
+          ...(rows["transactions"]![0] as object),
+          id: "bank",
+          description: "Pendente no banco",
+          status: "pending",
+          record_origin: "open_finance",
+        },
+        {
+          ...(rows["transactions"]![0] as object),
+          id: "reversed",
+          description: "Compra estornada",
+          status: "reversed",
+        },
+      ],
+    });
+  });
+  await page.goto("/transactions");
+  await expect(page.getByRole("button", { name: "Confirmar transação", exact: true })).toHaveCount(
+    1,
+  );
+  await expect(page.getByRole("table")).toContainText("Estornada");
+  await expect(page.getByRole("table")).toContainText("Informada pela instituição");
+  await page.getByRole("button", { name: "Confirmar transação", exact: true }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Confirmar", exact: true })
+    .click();
+  await expect(
+    page.getByText("Não foi possível alterar a situação. Atualize a lista e tente novamente."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Confirmar transação", exact: true }),
+  ).toBeEnabled();
+  await expect(page.getByText("internal fixture")).toHaveCount(0);
+});
+
+for (const width of [320, 1440]) {
+  test(`fatura reconhece conta de crédito sem cadastro separado em ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const account = {
+      id: "00000000-0000-4000-8000-000000000099",
+      user_id: user.id,
+      name: "Visa Infinit",
+      institution: "Itaú Unibanco",
+      type: "credit",
+    };
+    let card: Record<string, unknown> | null = null;
+    let cardWrites = 0;
+    const reviews: Record<string, unknown>[] = [];
+    let confirmations = 0;
+    await page.route("**/rest/v1/accounts?*", (route) =>
+      route.fulfill({
+        json: route.request().headers()["accept"]?.includes("vnd.pgrst.object")
+          ? account
+          : [account],
+      }),
+    );
+    await page.route("**/rest/v1/credit_cards?*", (route) => {
+      if (route.request().method() === "POST") {
+        cardWrites++;
+        card = route.request().postDataJSON();
+        expect(route.request().headers()["prefer"]).toContain("resolution=ignore-duplicates");
+        return route.fulfill({ json: null });
+      }
+      return route.fulfill({
+        json: route.request().headers()["accept"]?.includes("vnd.pgrst.object")
+          ? card
+          : card
+            ? [card]
+            : [],
+      });
+    });
+    await page.route("**/rest/v1/rpc/create_credit_invoice_review", (route) => {
+      reviews.push(route.request().postDataJSON());
+      return route.fulfill({ json: "invoice-1" });
+    });
+    await page.route("**/rest/v1/rpc/confirm_credit_invoice", (route) => {
+      confirmations++;
+      return confirmations === 1
+        ? route.fulfill({ status: 500, json: { message: "fixture" } })
+        : route.fulfill({ json: 1 });
+    });
+    await page.goto("/wallet/imports");
+    await page.getByLabel("Cartão", { exact: true }).click();
+    await page.getByRole("option", { name: "Visa Infinit · Itaú Unibanco", exact: true }).click();
+    expect(cardWrites).toBe(0);
+    await page.getByLabel("Vencimento", { exact: true }).fill("2026-09-20");
+    await page.getByLabel("Arquivo da fatura").setInputFiles({
+      name: "fatura.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from("data;estabelecimento;valor;parcela\n04/09/2026;Loja;100,00;2/6"),
+    });
+    await expect(page.getByRole("table")).toContainText("Loja");
+    expect(cardWrites).toBe(1);
+    expect(card).toMatchObject({
+      id: account.id,
+      account_id: account.id,
+      last_four: "",
+      brand: "other",
+    });
+    await page.screenshot({ path: `test-results/invoice-preview-${width}.png`, fullPage: true });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.getByRole("button", { name: "Confirmar importação da fatura", exact: true }).click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Cancelar", exact: true })
+      .click();
+    expect(reviews).toHaveLength(0);
+    await page.getByRole("button", { name: "Confirmar importação da fatura", exact: true }).click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Confirmar", exact: true })
+      .click();
+    await expect(
+      page.getByText(
+        "Não foi possível concluir a importação. Sua prévia foi mantida para tentar novamente.",
+      ),
+    ).toBeVisible();
+    expect(reviews[0]).toMatchObject({
+      p_card_id: account.id,
+      p_file_type: "csv",
+      p_due_date: "2026-09-20",
+      p_items: [{ amount: -100 }],
+    });
+    await expect(page.getByRole("table")).toContainText("Loja");
+    await page.getByRole("button", { name: "Confirmar importação da fatura", exact: true }).click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Confirmar", exact: true })
+      .click();
+    await expect(page.getByText("1 lançamento(s) criado(s).", { exact: true })).toBeVisible();
+    expect(reviews).toHaveLength(1);
+    expect(confirmations).toBe(2);
+  });
+}
+
+test("importação diferencia ausência de cartão e falha de consulta", async ({ page }) => {
+  await page.route("**/rest/v1/accounts?*", (route) => route.fulfill({ json: [] }));
+  await page.goto("/wallet/imports");
+  await expect(page.getByText("Nenhum cartão cadastrado.", { exact: false })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Cadastrar cartão", exact: true })).toBeVisible();
+  await page.route("**/rest/v1/credit_cards?*", (route) =>
+    route.fulfill({ status: 403, json: { code: "42501", message: "fixture" } }),
+  );
+  await page.reload();
+  await expect(page.getByText("Você não tem permissão para consultar estes dados.")).toBeVisible();
+  await expect(page.getByText("Nenhum cartão cadastrado.", { exact: false })).toHaveCount(0);
+});
+
+test("extrato exige selecionar conta antes de ler e troca de conta limpa a prévia", async ({
+  page,
+}) => {
+  await page.route("**/rest/v1/accounts?*", (route) =>
+    route.fulfill({
+      json: [
+        ...rows["accounts"]!,
+        {
+          ...(rows["accounts"]![0] as object),
+          id: "credit-account",
+          type: "credit",
+          name: "Visa Infinit",
+        },
+      ],
+    }),
+  );
+  await page.goto("/transactions?import=true");
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("button", { name: "Selecionar CSV, XML ou PDF" })).toBeDisabled();
+  await page.getByLabel("Conta do extrato", { exact: true }).click();
+  await page.getByRole("option", { name: "Visa Infinit", exact: true }).click();
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "extrato.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("data;descricao;valor\n04/09/2026;Compra de teste;-100,00"),
+  });
+  await expect(dialog.getByRole("table")).toContainText("Compra de teste");
+  await page.getByLabel("Conta do extrato", { exact: true }).click();
+  await page.getByRole("option", { name: "Conta principal", exact: true }).click();
+  await expect(dialog.getByRole("table")).not.toContainText("Compra de teste");
+  await expect(
+    dialog.getByRole("button", { name: "Confirmar importação", exact: true }),
+  ).toBeDisabled();
+});
+
+test("fatura PDF usa cartão vinculado e preserva tipo do arquivo", async ({ page }) => {
+  const account = {
+    id: "credit-account",
+    name: "Visa Infinit",
+    institution: "Itaú",
+    type: "credit",
+  };
+  const card = { id: "existing-card", account_id: account.id, last_four: "4321", brand: "visa" };
+  let writes = 0;
+  let review: unknown;
+  await page.route("**/rest/v1/accounts?*", (route) => route.fulfill({ json: [account] }));
+  await page.route("**/rest/v1/credit_cards?*", (route) => {
+    if (route.request().method() === "POST") writes++;
+    return route.fulfill({ json: [card] });
+  });
+  await page.route("**/api/documents", (route) => {
+    expect(route.request().postData()).toContain("existing-card");
+    expect(route.request().postData()).toContain("credit_invoice");
+    return route.fulfill({
+      json: {
+        rows: [
+          {
+            rowNumber: 1,
+            date: "2026-09-04",
+            description: "Compra PDF",
+            amount: -99.9,
+            installment: "",
+            externalId: "pdf-key",
+            valid: true,
+            errors: [],
+          },
+        ],
+      },
+    });
+  });
+  await page.route("**/rest/v1/rpc/create_credit_invoice_review", (route) => {
+    review = route.request().postDataJSON();
+    return route.fulfill({ json: "invoice-pdf" });
+  });
+  await page.route("**/rest/v1/rpc/confirm_credit_invoice", (route) => route.fulfill({ json: 1 }));
+  await page.goto("/wallet/imports");
+  await page.getByLabel("Cartão", { exact: true }).click();
+  await page.getByRole("option", { name: "Visa Infinit · Itaú · •••• 4321", exact: true }).click();
+  await page.getByLabel("Vencimento", { exact: true }).fill("2026-09-20");
+  await page.getByLabel("Arquivo da fatura").setInputFiles({
+    name: "fatura.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-fixture"),
+  });
+  await expect(page.getByRole("table")).toContainText("Compra PDF");
+  await page.getByRole("button", { name: "Confirmar importação da fatura", exact: true }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Confirmar", exact: true })
+    .click();
+  await expect(page.getByText("1 lançamento(s) criado(s).", { exact: true })).toBeVisible();
+  expect(writes).toBe(0);
+  expect(review).toMatchObject({
+    p_card_id: "existing-card",
+    p_file_type: "pdf",
+    p_file_name: "fatura.pdf",
+  });
 });

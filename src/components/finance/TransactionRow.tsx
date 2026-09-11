@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { formatBRL, formatShortDate, initials } from "@/lib/format";
+import { transactionStatusText } from "@/lib/transaction-view";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/shared/finance-types";
 
@@ -99,7 +100,7 @@ export function TransactionRow({
           </div>
           <div>
             <dt className="text-muted-foreground">Status</dt>
-            <dd className="font-medium">{transaction.pending ? "Pendente" : "Liquidada"}</dd>
+            <dd className="font-medium">{transactionStatusText(transaction)}</dd>
           </div>
 
           {(onCategoryChange || onDelete) && (

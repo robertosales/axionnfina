@@ -65,7 +65,11 @@ export function useUpsertAccount() {
         account_number: input.accountNumber?.trim() || "",
       });
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["accounts"] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      void queryClient.invalidateQueries({ queryKey: ["wallet-summary"] });
+      void queryClient.invalidateQueries({ queryKey: ["invoice-card-options"] });
+    },
   });
 }
 

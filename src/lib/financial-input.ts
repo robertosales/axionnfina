@@ -1,6 +1,6 @@
 /** Parse de entrada, sem arredondamento ou cálculo de domínio. Aceita decimal BR e decimal sem agrupamento. */
 export function parseFinancialInput(input: string, decimals = 2): number {
-  const text = input.trim().replace(/^R\$\s*/, "");
+  const text = input.trim().replace(/^([+-]?)R\$\s*/, "$1");
   if (!text) return Number.NaN;
   const pattern = text.includes(",")
     ? new RegExp(`^[+-]?(?:\\d+|\\d{1,3}(?:\\.\\d{3})+),\\d{1,${decimals}}$`)

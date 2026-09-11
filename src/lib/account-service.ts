@@ -380,9 +380,83 @@ export async function getCreditCards(): Promise<CreditCard[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("[AccountService] getCreditCards failed:", error);
-    return [];
+    throw error;
   }
 
   return (data as CreditCard[]) ?? [];
+}
+
+export type InvoiceCardOption = {
+  id: string;
+  accountId: string;
+  cardId: string | null;
+  label: string;
+};
+
+/** Inclui contas de crédito antigas que ainda não têm um registro em credit_cards. */
+export async function getInvoiceCardOptions(): Promise<InvoiceCardOption[]> {
+  const [cards, accounts] = await Promise.all([
+    getCreditCards(),
+    supabase
+      .from("accounts")
+      .select("id, name, institution")
+      .eq("type", "credit")
+      .is("archived_at", null)
+      .order("name"),
+  ]);
+  if (accounts.error) throw accounts.error;
+  return (accounts.data ?? []).flatMap<InvoiceCardOption>((account) => {
+    const linked = cards.filter((card) => card.account_id === account.id);
+    const name = [account.name, account.institution].filter(Boolean).join(" · ");
+    return linked.length
+      ? linked.map((card) => ({
+          id: card.id,
+          accountId: account.id,
+          cardId: card.id,
+          label: `${name}${card.last_four ? ` · •••• ${card.last_four}` : ""}`,
+        }))
+      : [{ id: `account:${account.id}`, accountId: account.id, cardId: null, label: name }];
+  });
+}
+
+/** Resolve o cadastro real antes de enviar o ID para o parser ou para a RPC da fatura. */
+export async function resolveInvoiceCard(option: InvoiceCardOption): Promise<string> {
+  if (option.cardId) return option.cardId;
+  const { data: account, error } = await supabase
+    .from("accounts")
+    .select("id, user_id")
+    .eq("id", option.accountId)
+    .eq("type", "credit")
+    .is("archived_at", null)
+    .single();
+  if (error) throw error;
+  const { data: existing, error: readError } = await supabase
+    .from("credit_cards")
+    .select("id")
+    .eq("account_id", account.id)
+    .order("created_at")
+    .limit(1);
+  if (readError) throw readError;
+  if (existing?.[0]) return existing[0].id;
+  // Identidade estável para o vínculo automático: tentativas simultâneas usam a mesma PK.
+  // Dados de cartão desconhecidos permanecem vazios; não inventamos número ou bandeira.
+  const { error: insertError } = await supabase.from("credit_cards").upsert(
+    {
+      id: account.id,
+      user_id: account.user_id,
+      account_id: account.id,
+      last_four: "",
+      brand: "other",
+    },
+    { onConflict: "id", ignoreDuplicates: true },
+  );
+  if (insertError) throw insertError;
+  const { data: card, error: verifyError } = await supabase
+    .from("credit_cards")
+    .select("id")
+    .eq("id", account.id)
+    .eq("account_id", account.id)
+    .single();
+  if (verifyError) throw verifyError;
+  return card.id;
 }

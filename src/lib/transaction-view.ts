@@ -1,4 +1,25 @@
-import type { Transaction } from "@/shared/finance-types";
+import type { Transaction, TransactionStatus } from "@/shared/finance-types";
+export const transactionStatusLabel: Record<TransactionStatus, string> = {
+  pending: "Pendente",
+  settled: "Confirmada",
+  cancelled: "Cancelada",
+  failed: "Falhou",
+  reversed: "Estornada",
+};
+export function transactionStatusText(row: Transaction) {
+  return row.status
+    ? transactionStatusLabel[row.status]
+    : row.pending
+      ? "Pendente"
+      : "Não informada";
+}
+export function canChangeTransactionStatus(row: Transaction) {
+  return (
+    !row.archivedAt &&
+    (row.recordOrigin === "manual" || row.recordOrigin === "import") &&
+    (row.status === "pending" || row.status === "settled")
+  );
+}
 export const transactionKindLabel = {
   income: "Receita",
   expense: "Despesa",
@@ -7,6 +28,7 @@ export const transactionKindLabel = {
 } as const;
 export type TransactionFilters = {
   search: string;
+  status?: string;
   kind: string;
   account: string;
   category: string;
@@ -15,6 +37,7 @@ export type TransactionFilters = {
 };
 export const emptyTransactionFilters: TransactionFilters = {
   search: "",
+  status: "all",
   kind: "all",
   account: "all",
   category: "all",
@@ -25,6 +48,7 @@ export function filterTransactions(rows: Transaction[], filters: TransactionFilt
   const search = filters.search.trim().toLocaleLowerCase("pt-BR");
   return rows.filter(
     (row) =>
+      (!filters.status || filters.status === "all" || row.status === filters.status) &&
       (filters.kind === "all" || row.kind === filters.kind) &&
       (filters.account === "all" || row.accountId === filters.account) &&
       (filters.category === "all" || row.category === filters.category) &&
@@ -43,7 +67,7 @@ export function transactionCsv(rows: Transaction[]) {
     return `"${safe.replaceAll('"', '""')}"`;
   };
   return (
-    "\uFEFFdata;descricao;estabelecimento;categoria;tipo;valor\r\n" +
+    "\uFEFFdata;descricao;estabelecimento;categoria;tipo;valor;situacao\r\n" +
     rows
       .map((row) =>
         [
@@ -53,6 +77,7 @@ export function transactionCsv(rows: Transaction[]) {
           row.category,
           transactionKindLabel[row.kind],
           row.amount,
+          transactionStatusText(row),
         ]
           .map((value, index) =>
             index === 5 ? Number(value).toFixed(2).replace(".", ",") : cell(value),

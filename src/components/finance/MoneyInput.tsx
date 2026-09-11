@@ -1,11 +1,13 @@
 import { Input } from "@/components/ui/input";
 import { parseFinancialInput } from "@/lib/financial-input";
+import { formatBRL } from "@/lib/format";
 import { useId, useState, type ComponentProps } from "react";
 
 export function MoneyInput({
   value,
   onChange,
   onBlur,
+  onFocus,
   required = true,
   min,
   decimals = 2,
@@ -13,6 +15,7 @@ export function MoneyInput({
 }: Omit<ComponentProps<typeof Input>, "type"> & { decimals?: number }) {
   const errorId = useId();
   const [touched, setTouched] = useState(false);
+  const [focused, setFocused] = useState(false);
   const text = String(value ?? "");
   const parsed = parseFinancialInput(text, decimals);
   const invalid =
@@ -29,17 +32,22 @@ export function MoneyInput({
         type="text"
         inputMode="decimal"
         required={required}
-        value={value}
+        value={!focused && decimals === 2 && Number.isFinite(parsed) ? formatBRL(parsed) : value}
         aria-invalid={(touched && invalid) || undefined}
         aria-describedby={touched && invalid ? errorId : props["aria-describedby"]}
         ref={(node) => {
           node?.setCustomValidity(invalid ? message : "");
         }}
         onInvalid={() => setTouched(true)}
+        onFocus={(event) => {
+          setFocused(true);
+          onFocus?.(event);
+        }}
         onChange={(event) => {
           onChange?.(event);
         }}
         onBlur={(event) => {
+          setFocused(false);
           setTouched(true);
           onBlur?.(event);
         }}

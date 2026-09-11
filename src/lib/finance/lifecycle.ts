@@ -104,7 +104,10 @@ export function useEntityLifecycle(entity: LifecycleEntity) {
   const queryClient = useQueryClient();
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: [lifecycleQueryKey[entity]] });
-    if (entity === "account") void queryClient.invalidateQueries({ queryKey: ["wallet-summary"] });
+    if (entity === "account") {
+      void queryClient.invalidateQueries({ queryKey: ["wallet-summary"] });
+      void queryClient.invalidateQueries({ queryKey: ["invoice-card-options"] });
+    }
     if (entity === "transaction") {
       void queryClient.invalidateQueries({ queryKey: ["accounts"] });
       void queryClient.invalidateQueries({ queryKey: ["wallet-summary"] });

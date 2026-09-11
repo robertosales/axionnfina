@@ -1,4 +1,7 @@
+import type { Database } from "@/integrations/supabase/types";
+
 /** Contratos de apresentação financeira usados pelas telas e adaptadores. */
+export type TransactionStatus = Database["public"]["Enums"]["transaction_status"];
 export type AccountType = "CHECKING" | "SAVINGS" | "CREDIT_CARD" | "INVESTMENT";
 export type TransactionKind = "income" | "expense" | "transfer" | "investment";
 
@@ -27,6 +30,7 @@ export type Transaction = {
   accountName: string;
   accountId?: string | null;
   pending?: boolean;
+  status?: TransactionStatus;
   isRecurring?: boolean;
   archivedAt?: string | null;
   recordOrigin?: "manual" | "open_finance" | "import" | "system";

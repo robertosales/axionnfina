@@ -32,9 +32,7 @@ async function loadParser() {
   // The Worker runtime cannot dynamically import pdf.worker.mjs at runtime, so
   // bundle it and expose it as the main-thread worker handler pdfjs looks for.
   if (typeof globals["pdfjsWorker"] === "undefined") {
-    globals["pdfjsWorker"] = (await import(
-      /* @vite-ignore */ "pdfjs-dist/legacy/build/pdf.worker.mjs" as string
-    )) as unknown;
+    globals["pdfjsWorker"] = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
   }
   const mod = await import("pdf-parse");
   return mod.PDFParse;

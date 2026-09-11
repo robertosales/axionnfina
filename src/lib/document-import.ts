@@ -131,15 +131,16 @@ function parseTextRows(content: string, ownerId: string, prefix: "statement" | "
   const amountPattern = /(?:R\$\s*)?-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+(?:[.,]\d{2})/g;
 
   content.split(/\r?\n/).forEach((line, index) => {
-    const trimmed = line.trim();
+    const trimmed = line.replace(/[\t|]+/g, " ").replace(/\s+/g, " ").trim();
     const dateMatch = trimmed.match(datePattern);
     if (!dateMatch) return;
     const date = parseDate(dateMatch[0]);
-    const amountMatches = trimmed.match(amountPattern) ?? [];
+    const statementDescription = trimmed.slice(dateMatch[0].length).trim();
+    if (prefix === "statement" && /^SALDO\s+DO\s+DIA\b/i.test(statementDescription)) return;
+    const amountMatches = statementDescription.match(amountPattern) ?? [];
     const rawAmount = amountMatches.at(-1) ?? "";
     const amount = parseAmount(rawAmount);
-    const description = trimmed
-      .slice(dateMatch[0].length)
+    const description = statementDescription
       .replace(rawAmount, "")
       .replace(/\s+/g, " ")
       .trim()

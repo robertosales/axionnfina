@@ -26,6 +26,23 @@ describe("document import", () => {
     expect(row).toMatchObject({ date: "2026-09-04", description: "Mercado Extra", amount: 123.45, valid: true });
   });
 
+  it("parses Itaú statement rows without importing daily balances", () => {
+    const rows = parseStatementText(
+      [
+        "11/09/2026 SALDO DO DIA -1.023,33",
+        "10/09/2026 PAG BOLETO BANCO C6 S.A. -1.570,06",
+        "04/09/2026 REMUNERACAO/SALARIO 10.799,21",
+      ].join("\n"),
+      "account-1",
+    );
+
+    expect(rows).toHaveLength(2);
+    expect(rows).toMatchObject([
+      { date: "2026-09-10", description: "PAG BOLETO BANCO C6 S.A.", amount: -1570.06, valid: true },
+      { date: "2026-09-04", description: "REMUNERACAO/SALARIO", amount: 10799.21, valid: true },
+    ]);
+  });
+
   it("turns extracted PDF text into negative invoice rows", () => {
     const [row] = parseInvoiceText("04/09/2026 Loja Online 99,90", "card-1");
     expect(row).toMatchObject({ amount: -99.9, valid: true });

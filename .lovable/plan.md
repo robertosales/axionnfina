@@ -20,13 +20,13 @@ Coluna principal (2/3)          |  Coluna lateral (1/3)
   Próximas contas               |    Sua próxima conquista
   Saúde do orçamento            |    Alocação de investimentos
   Transações recentes           |    Detecção de anomalias
-──────────────── zona 6 ────────────────
-Contas e origem dos dados + detalhe recolhível de investimentos
+──────────────── zona 6 (recolhida por padrão) ────────────────
+Contas e origem dos dados + detalhe de investimentos (expansível)
 ```
 
 ## Detalhes por item
 
-1. **KPIs**: cada card recebe um tom conforme o valor — dívidas altas em vermelho, liquidez positiva em verde, taxa de poupança positiva em verde / negativa em vermelho, próximo vencimento em vermelho se atrasado, amarelo se vence em até 7 dias, neutro caso contrário. As regras usam valores já calculados hoje na tela; nenhum cálculo novo de indicador.
+1. **KPIs**: cada card recebe um tom conforme o valor — dívidas altas em vermelho, liquidez positiva em verde, taxa de poupança positiva em verde / negativa em vermelho, próximo vencimento em vermelho se atrasado, amarelo se vence em até 7 dias, neutro (cinza) nos demais casos — incluindo quando não há nenhuma conta em aberto ("Sem contas abertas"), que fica cinza, nunca vermelho. As regras usam valores já calculados hoje na tela; nenhum cálculo novo de indicador.
 2. **Patrimônio líquido**: mesmo conteúdo (valor, variação mês/ano, gráfico, tabela, aviso de sincronização), agora em largura total logo abaixo dos KPIs. Score de saúde e "próxima conquista" saem daqui e vão para a coluna lateral.
 3. **Insights do agente**: sobe para logo abaixo do patrimônio, com borda e ícone na cor violeta da marca, largura total. Deixa de dividir linha com "Detecção de anomalias".
 4. **Seu próximo passo**: quando não há contas nem transações, aparece como está hoje. Com dados reais, vira um card estreito e discreto com uma linha de texto e link, dispensável.
@@ -34,6 +34,8 @@ Contas e origem dos dados + detalhe recolhível de investimentos
 6. **Estado vazio unificado**: quando não há contas nem transações, um único aviso no topo da página com o botão "Conectar contas"; os cards individuais deixam de repetir "Ainda não há dados para este período" nesse cenário.
 
 Zonas separadas por espaçamento maior e um leve fundo alternado nas faixas de destaque (patrimônio e insights).
+
+7. **Zona 6 recolhida**: "Contas e origem dos dados" e o detalhe de investimentos ficam dentro de um bloco expansível, fechado por padrão — informação de bastidor, sem competir com a zona 5.
 
 ## Arquivos tocados
 

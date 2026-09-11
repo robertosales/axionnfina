@@ -21,7 +21,7 @@ export function CashflowSection({
   loadingTransactions,
   transactionsError,
   transactions,
-  suppressEmpty,
+  suppressEmpty = false,
 }: CashflowSectionProps) {
   return (
     <ChartCard
@@ -78,7 +78,7 @@ export function AllocationSection({
   loadingInvestments,
   investmentsError,
   allocation,
-  suppressEmpty,
+  suppressEmpty = false,
 }: AllocationSectionProps) {
   return (
     <ChartCard title="Alocação de investimentos" description="Carteira consolidada">

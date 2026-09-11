@@ -55,5 +55,6 @@ export function DataState({
         <p>Ainda não há dados para este período.</p>
       </div>
     );
+  }
   return children;
 }

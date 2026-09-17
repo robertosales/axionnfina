@@ -79,10 +79,10 @@ export function EquityOpportunityCard({
         </div>
         <div className="rounded-xl bg-primary/8 px-3 py-2 text-right">
           <span className="numeric block text-xl font-semibold text-primary">
-            {opportunity.score}
+            {opportunity.studyOnly ? "—" : opportunity.score}
           </span>
           <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-            de 100
+            {opportunity.studyOnly ? "sem nota" : "de 100"}
           </span>
         </div>
       </div>

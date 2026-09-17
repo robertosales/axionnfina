@@ -77,7 +77,7 @@ const FIT_LABELS = { high: "Alta aderência", medium: "Aderência parcial", low:
 
 function OpportunityCard({ opportunity, rank }: { opportunity: RankedOpportunity; rank: number }) {
   return (
-    <article className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4 shadow-elevation-1 transition-colors hover:border-primary/30 sm:p-5">
+    <article className="group relative overflow-hidden rounded-lg border border-border bg-card p-4 shadow-elevation-1 transition-colors hover:border-primary/40 sm:p-5">
       <div
         className={cn(
           "absolute inset-y-0 left-0 w-1",
@@ -106,7 +106,7 @@ function OpportunityCard({ opportunity, rank }: { opportunity: RankedOpportunity
           <h3 className="mt-2 text-base font-semibold tracking-tight">{opportunity.name}</h3>
           <p className="mt-1 text-sm text-muted-foreground">{opportunity.summary}</p>
         </div>
-        <div className="rounded-xl bg-primary/8 px-3 py-2 text-right">
+        <div className="rounded-md bg-primary/8 px-3 py-2 text-right">
           <span className="numeric block text-xl font-semibold text-primary">
             {opportunity.score}
           </span>
@@ -172,7 +172,7 @@ function OpportunityCard({ opportunity, rank }: { opportunity: RankedOpportunity
               ))}
             </ul>
             {opportunity.warnings.length > 0 && (
-              <div className="mt-3 rounded-xl bg-warning/8 p-3 text-xs text-muted-foreground">
+              <div className="mt-3 rounded-md bg-warning/8 p-3 text-xs text-muted-foreground">
                 {opportunity.warnings.join(" ")}
               </div>
             )}
@@ -194,9 +194,9 @@ function OpportunityCard({ opportunity, rank }: { opportunity: RankedOpportunity
 function RadarSkeleton() {
   return (
     <div className="space-y-3" aria-label="Carregando Radar de Investimentos">
-      <Skeleton className="h-32 rounded-2xl" />
-      <Skeleton className="h-56 rounded-2xl" />
-      <Skeleton className="h-56 rounded-2xl" />
+      <Skeleton className="h-32 rounded-lg" />
+      <Skeleton className="h-56 rounded-lg" />
+      <Skeleton className="h-56 rounded-lg" />
     </div>
   );
 }
@@ -234,7 +234,7 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
   if (radar.isLoading) return <RadarSkeleton />;
   if (radar.isError) {
     return (
-      <Card className="rounded-2xl border-danger/25 bg-danger/5 p-5">
+      <Card className="border-danger/25 bg-danger/5 p-5">
         <div className="flex items-start gap-3">
           <TriangleAlert className="mt-0.5 size-5 text-danger" />
           <div>
@@ -255,7 +255,7 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
   const equities = data.equityOpportunities ?? [];
   const fixedIncomeList =
     opportunities.length === 0 ? (
-      <Card className="rounded-2xl p-8 text-center">
+      <Card className="p-6 text-center">
         <ScanSearch className="mx-auto size-8 text-muted-foreground" />
         <p className="mt-3 font-medium">Nenhum título disponível no último arquivo oficial.</p>
       </Card>

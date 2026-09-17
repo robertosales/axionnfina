@@ -25,10 +25,10 @@ export function FinancialNextStepCard({
 }: FinancialNextStepCardProps) {
   if (isLoading) {
     if (compact) {
-      return <Skeleton className="h-12 w-full rounded-xl" />;
+      return <Skeleton className="h-12 w-full rounded-lg" />;
     }
     return (
-      <Card className="overflow-hidden rounded-2xl border-border/60 shadow-elevation-1">
+      <Card className="overflow-hidden">
         <div className="space-y-5 p-5 sm:p-6">
           <Skeleton className="h-5 w-44" />
           <Skeleton className="h-2 w-full" />
@@ -42,7 +42,7 @@ export function FinancialNextStepCard({
   if (hasError) {
     return (
       <Card
-        className="rounded-2xl border-warning/40 bg-warning/5 p-5 shadow-elevation-1 sm:p-6"
+        className="border-warning/40 bg-warning/5 p-5 sm:p-6"
         role="alert"
       >
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -70,7 +70,7 @@ export function FinancialNextStepCard({
 
   if (compact) {
     return (
-      <Card className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-border/60 p-4 shadow-elevation-1">
+      <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
         <div className="flex min-w-0 items-center gap-3">
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
             <Compass className="size-4" aria-hidden />
@@ -91,7 +91,7 @@ export function FinancialNextStepCard({
   }
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-primary/20 shadow-elevation-1">
+    <Card className="overflow-hidden border-primary/20">
       <div className="border-b border-border/60 px-5 py-4 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">

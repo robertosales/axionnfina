@@ -1046,7 +1046,7 @@ function TransactionsPage() {
             setImportOpen(value);
         }}
       >
-        <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto rounded-2xl">
+        <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Conferir extrato antes de importar</DialogTitle>
           </DialogHeader>

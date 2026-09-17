@@ -103,7 +103,7 @@ export function InvestmentDecisionBriefing() {
   });
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-border/60 shadow-elevation-1">
+    <Card className="overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 p-5">
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
@@ -128,7 +128,7 @@ export function InvestmentDecisionBriefing() {
         ) : failed ? (
           <p className="text-sm text-danger">Não foi possível consolidar o briefing.</p>
         ) : actions.length === 0 ? (
-          <div className="rounded-xl border border-dashed p-5">
+          <div className="rounded-lg border border-dashed p-5">
             <p className="text-sm font-medium">Nenhuma ação prioritária identificada.</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Cadastre posições, planos ou ofertas para ampliar a análise.

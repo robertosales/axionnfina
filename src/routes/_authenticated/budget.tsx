@@ -198,7 +198,7 @@ function BudgetPage() {
         </div>
       </DataState>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="rounded-2xl">
+        <DialogContent>
           <FinancialForm>
             <DialogHeader>
               <DialogTitle>

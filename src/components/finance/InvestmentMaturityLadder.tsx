@@ -30,7 +30,7 @@ export function InvestmentMaturityLadder({ positions }: { positions: Position[] 
   const maximum = Math.max(...ladder.buckets.map((bucket) => bucket.total), 1);
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-border/60 shadow-elevation-1">
+    <Card className="overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 p-5">
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">

@@ -362,7 +362,7 @@ function InvestmentsPage() {
         )}
       </DataState>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <FinancialForm>
             <DialogHeader>
               <DialogTitle>{editingId ? "Editar posição" : "Nova posição"}</DialogTitle>

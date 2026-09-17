@@ -184,7 +184,7 @@ export function SavingsPlanPanel() {
 
   if (loading) {
     return (
-      <Card className="space-y-4 rounded-2xl border-border/60 p-5 shadow-elevation-1 sm:p-6">
+      <Card className="space-y-4 p-5 sm:p-6">
         <Skeleton className="h-6 w-52" />
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-40 w-full" />
@@ -195,7 +195,7 @@ export function SavingsPlanPanel() {
   if (isError) {
     return (
       <Card
-        className="rounded-2xl border-warning/40 bg-warning/5 p-5 shadow-elevation-1"
+        className="border-warning/40 bg-warning/5 p-5"
         role="alert"
       >
         <h2 className="font-semibold">Não foi possível carregar o plano de economia</h2>
@@ -209,7 +209,7 @@ export function SavingsPlanPanel() {
 
   return (
     <section aria-labelledby="savings-plan-title" className="space-y-4">
-      <Card className="overflow-hidden rounded-2xl border-success/25 bg-gradient-to-br from-success/[0.08] via-card to-card shadow-elevation-1">
+      <Card className="overflow-hidden border-success/25 bg-gradient-to-br from-success/[0.08] via-card to-card">
         <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div>
             <div className="flex items-center gap-2 text-success">
@@ -228,11 +228,11 @@ export function SavingsPlanPanel() {
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:min-w-80">
-            <div className="rounded-xl border border-border/60 bg-background/70 p-3">
+            <div className="rounded-md border border-border bg-background/70 p-3">
               <p className="text-[11px] text-muted-foreground">Meta mensal aceita</p>
               <p className="numeric mt-1 text-lg font-semibold">{formatBRL(plannedSaving)}</p>
             </div>
-            <div className="rounded-xl border border-success/30 bg-success/5 p-3">
+            <div className="rounded-md border border-success/30 bg-success/5 p-3">
               <p className="text-[11px] text-muted-foreground">Economia confirmada</p>
               <p className="numeric mt-1 text-lg font-semibold text-success">
                 {formatBRL(realizedSaving)}
@@ -243,7 +243,7 @@ export function SavingsPlanPanel() {
       </Card>
 
       {detected.length === 0 && active.length === 0 && completed.length === 0 ? (
-        <Card className="rounded-2xl border-dashed border-border/70 p-6 text-center shadow-none">
+        <Card className="border-dashed p-6 text-center shadow-none">
           <Sparkles className="mx-auto size-6 text-primary" aria-hidden />
           <h3 className="mt-3 font-semibold">Ainda não há oportunidades confiáveis</h3>
           <p className="mx-auto mt-1 max-w-lg text-sm text-muted-foreground">
@@ -402,7 +402,7 @@ export function SavingsPlanPanel() {
       )}
 
       <Dialog open={Boolean(checkInPlan)} onOpenChange={(open) => !open && setCheckInPlan(null)}>
-        <DialogContent className="rounded-2xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Registrar resultado mensal</DialogTitle>
           </DialogHeader>

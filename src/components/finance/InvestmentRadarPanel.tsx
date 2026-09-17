@@ -40,6 +40,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EquityOpportunityCard } from "@/components/finance/EquityOpportunityCard";
+import { MarketOverviewStrip } from "@/components/finance/MarketOverviewStrip";
 import { formatBRL, formatLongDate } from "@/lib/format";
 import { useInvestmentRadar, useUpdateInvestmentProfile } from "@/lib/finance-data";
 import type {
@@ -249,6 +252,20 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
 
   const data = radar.data;
   const opportunities = data.opportunities.slice(0, compact ? 3 : 8);
+  const equities = data.equityOpportunities ?? [];
+  const fixedIncomeList =
+    opportunities.length === 0 ? (
+      <Card className="rounded-2xl p-8 text-center">
+        <ScanSearch className="mx-auto size-8 text-muted-foreground" />
+        <p className="mt-3 font-medium">Nenhum título disponível no último arquivo oficial.</p>
+      </Card>
+    ) : (
+      <div className="grid gap-3 xl:grid-cols-2">
+        {opportunities.map((opportunity, index) => (
+          <OpportunityCard key={opportunity.id} opportunity={opportunity} rank={index + 1} />
+        ))}
+      </div>
+    );
 
   return (
     <section aria-labelledby="investment-radar-title" className="space-y-4">
@@ -325,17 +342,60 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
         )}
       </Card>
 
-      {opportunities.length === 0 ? (
-        <Card className="rounded-2xl p-8 text-center">
-          <ScanSearch className="mx-auto size-8 text-muted-foreground" />
-          <p className="mt-3 font-medium">Nenhum título disponível no último arquivo oficial.</p>
-        </Card>
+      {compact ? (
+        fixedIncomeList
       ) : (
-        <div className="grid gap-3 xl:grid-cols-2">
-          {opportunities.map((opportunity, index) => (
-            <OpportunityCard key={opportunity.id} opportunity={opportunity} rank={index + 1} />
-          ))}
-        </div>
+        <>
+          <MarketOverviewStrip
+            {...(data.marketOverview ? { overview: data.marketOverview } : {})}
+            indicators={data.indicators}
+          />
+          <Tabs defaultValue="fixed-income">
+            <TabsList>
+              <TabsTrigger value="fixed-income">Renda fixa</TabsTrigger>
+              <TabsTrigger value="equities">Renda variável</TabsTrigger>
+            </TabsList>
+            <TabsContent value="fixed-income" className="mt-4">
+              {fixedIncomeList}
+            </TabsContent>
+            <TabsContent value="equities" className="mt-4 space-y-3">
+              {equities.length === 0 ? (
+                <Card className="rounded-2xl p-8 text-center">
+                  <ScanSearch className="mx-auto size-8 text-muted-foreground" />
+                  <p className="mt-3 font-medium">
+                    Cotações da bolsa indisponíveis nesta atualização.
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Nenhum número é estimado quando a fonte falha. Tente novamente mais tarde.
+                  </p>
+                </Card>
+              ) : (
+                <>
+                  {equities.every((item) => item.studyOnly) && (
+                    <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/8 px-4 py-3 text-sm text-muted-foreground">
+                      <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+                      <span>
+                        Pelo seu perfil e situação atual, a renda variável aparece apenas para
+                        estudo. Cada cartão explica o motivo. Não somos corretora e não indicamos
+                        compra.
+                      </span>
+                    </div>
+                  )}
+                  <div className="grid gap-3 xl:grid-cols-2">
+                    {equities.map((equity, index) => (
+                      <EquityOpportunityCard
+                        key={equity.ticker}
+                        opportunity={equity}
+                        rank={index + 1}
+                        fixedIncomeReference={data.opportunities[0]}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
+        </>
       )}
 
       {(data.cacheStatus === "stale" ||

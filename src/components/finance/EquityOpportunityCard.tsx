@@ -33,7 +33,7 @@ export function EquityOpportunityCard({
   return (
     <article
       className={cn(
-        "group relative overflow-hidden rounded-2xl border bg-card p-4 shadow-elevation-1 transition-colors sm:p-5",
+        "group relative overflow-hidden rounded-lg border bg-card p-4 shadow-elevation-1 transition-colors sm:p-5",
         opportunity.studyOnly ? "border-border/60 opacity-95" : "border-border/70 hover:border-primary/30",
       )}
     >
@@ -77,7 +77,7 @@ export function EquityOpportunityCard({
           <h3 className="mt-2 text-base font-semibold tracking-tight">{opportunity.name}</h3>
           <p className="mt-1 text-sm text-muted-foreground">{opportunity.summary}</p>
         </div>
-        <div className="rounded-xl bg-primary/8 px-3 py-2 text-right">
+        <div className="rounded-md bg-primary/8 px-3 py-2 text-right">
           <span className="numeric block text-xl font-semibold text-primary">
             {opportunity.studyOnly ? "—" : opportunity.score}
           </span>
@@ -88,7 +88,7 @@ export function EquityOpportunityCard({
       </div>
 
       {opportunity.studyOnly && opportunity.studyReason && (
-        <p className="mt-3 flex items-start gap-2 rounded-xl bg-warning/8 p-3 text-xs text-muted-foreground">
+        <p className="mt-3 flex items-start gap-2 rounded-md bg-warning/8 p-3 text-xs text-muted-foreground">
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
           {opportunity.studyReason}
         </p>
@@ -153,7 +153,7 @@ export function EquityOpportunityCard({
             </p>
 
             {fixedIncomeReference && (
-              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
+              <div className="rounded-md border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
                 <strong className="block text-foreground">Comparação com a renda fixa</strong>
                 Assumindo este risco você abre mão da previsibilidade de{" "}
                 <strong className="text-foreground">{fixedIncomeReference.name}</strong>, hoje a{" "}
@@ -184,7 +184,7 @@ export function EquityOpportunityCard({
               ))}
             </ul>
 
-            <div className="rounded-xl bg-warning/8 p-3 text-xs text-muted-foreground">
+            <div className="rounded-md bg-warning/8 p-3 text-xs text-muted-foreground">
               {opportunity.warnings.join(" ")}
             </div>
 

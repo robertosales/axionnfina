@@ -86,14 +86,14 @@ function AgentPage() {
       </header>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <Card className="flex min-h-[60vh] flex-col rounded-xl border-border/60 p-0 shadow-elevation-1">
+        <Card className="flex min-h-[60vh] flex-col p-0">
           <div className="flex-1 space-y-4 overflow-y-auto p-5">
             {messages.length === 0 && (
               <div className="flex gap-3">
                 <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted">
                   <Bot className="size-4 text-primary" aria-hidden />
                 </span>
-                <p className="max-w-prose rounded-2xl bg-muted/60 px-4 py-2.5 text-sm leading-relaxed">
+                <p className="max-w-prose rounded-lg bg-muted/60 px-4 py-2.5 text-sm leading-relaxed">
                   Olá! Sou o Axionn. Posso consultar seus gastos, orçamento, metas e projetar seu
                   fluxo de caixa usando os dados reais da sua conta. O que você quer saber?
                 </p>
@@ -119,7 +119,7 @@ function AgentPage() {
                         <p
                           key={index}
                           className={cn(
-                            "whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+                            "whitespace-pre-wrap rounded-lg px-4 py-2.5 text-sm leading-relaxed",
                             message.role === "assistant"
                               ? "bg-muted/60"
                               : "bg-primary text-primary-foreground",

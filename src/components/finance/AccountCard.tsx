@@ -33,8 +33,8 @@ export function AccountCard({ account }: { account: Account }) {
   const negative = account.balance < 0;
 
   return (
-    <Card className="flex min-w-0 flex-row flex-wrap items-center gap-4 rounded-2xl border-border/40 p-5 shadow-elevation-1">
-      <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary/15 text-primary">
+    <Card className="flex min-w-0 flex-row flex-wrap items-center gap-4 p-4 sm:p-5">
+      <span className="grid size-11 shrink-0 place-items-center rounded-md bg-primary/15 text-primary">
         <Icon className="size-5" aria-hidden />
       </span>
 

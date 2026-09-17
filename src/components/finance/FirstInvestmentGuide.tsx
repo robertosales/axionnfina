@@ -237,7 +237,7 @@ export function FirstInvestmentGuide() {
   const readyTone = gate.readiness === "ready";
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-border/60 shadow-elevation-1">
+    <Card className="overflow-hidden">
       <div className="grid gap-6 border-b border-border/60 p-5 sm:p-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -405,7 +405,7 @@ export function FirstInvestmentGuide() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto rounded-2xl p-0">
+        <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto p-0">
           <DialogHeader className="border-b border-border/60 p-5 pb-4 sm:p-6 sm:pb-4">
             <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
               <span>

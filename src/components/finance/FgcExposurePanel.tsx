@@ -56,7 +56,7 @@ export function FgcExposurePanel({ positions }: { positions: Position[] }) {
   );
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-border/60 shadow-elevation-1">
+    <Card className="overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 p-5">
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
@@ -93,13 +93,13 @@ export function FgcExposurePanel({ positions }: { positions: Position[] }) {
         ) : offers.isError || preferences.isError ? (
           <p className="text-sm text-danger">Não foi possível calcular a cobertura.</p>
         ) : summary.groups.length === 0 ? (
-          <div className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
+          <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
             Edite posições de renda fixa e informe quais produtos são elegíveis ao FGC.
           </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {summary.groups.map((group) => (
-              <article key={group.conglomerate} className="rounded-xl border border-border/60 p-4">
+              <article key={group.conglomerate} className="rounded-lg border border-border p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold">{group.conglomerate}</h3>

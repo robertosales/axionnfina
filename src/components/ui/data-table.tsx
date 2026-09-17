@@ -69,12 +69,12 @@ export function DataTable<TData, TValue>({
   return (
     <div
       className={cn(
-        "min-w-0 overflow-hidden rounded-2xl border border-border/50 bg-card shadow-elevation-1",
+        "min-w-0 overflow-hidden rounded-lg border border-border bg-card shadow-elevation-1",
         className,
       )}
     >
       {(enableFiltering || toolbar) && (
-        <div className="flex flex-wrap gap-3 border-b p-4">
+        <div className="flex flex-wrap gap-3 border-b bg-muted/20 p-4">
           {enableFiltering && (
             <Input
               aria-label="Filtrar tabela"
@@ -95,7 +95,7 @@ export function DataTable<TData, TValue>({
       >
         <table className="w-full min-w-[800px] text-left text-sm">
           <caption className="sr-only">Transações financeiras</caption>
-          <thead className="sticky top-0 z-10 bg-card">
+          <thead className="sticky top-0 z-10 bg-muted">
             <tr>
               {table.getHeaderGroups()[0]?.headers.map((header) => (
                 <th
@@ -109,7 +109,7 @@ export function DataTable<TData, TValue>({
                         : undefined
                   }
                   className={cn(
-                    "px-4 py-4 text-xs font-semibold text-foreground",
+                    "px-4 py-3 text-xs font-semibold uppercase text-muted-foreground",
                     header.id === "amount" && "text-right",
                   )}
                 >
@@ -156,7 +156,7 @@ export function DataTable<TData, TValue>({
             ) : (
               table.getRowModel().rows.map((row) => (
                 <Fragment key={row.id}>
-                  <tr className="border-t hover:bg-muted/30">
+                  <tr className="border-t transition-colors hover:bg-muted/40">
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}

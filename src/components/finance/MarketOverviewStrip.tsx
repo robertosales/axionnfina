@@ -28,14 +28,14 @@ export function MarketOverviewStrip({
   if (!overview && indicators.length === 0) return null;
 
   return (
-    <Card className="rounded-2xl p-5">
+    <Card className="p-5">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
         <LineChart className="size-4" /> Como está o mercado hoje
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {overview?.indices.map((index) => (
-          <div key={index.id} className="rounded-xl border border-border/60 bg-muted/20 p-3">
+          <div key={index.id} className="rounded-md border border-border bg-muted/20 p-3">
             <span className="text-xs text-muted-foreground">{index.label}</span>
             <strong className="numeric mt-1 block text-base font-semibold">
               {index.value == null
@@ -51,7 +51,7 @@ export function MarketOverviewStrip({
         ))}
 
         {indicators.map((indicator) => (
-          <div key={indicator.id} className="rounded-xl border border-border/60 bg-muted/20 p-3">
+          <div key={indicator.id} className="rounded-md border border-border bg-muted/20 p-3">
             <span className="text-xs text-muted-foreground">{indicator.label}</span>
             <strong className="numeric mt-1 block text-base font-semibold">
               {indicator.value.toFixed(2)}%

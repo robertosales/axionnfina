@@ -55,15 +55,15 @@ export function KPICard({
   return (
     <Card
       className={cn(
-        "surface-elevated relative h-full rounded-2xl border-border/40 border-l-4 p-5",
+        "surface-elevated relative h-full border-l-2 p-4 sm:p-5",
         toneBorder[tone],
       )}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <span
-          className={cn("grid size-12 shrink-0 place-items-center rounded-full", toneRing[tone])}
+          className={cn("grid size-10 shrink-0 place-items-center rounded-md", toneRing[tone])}
         >
-          <Icon className="size-6" aria-hidden />
+          <Icon className="size-5" aria-hidden />
         </span>
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -91,7 +91,7 @@ export function KPICard({
               </TooltipProvider>
             )}
           </p>
-          <p className="numeric mt-1 break-words text-xl font-semibold tracking-tight sm:text-2xl">
+          <p className="numeric mt-1 break-words text-xl font-semibold sm:text-2xl">
             {value}
           </p>
         </div>

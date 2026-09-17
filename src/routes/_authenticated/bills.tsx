@@ -446,7 +446,7 @@ function BillsPage() {
         )}
       </DataState>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="rounded-2xl">
+        <DialogContent>
           <FinancialForm>
             <DialogHeader>
               <DialogTitle>
@@ -519,7 +519,7 @@ function BillsPage() {
       </Dialog>
 
       <Dialog open={receivableOpen} onOpenChange={setReceivableOpen}>
-        <DialogContent className="rounded-2xl">
+        <DialogContent>
           <FinancialForm>
             <DialogHeader>
               <DialogTitle>

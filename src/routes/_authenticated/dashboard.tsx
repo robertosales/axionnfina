@@ -267,7 +267,7 @@ function Dashboard() {
         <>
           {/* Chamada única de estado vazio */}
           {showEmptyCta && (
-            <Card className="mb-8 flex flex-col items-center gap-3 rounded-2xl border-primary/30 bg-primary/5 p-8 text-center">
+            <Card className="mb-8 flex flex-col items-center gap-3 border-primary/30 bg-primary/5 p-6 text-center">
               <Sparkles className="size-8 text-primary" aria-hidden />
               <h2 className="text-lg font-semibold">Comece conectando suas contas</h2>
               <p className="max-w-md text-sm text-muted-foreground">
@@ -357,7 +357,7 @@ function Dashboard() {
 
           {/* Zona 2 — Hero: patrimônio líquido */}
           <section aria-label="Resumo patrimonial" className="mb-8">
-            <Card className="min-w-0 rounded-2xl border-primary/20 bg-primary/[0.03] p-5 sm:p-6">
+            <Card className="min-w-0 overflow-hidden border-primary/25 bg-primary/[0.03] p-5 sm:p-6">
               <p className="text-sm font-medium text-muted-foreground">Patrimônio líquido</p>
               <DataState
                 loading={loadingAccounts || loadingInvestments}
@@ -415,7 +415,7 @@ function Dashboard() {
                           background: "var(--popover)",
                           color: "var(--foreground)",
                           border: "1px solid var(--border)",
-                          borderRadius: 16,
+                          borderRadius: 8,
                         }}
                       />
                       <Area
@@ -468,7 +468,7 @@ function Dashboard() {
 
           {/* Zona 3 — Insights do agente (IA) */}
           <section aria-label="Insights do agente" className="mb-8">
-            <Card className="rounded-2xl border-primary/50 bg-primary/[0.04] p-5 shadow-elevation-1 sm:p-6">
+            <Card className="border-primary/50 bg-primary/[0.04] p-5 sm:p-6">
               <div className="flex items-center gap-2">
                 <span className="grid size-8 place-items-center rounded-lg bg-primary/15 text-primary">
                   <Sparkles className="size-4" aria-hidden />
@@ -537,7 +537,7 @@ function Dashboard() {
 
               <div>
                 <h2 className="mb-3 text-base font-semibold">Próximas contas</h2>
-                <Card className="rounded-xl border-border/60 p-0 shadow-elevation-1">
+                <Card className="p-0">
                   <DataState loading={loadingBills} error={billsError}>
                     {!loadingBills && !billsError && openBills.length === 0 && (
                       <p className="p-4 text-sm text-muted-foreground">Nenhuma conta em aberto.</p>
@@ -587,7 +587,7 @@ function Dashboard() {
                 </Card>
               </div>
 
-              <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+              <Card className="p-5">
                 <h3 className="text-sm font-semibold">Saúde do orçamento</h3>
                 <DataState
                   loading={loadingBudget}
@@ -659,7 +659,7 @@ function Dashboard() {
                 />
               </DataState>
 
-              <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+              <Card className="p-5">
                 <h2 className="font-semibold">Sua próxima conquista</h2>
                 <DataState
                   loading={loadingGoals}
@@ -695,7 +695,7 @@ function Dashboard() {
                 suppressEmpty={showEmptyCta}
               />
 
-              <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+              <Card className="p-5">
                 <div className="flex items-center gap-2">
                   <Shield className="size-4 text-primary" aria-hidden />
                   <h2 className="text-sm font-semibold">Detecção de anomalias</h2>
@@ -731,12 +731,12 @@ function Dashboard() {
           </section>
 
           {/* Zona 6 — Bastidores (recolhido por padrão) */}
-          <details className="rounded-2xl border border-border bg-card p-5">
+          <details className="rounded-lg border border-border bg-card p-5 shadow-elevation-1">
             <summary className="focus-ring cursor-pointer rounded font-semibold">
               Contas, origem dos dados e detalhes de investimentos
             </summary>
             <div className="mt-6 grid gap-6 lg:grid-cols-3">
-              <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1 lg:col-span-1">
+              <Card className="p-5 lg:col-span-1">
                 <h2 className="text-base font-semibold">Contas e origem dos dados</h2>
                 <DataState
                   loading={loadingAccounts}

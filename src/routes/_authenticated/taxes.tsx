@@ -325,7 +325,7 @@ function TaxesPage() {
         </Card>
       </DataState>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="rounded-2xl">
+        <DialogContent>
           <FinancialForm>
             <DialogHeader>
               <DialogTitle>{editingId ? "Editar evento fiscal" : "Novo evento fiscal"}</DialogTitle>

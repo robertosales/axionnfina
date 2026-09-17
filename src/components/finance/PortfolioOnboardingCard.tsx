@@ -43,7 +43,7 @@ export function PortfolioOnboardingCard({ onManual }: { onManual: () => void }) 
 
   return (
     <>
-      <Card className="overflow-hidden rounded-2xl border-primary/20 bg-gradient-to-br from-primary/[0.07] via-card to-card shadow-elevation-1">
+      <Card className="overflow-hidden border-primary/25 bg-primary/[0.04]">
         <div className="border-b border-border/60 p-5 sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
             Monte sua carteira
@@ -67,7 +67,7 @@ export function PortfolioOnboardingCard({ onManual }: { onManual: () => void }) 
           </div>
         </div>
         <div className="grid gap-3 p-5 sm:p-6 lg:grid-cols-3">
-          <div className="rounded-xl border border-success/30 bg-success/5 p-4">
+          <div className="rounded-lg border border-success/30 bg-success/5 p-4">
             <Building2 className="size-5 text-success" aria-hidden />
             <h3 className="mt-3 font-semibold">Conectar instituição</h3>
             <p className="mt-1 min-h-10 text-xs leading-5 text-muted-foreground">
@@ -77,7 +77,7 @@ export function PortfolioOnboardingCard({ onManual }: { onManual: () => void }) 
               <Link to="/wallet/connect">Conectar banco ou corretora</Link>
             </Button>
           </div>
-          <div className="rounded-xl border border-border/60 p-4">
+          <div className="rounded-lg border border-border p-4">
             <FileSpreadsheet className="size-5 text-primary" aria-hidden />
             <h3 className="mt-3 font-semibold">Importar planilha</h3>
             <p className="mt-1 min-h-10 text-xs leading-5 text-muted-foreground">
@@ -99,7 +99,7 @@ export function PortfolioOnboardingCard({ onManual }: { onManual: () => void }) 
               Selecionar CSV
             </Button>
           </div>
-          <div className="rounded-xl border border-border/60 p-4">
+          <div className="rounded-lg border border-border p-4">
             <PencilLine className="size-5 text-primary" aria-hidden />
             <h3 className="mt-3 font-semibold">Informar manualmente</h3>
             <p className="mt-1 min-h-10 text-xs leading-5 text-muted-foreground">
@@ -113,7 +113,7 @@ export function PortfolioOnboardingCard({ onManual }: { onManual: () => void }) 
       </Card>
 
       <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto rounded-2xl">
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Confira antes de importar</DialogTitle>
           </DialogHeader>
@@ -125,7 +125,7 @@ export function PortfolioOnboardingCard({ onManual }: { onManual: () => void }) 
               {rows.length - valid.length} para corrigir
             </Badge>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-border/60">
+          <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[38rem] text-left text-xs">
               <thead className="bg-muted/40 text-muted-foreground">
                 <tr>

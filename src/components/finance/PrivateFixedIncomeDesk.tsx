@@ -210,7 +210,7 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
   };
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-border/60 shadow-elevation-1">
+    <Card className="overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 p-5">
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
@@ -483,7 +483,7 @@ export function PrivateFixedIncomeDesk({ showArchived = false }: { showArchived?
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl sm:max-w-2xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editing ? "Alterar oferta" : "Incluir oferta"}</DialogTitle>
           </DialogHeader>

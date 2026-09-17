@@ -137,7 +137,7 @@ export function InvestmentPlanSimulator() {
   };
 
   if (radar.isLoading) {
-    return <Skeleton className="h-[32rem] rounded-2xl" aria-label="Carregando simulador" />;
+    return <Skeleton className="h-[32rem] rounded-lg" aria-label="Carregando simulador" />;
   }
   if (!radar.data || !simulation) return null;
 
@@ -145,7 +145,7 @@ export function InvestmentPlanSimulator() {
 
   return (
     <section aria-labelledby="investment-plan-title">
-      <Card className="overflow-hidden rounded-2xl border-border/70 shadow-elevation-1">
+      <Card className="overflow-hidden">
         <div className="border-b border-border/60 bg-muted/25 p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -173,7 +173,7 @@ export function InvestmentPlanSimulator() {
 
           <TabsContent value="simulate" className="mt-5 space-y-5">
             <div className="grid gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-              <div className="space-y-4 rounded-2xl border border-border/60 bg-background p-4 sm:p-5">
+              <div className="space-y-4 rounded-lg border border-border bg-background p-4 sm:p-5">
                 <div className="space-y-1.5">
                   <Label htmlFor="plan-initial">Aporte inicial</Label>
                   <Input
@@ -238,14 +238,14 @@ export function InvestmentPlanSimulator() {
                   <span className="text-xs text-muted-foreground">Distribuição sugerida</span>
                 </div>
                 {simulation.allocations.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                  <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
                     Nenhuma oportunidade possui dados suficientes para projeção.
                   </div>
                 ) : (
                   simulation.allocations.map((allocation, index) => (
                     <div
                       key={allocation.opportunityId}
-                      className="rounded-2xl border border-border/60 p-4"
+                      className="rounded-lg border border-border p-4"
                     >
                       <div className="flex items-start gap-3">
                         <span
@@ -305,7 +305,7 @@ export function InvestmentPlanSimulator() {
                   <div
                     key={scenario.id}
                     className={cn(
-                      "rounded-2xl border p-4",
+                      "rounded-lg border p-4",
                       scenario.id === "reference"
                         ? "border-primary/35 bg-primary/5"
                         : "border-border/60",
@@ -379,9 +379,9 @@ export function InvestmentPlanSimulator() {
               />
             </div>
 
-            {plans.isLoading && <Skeleton className="h-32 rounded-2xl" />}
+            {plans.isLoading && <Skeleton className="h-32 rounded-lg" />}
             {plans.isError && (
-              <div className="rounded-2xl border border-danger/30 bg-danger/5 p-5">
+              <div className="rounded-lg border border-danger/30 bg-danger/5 p-5">
                 <p className="text-sm font-medium">Não foi possível carregar os planos.</p>
                 <p className="mt-1 text-xs text-muted-foreground">{plans.error.message}</p>
                 <Button
@@ -395,7 +395,7 @@ export function InvestmentPlanSimulator() {
               </div>
             )}
             {!plans.isLoading && !plans.isError && (plans.data?.length ?? 0) === 0 && (
-              <div className="rounded-2xl border border-dashed p-10 text-center">
+              <div className="rounded-lg border border-dashed p-10 text-center">
                 {showArchived ? (
                   <Archive className="mx-auto size-8 text-muted-foreground" />
                 ) : (
@@ -415,7 +415,7 @@ export function InvestmentPlanSimulator() {
               {(plans.data ?? []).map((plan) => {
                 const reference = plan.scenarios.find((scenario) => scenario.id === "reference");
                 return (
-                  <article key={plan.id} className="rounded-2xl border border-border/60 p-4">
+                  <article key={plan.id} className="rounded-lg border border-border p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <h4 className="truncate font-medium">{plan.name}</h4>
@@ -496,7 +496,7 @@ export function InvestmentPlanSimulator() {
       </Card>
 
       <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
-        <DialogContent className="rounded-2xl sm:max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editingId ? "Atualizar plano" : "Salvar plano"}</DialogTitle>
             <DialogDescription>

@@ -133,7 +133,7 @@ export function InvestmentPlanTracking() {
   };
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-border/60 shadow-elevation-1">
+    <Card className="overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 p-5">
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
@@ -324,14 +324,14 @@ export function InvestmentPlanTracking() {
       )}
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="rounded-2xl sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <BellRing className="size-5" /> Alertas de investimento
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-5">
-            <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
+            <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
               <div>
                 <Label htmlFor="investment-alerts-enabled">Monitoramento diário</Label>
                 <p className="mt-1 text-xs text-muted-foreground">

@@ -194,7 +194,7 @@ function SettingsPage() {
             ))}
           </div>
 
-          <Card className="rounded-2xl border-border/50 p-5 shadow-elevation-1">
+          <Card className="p-5">
             <div className="flex items-center gap-2">
               <Tags className="size-4 text-primary" aria-hidden />
               <h2 className="text-lg font-semibold">Categorias</h2>
@@ -406,7 +406,7 @@ function SettingsPage() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] overflow-y-auto rounded-2xl">
+        <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] overflow-y-auto">
           <FinancialForm>
             <DialogHeader>
               <DialogTitle>Cadastrar nova conta</DialogTitle>

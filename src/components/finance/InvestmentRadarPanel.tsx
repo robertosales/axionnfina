@@ -269,7 +269,7 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
 
   return (
     <section aria-labelledby="investment-radar-title" className="space-y-4">
-      <Card className="relative overflow-hidden rounded-2xl border-primary/20 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.14),transparent_42%)] p-5 shadow-elevation-1 sm:p-6">
+      <Card className="relative overflow-hidden border-primary/30 bg-primary/[0.04] p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
@@ -294,19 +294,19 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
         </div>
 
         <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-border/60 bg-background/75 p-3 backdrop-blur-sm">
+          <div className="rounded-md border border-border bg-background/75 p-3">
             <span className="text-xs text-muted-foreground">Perfil usado</span>
             <strong className="mt-1 block text-sm">
               {PROFILE_LABELS[data.profile.riskProfile]}
             </strong>
           </div>
-          <div className="rounded-xl border border-border/60 bg-background/75 p-3 backdrop-blur-sm">
+          <div className="rounded-md border border-border bg-background/75 p-3">
             <span className="text-xs text-muted-foreground">Horizonte</span>
             <strong className="numeric mt-1 block text-sm">
               {data.profile.horizonMonths} meses
             </strong>
           </div>
-          <div className="rounded-xl border border-border/60 bg-background/75 p-3 backdrop-blur-sm">
+          <div className="rounded-md border border-border bg-background/75 p-3">
             <span className="text-xs text-muted-foreground">Reserva estimada</span>
             <strong className="numeric mt-1 block text-sm">
               {data.context.reserveMonths == null
@@ -314,7 +314,7 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
                 : `${data.context.reserveMonths} meses`}
             </strong>
           </div>
-          <div className="rounded-xl border border-border/60 bg-background/75 p-3 backdrop-blur-sm">
+          <div className="rounded-md border border-border bg-background/75 p-3">
             <span className="text-xs text-muted-foreground">Dados de mercado</span>
             <strong className="numeric mt-1 block text-sm">
               {formatLongDate(data.referenceDate)}
@@ -360,7 +360,7 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
             </TabsContent>
             <TabsContent value="equities" className="mt-4 space-y-3">
               {equities.length === 0 ? (
-                <Card className="rounded-2xl p-8 text-center">
+                <Card className="p-6 text-center">
                   <ScanSearch className="mx-auto size-8 text-muted-foreground" />
                   <p className="mt-3 font-medium">
                     Cotações da bolsa indisponíveis nesta atualização.
@@ -372,7 +372,7 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
               ) : (
                 <>
                   {equities.every((item) => item.studyOnly) && (
-                    <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/8 px-4 py-3 text-sm text-muted-foreground">
+                    <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/8 px-4 py-3 text-sm text-muted-foreground">
                       <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
                       <span>
                         Pelo seu perfil e situação atual, a renda variável aparece apenas para
@@ -400,7 +400,7 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
 
       {(data.cacheStatus === "stale" ||
         data.sourceHealth.some((source) => source.status === "unavailable")) && (
-        <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/8 px-4 py-3 text-xs text-muted-foreground">
+        <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/8 px-4 py-3 text-xs text-muted-foreground">
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
           <span>
             Parte das fontes está temporariamente indisponível. O Radar identificará claramente
@@ -409,7 +409,7 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <ShieldCheck className="size-4 text-primary" /> {data.disclaimer}
         </span>
@@ -429,7 +429,7 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
       </div>
 
       <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
-        <DialogContent className="rounded-2xl sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Preferências do Radar</DialogTitle>
             <DialogDescription>

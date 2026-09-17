@@ -14,6 +14,9 @@ import {
   type RiskProfile,
 } from "@/lib/investment-radar";
 import { getMarketSnapshot } from "@/lib/investment-market.server";
+import { getEquitySnapshot } from "@/lib/market-equities.server";
+import { buildMarketOverview, rankEquityOpportunities } from "@/lib/equity-ranking";
+import { CURATED_ASSETS } from "@/lib/market-equities";
 
 function includesValue<T extends string>(values: readonly T[], value: string | null): value is T {
   return value != null && values.includes(value as T);
@@ -97,6 +100,16 @@ export async function buildUserInvestmentRadar(
   };
 
   const { snapshot, cacheStatus } = await getMarketSnapshot();
+
+  const equity = await getEquitySnapshot().catch(() => null);
+  const quoteMap = new Map((equity?.quotes ?? []).map((quote) => [quote.ticker, quote]));
+  const equityOpportunities = equity
+    ? rankEquityOpportunities(CURATED_ASSETS, quoteMap, profile, context)
+    : undefined;
+  const marketOverview = equity
+    ? buildMarketOverview(equity.indices, equity.referenceDate, equity.source, equity.sourceUrl)
+    : undefined;
+
   return {
     generatedAt: new Date().toISOString(),
     referenceDate: snapshot.opportunities[0]?.referenceDate ?? snapshot.fetchedAt.slice(0, 10),
@@ -110,7 +123,26 @@ export async function buildUserInvestmentRadar(
       snapshot.indicators,
       context,
     ),
-    sourceHealth: snapshot.sourceHealth,
+    ...(marketOverview ? { marketOverview } : {}),
+    ...(equityOpportunities ? { equityOpportunities } : {}),
+    sourceHealth: [
+      ...snapshot.sourceHealth,
+      ...(equity
+        ? [
+            {
+              source: equity.source,
+              status: equity.health.status,
+              detail: equity.health.detail,
+            },
+          ]
+        : [
+            {
+              source: "Cotações da bolsa",
+              status: "unavailable" as const,
+              detail: "Nenhuma fonte de cotações respondeu nesta atualização.",
+            },
+          ]),
+    ],
     disclaimer:
       "Conteúdo educacional baseado em dados públicos. Não constitui recomendação, oferta ou análise individual regulada. Confirme preços, custos, tributação e suitability na instituição antes de investir.",
   };

@@ -40,6 +40,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EquityOpportunityCard } from "@/components/finance/EquityOpportunityCard";
+import { MarketOverviewStrip } from "@/components/finance/MarketOverviewStrip";
 import { formatBRL, formatLongDate } from "@/lib/format";
 import { useInvestmentRadar, useUpdateInvestmentProfile } from "@/lib/finance-data";
 import type {
@@ -249,6 +252,20 @@ export function InvestmentRadarPanel({ compact = false }: { compact?: boolean })
 
   const data = radar.data;
   const opportunities = data.opportunities.slice(0, compact ? 3 : 8);
+  const equities = data.equityOpportunities ?? [];
+  const fixedIncomeList =
+    opportunities.length === 0 ? (
+      <Card className="rounded-2xl p-8 text-center">
+        <ScanSearch className="mx-auto size-8 text-muted-foreground" />
+        <p className="mt-3 font-medium">Nenhum título disponível no último arquivo oficial.</p>
+      </Card>
+    ) : (
+      <div className="grid gap-3 xl:grid-cols-2">
+        {opportunities.map((opportunity, index) => (
+          <OpportunityCard key={opportunity.id} opportunity={opportunity} rank={index + 1} />
+        ))}
+      </div>
+    );
 
   return (
     <section aria-labelledby="investment-radar-title" className="space-y-4">

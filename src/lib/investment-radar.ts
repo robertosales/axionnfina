@@ -65,6 +65,10 @@ export type RankedOpportunity = TreasuryOpportunity & {
 };
 
 export type InvestmentRadarResponse = {
+  /** Panorama do dia (Ibovespa e dólar). Ausente quando as fontes falham. */
+  marketOverview?: import("./market-equities").MarketOverview;
+  /** Ranking educacional de ETFs e fundos imobiliários. */
+  equityOpportunities?: import("./market-equities").EquityOpportunity[];
   generatedAt: string;
   referenceDate: string;
   cacheStatus: "fresh" | "cached" | "stale";

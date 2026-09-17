@@ -110,13 +110,13 @@ function Brand({ collapsed }: { collapsed: boolean }) {
     <Link
       to="/dashboard"
       aria-label="Axionn Finance — início"
-      className="focus-ring flex min-w-0 items-center gap-3 rounded-xl"
+      className="focus-ring flex min-w-0 items-center gap-3 rounded-md"
     >
-      <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-action text-action-foreground">
+      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-action text-action-foreground shadow-elevation-2">
         <Coins className="size-6" aria-hidden />
       </span>
       {!collapsed && (
-        <span className="whitespace-nowrap text-xl font-semibold tracking-tight">
+        <span className="font-display whitespace-nowrap text-xl font-semibold">
           Axionn<span className="font-normal text-muted-foreground">Fina</span>
         </span>
       )}
@@ -138,9 +138,9 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
             aria-label={collapsed ? item.label : undefined}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "focus-ring relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
+               "focus-ring relative flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
               active
-                ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground before:absolute before:-left-3 before:h-6 before:w-1 before:rounded-r-full before:bg-action"
+                 ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground before:absolute before:-left-3 before:h-6 before:w-0.5 before:rounded-r-full before:bg-action"
                 : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
               collapsed && "justify-center px-0",
             )}
@@ -245,11 +245,11 @@ export function AppShell({
   return (
     <div
       className="min-h-screen bg-background"
-      style={{ "--sidebar-width": collapsed ? "80px" : "264px" } as CSSProperties}
+       style={{ "--sidebar-width": collapsed ? "76px" : "252px" } as CSSProperties}
     >
       <a
         href="#main-content"
-        className="sr-only fixed left-4 top-4 z-50 rounded-xl bg-action px-4 py-3 text-action-foreground focus:not-sr-only"
+         className="sr-only fixed left-4 top-4 z-50 rounded-md bg-action px-4 py-3 text-action-foreground focus:not-sr-only"
       >
         Ir para o conteúdo
       </a>
@@ -260,7 +260,7 @@ export function AppShell({
         className="fixed inset-y-0 left-0 z-40 hidden w-[var(--sidebar-width)] flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 lg:flex"
       >
         <div
-          className={cn("flex h-24 shrink-0 items-center px-6", collapsed && "justify-center px-0")}
+           className={cn("flex h-20 shrink-0 items-center px-5", collapsed && "justify-center px-0")}
         >
           <Brand collapsed={collapsed} />
         </div>
@@ -268,7 +268,7 @@ export function AppShell({
           variant="outline"
           size="icon"
           onClick={toggleSidebar}
-          className="absolute -right-4 top-8 size-8 bg-sidebar text-muted-foreground"
+           className="absolute -right-4 top-6 size-8 bg-sidebar text-muted-foreground"
           aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
           aria-expanded={!collapsed}
           aria-controls="desktop-sidebar"
@@ -282,7 +282,7 @@ export function AppShell({
       </aside>
 
       <div className="transition-[padding-left] duration-200 lg:pl-[var(--sidebar-width)]">
-        <header className="sticky top-0 z-30 flex h-20 items-center gap-3 border-b border-border/50 bg-background px-4 sm:px-6 lg:px-8">
+         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur sm:px-6 lg:px-8">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menu">
@@ -294,7 +294,7 @@ export function AppShell({
               className="flex w-[min(300px,calc(100vw-2rem))] flex-col gap-0 bg-sidebar p-0"
             >
               <SheetTitle className="sr-only">Menu</SheetTitle>
-              <div className="flex h-20 shrink-0 items-center px-5">
+               <div className="flex h-16 shrink-0 items-center px-5">
                 <Brand collapsed={false} />
               </div>
               <div className="px-5 pb-2">{newAction(false, true)}</div>
@@ -309,7 +309,7 @@ export function AppShell({
           <button
             type="button"
             onClick={() => setPaletteOpen(true)}
-            className="focus-ring hidden h-11 min-w-0 flex-1 max-w-sm items-center gap-3 rounded-full bg-card px-4 text-sm text-muted-foreground transition-colors hover:bg-muted md:flex"
+             className="focus-ring hidden h-10 min-w-0 flex-1 max-w-md items-center gap-3 rounded-md border border-border bg-card px-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted md:flex"
           >
             <Search className="size-4 shrink-0" aria-hidden />
             <span className="truncate">Buscar ou perguntar ao agente…</span>
@@ -363,7 +363,7 @@ export function AppShell({
         <main
           id="main-content"
           tabIndex={-1}
-          className="min-h-[calc(100vh-5rem)] px-4 py-6 pb-28 outline-none sm:px-6 lg:px-8 lg:py-8 lg:pb-10"
+           className="min-h-[calc(100vh-4rem)] px-4 py-5 pb-28 outline-none sm:px-6 lg:px-8 lg:py-7 lg:pb-10"
         >
           <div className="app-page mx-auto w-full min-w-0 max-w-[1600px]">{children}</div>
         </main>
@@ -381,7 +381,7 @@ export function AppShell({
               to={to}
               aria-current={pathname === to ? "page" : undefined}
               className={cn(
-                "focus-ring flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[10px]",
+                 "focus-ring flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-md text-[10px]",
                 pathname === to ? "bg-accent text-accent-foreground" : "text-muted-foreground",
               )}
             >

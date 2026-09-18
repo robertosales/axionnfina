@@ -66,6 +66,7 @@ const navItems: NavItem[] = [
   { to: "/reconciliation", label: "Conferir saldos", icon: Receipt, group: "Vida financeira" },
   { to: "/investments", label: "Investimentos", icon: LineChart, group: "Investimentos" },
   { to: "/goals", label: "Metas", icon: Target, group: "Planejamento" },
+  { to: "/piggy-banks", label: "Cofrinhos", icon: Coins, group: "Planejamento" },
   { to: "/budget", label: "Orçamento", icon: PiggyBank, group: "Planejamento" },
   { to: "/reports", label: "Relatórios", icon: FileText, group: "Planejamento" },
   { to: "/taxes", label: "Impostos", icon: FileText, group: "Planejamento" },

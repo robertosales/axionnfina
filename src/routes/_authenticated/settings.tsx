@@ -90,7 +90,6 @@ function SettingsPage() {
   const [balance, setBalance] = useState("0");
   const [branch, setBranch] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
-  const [openFinance, setOpenFinance] = useState(false);
   const [enabled, setEnabled] = useState<Record<string, boolean>>(
     Object.fromEntries(scopes.map((s) => [s.id, s.default])),
   );
@@ -148,7 +147,6 @@ function SettingsPage() {
         balance: amount,
         branch,
         accountNumber,
-        openFinance,
       },
       {
         onSuccess: () => {
@@ -158,7 +156,6 @@ function SettingsPage() {
           setName("");
           setBranch("");
           setAccountNumber("");
-          setOpenFinance(false);
           setType("CHECKING");
           setBalance("0");
         },
@@ -468,14 +465,6 @@ function SettingsPage() {
                         onChange={(event) => setAccountNumber(event.target.value)}
                       />
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                    <Label htmlFor="open-finance">Conectar via Open Finance</Label>
-                    <Switch
-                      id="open-finance"
-                      checked={openFinance}
-                      onCheckedChange={setOpenFinance}
-                    />
                   </div>
                 </>
               )}

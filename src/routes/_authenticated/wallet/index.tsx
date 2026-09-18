@@ -2,7 +2,6 @@ import { DataState } from "@/components/finance/DataState";
 import { EmptyState } from "@/components/finance/EmptyState";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import {
-  ArrowRightLeft,
   CreditCard,
   Landmark,
   LineChart,
@@ -61,12 +60,6 @@ function WalletPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link to="/wallet/connect">
-                <Button variant="outline">
-                  <ArrowRightLeft className="mr-2 size-4" />
-                  Conectar Banco
-                </Button>
-              </Link>
               <Link to="/wallet/accounts">
                 <Button>
                   <Plus className="mr-2 size-4" />
@@ -180,11 +173,6 @@ function WalletPage() {
                                   Principal
                                 </Badge>
                               )}
-                              {account.open_finance && (
-                                <Badge variant="outline" className="text-[10px]">
-                                  Open Finance
-                                </Badge>
-                              )}
                             </div>
                             <p className="text-xs text-muted-foreground">
                               {account.institution_name ?? account.name} ·{" "}
@@ -203,12 +191,12 @@ function WalletPage() {
             <EmptyState
               icon={Wallet}
               title="Nenhuma conta cadastrada"
-              description="Adicione suas contas ou conecte um banco via Open Finance."
+              description="Adicione suas contas bancárias e cartões de crédito para começar."
               action={{
-                label: "Conectar Banco",
+                label: "Adicionar Conta",
                 asChild: (
-                  <Link to="/wallet/connect">
-                    <Button variant="outline">Conectar Banco</Button>
+                  <Link to="/wallet/accounts">
+                    <Button>Adicionar Conta</Button>
                   </Link>
                 ),
               }}

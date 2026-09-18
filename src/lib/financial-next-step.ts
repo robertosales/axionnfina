@@ -7,7 +7,7 @@ export const FINANCIAL_JOURNEY = [
 ] as const;
 
 export type FinancialStage = (typeof FINANCIAL_JOURNEY)[number]["id"];
-export type NextStepHref = "/wallet/connect" | "/bills" | "/budget" | "/goals" | "/investments";
+export type NextStepHref = "/wallet/accounts" | "/bills" | "/budget" | "/goals" | "/investments";
 
 type ReadinessAccount = {
   type: "CHECKING" | "SAVINGS" | "CREDIT_CARD" | "INVESTMENT";
@@ -168,14 +168,14 @@ export function analyzeFinancialReadiness(input: FinancialReadinessInput): Finan
     return {
       ...common,
       stage: "organize",
-      title: "Conecte seus dados para receber um plano confiável",
+      title: "Adicione suas contas para receber um plano confiável",
       description:
         "Com contas e pelo menos dois meses de movimentações, calculamos sua sobra sem exigir conhecimento de investimentos.",
-      ctaLabel: "Conectar contas",
-      href: "/wallet/connect",
+      ctaLabel: "Adicionar contas",
+      href: "/wallet/accounts",
       reasons: [
         input.accounts.length === 0
-          ? "Nenhuma conta foi conectada ainda."
+          ? "Nenhuma conta foi cadastrada ainda."
           : "Ainda há pouco histórico para estimar sua média mensal.",
       ],
       suggestedAmount: null,

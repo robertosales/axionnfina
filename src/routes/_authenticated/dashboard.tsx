@@ -11,7 +11,6 @@ import {
   CalendarClock,
   Eye,
   EyeOff,
-  Landmark,
   Minus,
   Plus,
   Shield,
@@ -272,12 +271,6 @@ function Dashboard() {
           </Link>
         </Button>
         <Button asChild variant="outline">
-          <Link to="/wallet/connect">
-            <Landmark className="size-4" aria-hidden />
-            Conectar banco
-          </Link>
-        </Button>
-        <Button asChild variant="outline">
           <Link to="/goals" search={{ new: true }}>
             <Target className="size-4" aria-hidden />
             Criar meta
@@ -302,15 +295,15 @@ function Dashboard() {
           {showEmptyCta && (
             <Card className="mb-8 flex flex-col items-center gap-3 border-primary/30 bg-primary/5 p-6 shadow-none text-center">
               <Sparkles className="size-8 text-primary" aria-hidden />
-              <h2 className="text-lg font-semibold">Comece conectando suas contas</h2>
+              <h2 className="text-lg font-semibold">Comece adicionando suas contas</h2>
               <p className="max-w-md text-sm text-muted-foreground">
                 Assim que houver dados, este painel mostra patrimônio, fluxo de caixa, orçamento e
                 insights do agente automaticamente.
               </p>
               <Button asChild className="mt-2">
-                <Link to="/wallet/connect">
-                  <Landmark className="size-4" aria-hidden />
-                  Conectar contas
+                <Link to="/wallet/accounts">
+                  <Wallet className="size-4" aria-hidden />
+                  Adicionar conta
                 </Link>
               </Button>
             </Card>

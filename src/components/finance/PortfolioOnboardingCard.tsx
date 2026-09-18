@@ -44,14 +44,14 @@ export function PortfolioOnboardingCard({ onManual }: { onManual: () => void }) 
           </div>
         </div>
         <div className="grid gap-3 p-5 sm:p-6 lg:grid-cols-3">
-          <div className="rounded-lg border border-success/30 bg-success/5 p-4">
-            <Building2 className="size-5 text-success" aria-hidden />
-            <h3 className="mt-3 font-semibold">Conectar instituição</h3>
+          <div className="rounded-lg border border-border p-4">
+            <Building2 className="size-5 text-primary" aria-hidden />
+            <h3 className="mt-3 font-semibold">Adicionar conta</h3>
             <p className="mt-1 min-h-10 text-xs leading-5 text-muted-foreground">
-              Importa e atualiza posições automaticamente quando a instituição oferece o produto.
+              Cadastre contas bancárias e cartões de crédito manualmente.
             </p>
-            <Button asChild className="mt-4 h-11 w-full">
-              <Link to="/wallet/connect">Conectar banco ou corretora</Link>
+            <Button asChild variant="outline" className="mt-4 h-11 w-full">
+              <Link to="/wallet/accounts">Gerenciar contas</Link>
             </Button>
           </div>
           <div className="rounded-lg border border-border p-4">

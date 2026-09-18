@@ -17,6 +17,7 @@ export type Account = {
   openFinance: boolean;
   branch?: string;
   accountNumber?: string;
+  logoUrl?: string | null;
 };
 
 export type Transaction = {

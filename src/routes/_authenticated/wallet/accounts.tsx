@@ -1,3 +1,4 @@
+import { AccountAvatar } from "@/components/finance/AccountAvatar";
 import { DataState } from "@/components/finance/DataState";
 import { EmptyState } from "@/components/finance/EmptyState";
 import { FinancialForm } from "@/components/finance/FinancialForm";
@@ -232,15 +233,19 @@ function AccountsPage() {
             <div className="space-y-3">
               {accounts.map((account) => {
                 const Icon = TYPE_ICONS[account.type] ?? Wallet;
+                const logoUrl = accountDetailsQuery.data?.find((d) => d.id === account.id)?.logo_url ?? null;
                 return (
                   <Card
                     key={account.id}
                     className="flex flex-wrap items-center justify-between gap-3 bg-card p-4 shadow-none"
                   >
                     <div className="flex min-w-0 items-center gap-4">
-                      <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary/15 text-primary">
-                        <Icon className="size-5" aria-hidden />
-                      </span>
+                      <AccountAvatar
+                        logoUrl={logoUrl}
+                        name={account.name}
+                        icon={Icon}
+                        size="lg"
+                      />
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="break-words font-medium">{account.name}</p>

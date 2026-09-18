@@ -1,5 +1,6 @@
 import { Building2, CreditCard, Landmark, LineChart, PiggyBank, RefreshCw } from "lucide-react";
 
+import { AccountAvatar } from "@/components/finance/AccountAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,9 +34,12 @@ export function AccountCard({ account }: { account: Account }) {
 
   return (
     <Card className="flex min-w-0 flex-row flex-wrap items-center gap-4 bg-card p-4 shadow-none sm:p-5">
-      <span className="grid size-11 shrink-0 place-items-center rounded-md bg-primary/15 text-primary">
-        <Icon className="size-5" aria-hidden />
-      </span>
+      <AccountAvatar
+        logoUrl={account.logoUrl ?? null}
+        name={account.name}
+        icon={Icon}
+        size="lg"
+      />
 
       <div className="min-w-0 flex-1 basis-[min(14rem,100%)]">
         <div className="flex min-w-0 flex-wrap items-center gap-2">

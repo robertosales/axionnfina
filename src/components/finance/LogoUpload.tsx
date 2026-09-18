@@ -11,9 +11,9 @@ interface LogoUploadProps {
 }
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/svg+xml"];
-const MAX_SIZE_BYTES = 512 * 1024; // 512 KB
+const MAX_SIZE_BYTES = 512 * 1024;
 
-function getInitials(name: string): string {
+export function getInitials(name: string): string {
   return name
     .split(/\s+/)
     .slice(0, 2)
@@ -22,7 +22,7 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-function hashColor(str: string): string {
+export function hashColor(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
@@ -72,7 +72,7 @@ export function LogoUpload({ value, onChange, fallbackText = "BK", className }: 
     <div className={cn("flex flex-col items-center gap-2", className)}>
       <button
         type="button"
-        className="group relative size-20 overflow-hidden rounded-xl border-2 border-dashed border-border bg-muted/40 transition-colors hover:border-primary/50 hover:bg-muted/60"
+        className="group relative size-20 overflow-hidden rounded-full border-2 border-dashed border-border bg-muted/40 transition-colors hover:border-primary/50 hover:bg-muted/60"
         onClick={() => inputRef.current?.click()}
       >
         {value ? (
@@ -80,7 +80,7 @@ export function LogoUpload({ value, onChange, fallbackText = "BK", className }: 
             <img
               src={value}
               alt="Logo"
-              className="size-full object-contain p-1"
+              className="size-full object-cover"
             />
             <span
               className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
@@ -92,7 +92,7 @@ export function LogoUpload({ value, onChange, fallbackText = "BK", className }: 
         ) : (
           <div className="flex size-full flex-col items-center justify-center gap-1">
             <div
-              className="grid size-10 place-items-center rounded-lg text-sm font-semibold text-white"
+              className="grid size-10 place-items-center rounded-full text-sm font-semibold text-white"
               style={{ backgroundColor: hashColor(fallbackText) }}
             >
               {getInitials(fallbackText)}

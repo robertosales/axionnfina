@@ -12,7 +12,7 @@ export function useAccounts() {
       const { data, error } = await supabase
         .from("accounts")
         .select(
-          "id, name, institution, type, balance, open_finance, last_sync_at, branch, account_number, metadata, record_origin",
+          "id, name, institution, type, balance, open_finance, last_sync_at, branch, account_number, metadata, record_origin, logo_url",
         )
         .is("archived_at", null)
         .order("created_at", { ascending: true });
@@ -35,6 +35,7 @@ export function useAccounts() {
         openFinance: row.open_finance,
         branch: row.branch ?? "",
         accountNumber: row.account_number ?? "",
+        logoUrl: row.logo_url ?? null,
       }));
     },
   });

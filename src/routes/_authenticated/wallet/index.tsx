@@ -1,6 +1,8 @@
 import { DataState } from "@/components/finance/DataState";
 import { EmptyState } from "@/components/finance/EmptyState";
+import { AccountAvatar } from "@/components/finance/AccountAvatar";
 import { Link, createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   CreditCard,
   Landmark,
@@ -16,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useWalletSummary } from "@/hooks/use-wallet";
+import { supabase } from "@/integrations/supabase/client";
 import { formatBRL } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/wallet/")({
@@ -47,6 +50,17 @@ const TYPE_LABELS: Record<string, string> = {
 
 function WalletPage() {
   const { data: summary, isLoading, isError, refetch } = useWalletSummary();
+  const { data: accountLogos = [] } = useQuery({
+    queryKey: ["account-logos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("accounts")
+        .select("id, logo_url")
+        .is("archived_at", null);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   return (
     <AppShell>
@@ -158,13 +172,19 @@ function WalletPage() {
                 <div className="space-y-3">
                   {summary.accounts.map((account) => {
                     const Icon = TYPE_ICONS[account.type] ?? Wallet;
+                    const logoUrl = accountLogos.find((a) => a.id === account.id)?.logo_url ?? null;
                     return (
                       <div
                         key={account.id}
                         className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
                       >
                         <div className="flex items-center gap-3">
-                          <Icon className="size-5 text-muted-foreground" />
+                          <AccountAvatar
+                            logoUrl={logoUrl}
+                            name={account.name}
+                            icon={Icon}
+                            size="sm"
+                          />
                           <div>
                             <div className="flex items-center gap-2">
                               <p className="text-sm font-medium">{account.name}</p>

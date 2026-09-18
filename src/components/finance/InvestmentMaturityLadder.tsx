@@ -1,12 +1,11 @@
-import { localDateInput } from "@/lib/financial-input";
 import { CalendarClock, CircleAlert } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { useInvestmentAlertPreferences, type Position } from "@/lib/finance-data";
+import type { Position } from "@/lib/finance-data";
 import { formatBRL, formatLongDate } from "@/lib/format";
-import { buildMaturityLadder } from "@/lib/investment-maturity";
 import { cn } from "@/lib/utils";
+import { useMaturityLadder } from "./use-maturity-ladder";
 
 const bucketTone = {
   overdue: "bg-danger",
@@ -17,17 +16,7 @@ const bucketTone = {
 } as const;
 
 export function InvestmentMaturityLadder({ positions }: { positions: Position[] }) {
-  const preferences = useInvestmentAlertPreferences();
-  const fixedIncome = positions.filter((position) => position.assetClass === "fixed_income");
-  const missingMaturity = fixedIncome.filter((position) => !position.maturityDate);
-  const referenceDate = localDateInput();
-  const ladder = buildMaturityLadder(
-    fixedIncome,
-    referenceDate,
-    preferences.data?.maturityAlertDays ?? 30,
-  );
-  const events = ladder.items.slice(0, 5);
-  const maximum = Math.max(...ladder.buckets.map((bucket) => bucket.total), 1);
+  const { preferences, missingMaturity, ladder, events, maximum } = useMaturityLadder(positions);
 
   return (
     <Card className="overflow-hidden">

@@ -10,8 +10,6 @@ import {
   SlidersHorizontal,
   TriangleAlert,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 import {
   Accordion,
@@ -44,15 +42,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EquityOpportunityCard } from "@/components/finance/EquityOpportunityCard";
 import { MarketOverviewStrip } from "@/components/finance/MarketOverviewStrip";
 import { formatBRL, formatLongDate } from "@/lib/format";
-import { useInvestmentRadar, useUpdateInvestmentProfile } from "@/lib/finance-data";
 import type {
-  InvestmentObjective,
-  InvestmentProfile,
-  LiquidityPreference,
   RankedOpportunity,
   RiskProfile,
+  LiquidityPreference,
+  InvestmentObjective,
 } from "@/lib/investment-radar";
 import { cn } from "@/lib/utils";
+import { useInvestmentRadarPanel } from "./use-investment-radar-panel";
 
 const PROFILE_LABELS: Record<RiskProfile, string> = {
   conservative: "Conservador",
@@ -202,34 +199,8 @@ function RadarSkeleton() {
 }
 
 export function InvestmentRadarPanel({ compact = false }: { compact?: boolean }) {
-  const radar = useInvestmentRadar();
-  const updateProfile = useUpdateInvestmentProfile();
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [draft, setDraft] = useState<InvestmentProfile>({
-    riskProfile: "conservative",
-    horizonMonths: 24,
-    liquidityPreference: "daily",
-    objective: "reserve",
-  });
-
-  useEffect(() => {
-    if (radar.data?.profile) setDraft(radar.data.profile);
-  }, [radar.data?.profile]);
-
-  const saveProfile = () => {
-    if (draft.horizonMonths < 1 || draft.horizonMonths > 600) {
-      toast.error("Informe um horizonte entre 1 e 600 meses.");
-      return;
-    }
-    updateProfile.mutate(draft, {
-      onSuccess: () => {
-        toast.success("Preferências atualizadas. O ranking será recalculado.");
-        setProfileOpen(false);
-      },
-      onError: (error) =>
-        toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
-    });
-  };
+  const { radar, profileOpen, setProfileOpen, draft, setDraft, updateProfile, saveProfile } =
+    useInvestmentRadarPanel();
 
   if (radar.isLoading) return <RadarSkeleton />;
   if (radar.isError) {

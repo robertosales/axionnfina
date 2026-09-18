@@ -1,5 +1,4 @@
 import { ShieldAlert, ShieldCheck } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -11,14 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  useInvestmentAlertPreferences,
-  usePrivateFixedIncomeOffers,
-  type Position,
-} from "@/lib/finance-data";
-import { calculateFgcExposure, FGC_ORDINARY_LIMIT } from "@/lib/fgc-exposure";
+import type { Position } from "@/lib/finance-data";
+import { FGC_ORDINARY_LIMIT } from "@/lib/fgc-exposure";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useFgcExposure } from "./use-fgc-exposure";
 
 const statusCopy = {
   safe: { label: "Com margem", tone: "border-success/40 text-success" },
@@ -27,33 +23,8 @@ const statusCopy = {
 } as const;
 
 export function FgcExposurePanel({ positions }: { positions: Position[] }) {
-  const offers = usePrivateFixedIncomeOffers(false);
-  const preferences = useInvestmentAlertPreferences();
-  const [selectedOfferId, setSelectedOfferId] = useState("");
-  const eligibleOffers = (offers.data ?? []).filter((offer) => offer.fgcEligible);
-
-  useEffect(() => {
-    if (!selectedOfferId && eligibleOffers[0]) setSelectedOfferId(eligibleOffers[0].id);
-  }, [eligibleOffers, selectedOfferId]);
-
-  const selectedOffer = eligibleOffers.find((offer) => offer.id === selectedOfferId);
-  const plannedAmount = preferences.data?.privateComparisonAmount ?? 10_000;
-  const summary = useMemo(
-    () =>
-      calculateFgcExposure(
-        positions.map((position) => ({
-          id: position.id,
-          name: position.name,
-          marketValue: position.marketValue,
-          conglomerate: position.conglomerate,
-          fgcEligible: position.fgcEligible,
-        })),
-        selectedOffer
-          ? { conglomerate: selectedOffer.conglomerate, amount: plannedAmount }
-          : undefined,
-      ),
-    [plannedAmount, positions, selectedOffer],
-  );
+  const { offers, preferences, selectedOfferId, setSelectedOfferId, eligibleOffers, plannedAmount, summary } =
+    useFgcExposure(positions);
 
   return (
     <Card className="overflow-hidden">

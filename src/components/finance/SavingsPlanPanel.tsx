@@ -1,6 +1,4 @@
 import { MoneyInput } from "@/components/finance/MoneyInput";
-import { parseFinancialInput } from "@/lib/financial-input";
-import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -11,7 +9,6 @@ import {
   Target,
   X,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,20 +23,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  useSavingPlanCheckIn,
-  useSavingsPlans,
-  useSyncSavingsOpportunities,
-  useTransactions,
-  useUpdateSavingsPlan,
-} from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
-import {
-  detectSavingsOpportunities,
-  type SavingsPlan,
-  type SavingsPlanStatus,
-} from "@/lib/savings-opportunities";
+import type { SavingsPlanStatus } from "@/lib/savings-opportunities";
 import { cn } from "@/lib/utils";
+import { useSavingsPlanPanel } from "./use-savings-plan-panel";
 
 const flow = [
   { id: "detected", label: "Detectado" },
@@ -54,12 +41,6 @@ const kindLabel = {
   category_increase: "Categoria em alta",
   unusual_expense: "Fora do padrão",
 } as const;
-
-const previousMonth = () => {
-  const date = new Date();
-  date.setMonth(date.getMonth() - 1, 1);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-};
 
 function StatusFlow({ status }: { status: SavingsPlanStatus }) {
   const current = flow.findIndex((step) => step.id === status);
@@ -96,91 +77,33 @@ function StatusFlow({ status }: { status: SavingsPlanStatus }) {
   );
 }
 
+const previousMonthFn = () => {
+  const date = new Date();
+  date.setMonth(date.getMonth() - 1, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+};
+
 export function SavingsPlanPanel() {
-  const { data: transactions = [], isLoading: loadingTransactions } = useTransactions(1000);
-  const { data: plans = [], isLoading: loadingPlans, isError, refetch } = useSavingsPlans();
-  const sync = useSyncSavingsOpportunities();
-  const update = useUpdateSavingsPlan();
-  const checkIn = useSavingPlanCheckIn();
-  const [checkInPlan, setCheckInPlan] = useState<SavingsPlan | null>(null);
-  const [actualAmount, setActualAmount] = useState("");
-  const [referenceMonth, setReferenceMonth] = useState(previousMonth);
-  const syncedSignature = useRef("");
-
-  const opportunities = useMemo(() => detectSavingsOpportunities({ transactions }), [transactions]);
-  const signature = opportunities
-    .map((item) => item.key)
-    .sort()
-    .join("|");
-
-  useEffect(() => {
-    if (
-      loadingTransactions ||
-      loadingPlans ||
-      isError ||
-      !signature ||
-      syncedSignature.current === signature
-    ) {
-      return;
-    }
-    syncedSignature.current = signature;
-    sync.mutate(opportunities);
-  }, [isError, loadingPlans, loadingTransactions, opportunities, signature, sync]);
-
-  const detected = plans.filter((plan) => plan.status === "detected");
-  const active = plans.filter((plan) => plan.status === "accepted" || plan.status === "tracking");
-  const completed = plans.filter((plan) => plan.status === "completed");
-  const plannedSaving = active.reduce((sum, plan) => sum + plan.expectedMonthlySaving, 0);
-  const realizedSaving = plans.reduce(
-    (sum, plan) =>
-      sum + plan.checkIns.reduce((subtotal, item) => subtotal + item.realizedSaving, 0),
-    0,
-  );
-  const loading = loadingTransactions || loadingPlans;
-
-  const mutateStatus = (plan: SavingsPlan, status: SavingsPlanStatus) => {
-    update.mutate(
-      { id: plan.id, status },
-      {
-        onSuccess: () =>
-          toast.success(
-            status === "accepted"
-              ? "Oportunidade adicionada ao seu plano"
-              : status === "completed"
-                ? "Plano concluído"
-                : "Oportunidade dispensada",
-          ),
-        onError: (error) =>
-          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
-      },
-    );
-  };
-
-  const saveCheckIn = () => {
-    if (!checkInPlan) return;
-    const amount = parseFinancialInput(actualAmount);
-    if (!Number.isFinite(amount) || amount < 0 || !referenceMonth) {
-      toast.error("Informe o mês e quanto foi gasto");
-      return;
-    }
-    checkIn.mutate(
-      {
-        planId: checkInPlan.id,
-        referenceMonth,
-        baselineAmount: checkInPlan.baselineMonthly,
-        actualAmount: amount,
-      },
-      {
-        onSuccess: () => {
-          toast.success("Resultado mensal registrado");
-          setCheckInPlan(null);
-          setActualAmount("");
-        },
-        onError: (error) =>
-          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
-      },
-    );
-  };
+  const {
+    loading,
+    isError,
+    refetch,
+    sync,
+    opportunities,
+    detected,
+    active,
+    completed,
+    plannedSaving,
+    realizedSaving,
+    checkInPlan,
+    setCheckInPlan,
+    actualAmount,
+    setActualAmount,
+    referenceMonth,
+    setReferenceMonth,
+    mutateStatus,
+    saveCheckIn,
+  } = useSavingsPlanPanel();
 
   if (loading) {
     return (
@@ -311,7 +234,7 @@ export function SavingsPlanPanel() {
                     <Button
                       className="h-11"
                       onClick={() => mutateStatus(plan, "accepted")}
-                      disabled={update.isPending}
+                      disabled={sync.isPending}
                     >
                       Adicionar ao plano <ArrowRight aria-hidden />
                     </Button>
@@ -319,7 +242,7 @@ export function SavingsPlanPanel() {
                       variant="ghost"
                       className="h-11"
                       onClick={() => mutateStatus(plan, "dismissed")}
-                      disabled={update.isPending}
+                      disabled={sync.isPending}
                     >
                       <X aria-hidden /> Não faz sentido
                     </Button>
@@ -372,7 +295,7 @@ export function SavingsPlanPanel() {
                         className="h-11"
                         onClick={() => {
                           setCheckInPlan(plan);
-                          setReferenceMonth(previousMonth());
+                          setReferenceMonth(previousMonthFn());
                           setActualAmount("");
                         }}
                       >
@@ -433,8 +356,8 @@ export function SavingsPlanPanel() {
             </div>
           </div>
           <DialogFooter>
-            <Button className="h-11" onClick={saveCheckIn} disabled={checkIn.isPending}>
-              {checkIn.isPending ? "Salvando…" : "Confirmar resultado"}
+            <Button className="h-11" onClick={saveCheckIn} disabled={sync.isPending}>
+              {sync.isPending ? "Salvando…" : "Confirmar resultado"}
             </Button>
           </DialogFooter>
         </DialogContent>

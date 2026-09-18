@@ -5,12 +5,13 @@ import { useFinancialConfirmation } from "@/components/finance/use-financial-con
 import { ValidatedInput } from "@/components/finance/ValidatedInput";
 import { parseFinancialInput } from "@/lib/financial-input";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { LineChart, Plus } from "lucide-react";
 import { useState } from "react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip as RTooltip } from "recharts";
 import { toast } from "sonner";
 
 import { ChartCard } from "@/components/finance/ChartCard";
+import { EmptyState } from "@/components/finance/EmptyState";
 import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { FgcExposurePanel } from "@/components/finance/FgcExposurePanel";
 import { FirstInvestmentGuide } from "@/components/finance/FirstInvestmentGuide";
@@ -235,9 +236,14 @@ function InvestmentsPage() {
 
         {isLoading && <p className="text-sm text-muted-foreground">Carregando carteira…</p>}
         {!isLoading && positions.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            Nenhuma posição cadastrada. Popule dados de exemplo no painel ou conecte uma corretora.
-          </p>
+          <EmptyState
+            icon={LineChart}
+            title="Nenhuma posição cadastrada"
+            description="Adicione posições manualmente ou conecte uma corretora via Open Finance."
+            {...(!showArchived
+              ? { action: { label: "Nova posição", onClick: () => openForm() } }
+              : {})}
+          />
         )}
 
         {positions.length > 0 && (
@@ -275,7 +281,7 @@ function InvestmentsPage() {
               </div>
             </ChartCard>
 
-            <Card className="rounded-xl border-border/60 p-5 shadow-elevation-1">
+            <Card className="rounded-xl border-border/60 bg-card p-5 shadow-none">
               <h2 className="text-base font-semibold">Posições</h2>
               <ul className="mt-4 space-y-3">
                 {positions.map((position) => (

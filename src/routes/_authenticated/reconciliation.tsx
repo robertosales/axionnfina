@@ -46,7 +46,7 @@ function ReconciliationPage() {
           void reconciliation.refetch();
         }}
       >
-        <Card className="overflow-hidden">
+        <Card className="shadow-none bg-card overflow-hidden">
           <div
             className="overflow-auto"
             tabIndex={0}

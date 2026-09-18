@@ -1,11 +1,12 @@
 import { DataState } from "@/components/finance/DataState";
+import { EmptyState } from "@/components/finance/EmptyState";
 import { FinancialForm } from "@/components/finance/FinancialForm";
 import { MoneyInput } from "@/components/finance/MoneyInput";
 import { useFinancialConfirmation } from "@/components/finance/use-financial-confirmation";
 import { ValidatedInput } from "@/components/finance/ValidatedInput";
 import { localDateInput, parseFinancialInput } from "@/lib/financial-input";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Upload } from "lucide-react";
+import { Receipt, Plus, Upload } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -253,10 +254,17 @@ function BillsPage() {
           void retryReceivables();
         }}
       >
-        <Card className="rounded-xl border-border/60 p-0 shadow-elevation-1">
+        <Card className="rounded-xl border-border/60 bg-card p-0 shadow-none">
           {isLoading && <p className="p-4 text-sm text-muted-foreground">Carregando contas…</p>}
           {!isLoading && bills.length === 0 && (
-            <p className="p-4 text-sm text-muted-foreground">Nenhuma conta cadastrada.</p>
+            <EmptyState
+              icon={Receipt}
+              title="Nenhuma conta cadastrada"
+              description="Cadastre boletos ou contas a pagar para acompanhar seus vencimentos."
+              {...(!showArchived
+                ? { action: { label: "Nova conta / boleto", onClick: openNewPayable } }
+                : {})}
+            />
           )}
           <ul className="divide-y divide-border/60">
             {bills.map((bill) => {
@@ -374,11 +382,16 @@ function BillsPage() {
           <>
             <Separator className="my-8" />
             <h2 className="mb-3 text-base font-semibold">Contas a receber</h2>
-            <Card className="rounded-xl border-border/60 p-0 shadow-elevation-1">
+            <Card className="rounded-xl border-border/60 bg-card p-0 shadow-none">
               {receivables.length === 0 && (
-                <p className="p-4 text-sm text-muted-foreground">
-                  Nenhuma conta a receber cadastrada.
-                </p>
+                <EmptyState
+                  icon={Receipt}
+                  title="Nenhuma conta a receber"
+                  description="Registre valores previstos para manter a projeção de caixa atualizada."
+                  {...(!showArchived
+                    ? { action: { label: "Novo recebimento", onClick: openNewReceivable } }
+                    : {})}
+                />
               )}
               <ul className="divide-y divide-border/60">
                 {receivables.map((item) => (

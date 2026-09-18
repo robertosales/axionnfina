@@ -1,4 +1,5 @@
 import { DataState } from "@/components/finance/DataState";
+import { EmptyState } from "@/components/finance/EmptyState";
 import { FinancialForm } from "@/components/finance/FinancialForm";
 import { MoneyInput } from "@/components/finance/MoneyInput";
 import { useFinancialConfirmation } from "@/components/finance/use-financial-confirmation";
@@ -6,7 +7,7 @@ import { ValidatedInput } from "@/components/finance/ValidatedInput";
 import { parseFinancialInput } from "@/lib/financial-input";
 import { formatBRL } from "@/lib/format";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { Plus, Target } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -149,9 +150,26 @@ function GoalsPage() {
       </header>
       <DataState loading={isLoading} error={queryError || isError} onRetry={() => void refetch()}>
         {goals.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            {isLoading ? "Carregando metas…" : "Você ainda não criou metas."}
-          </p>
+          <EmptyState
+            icon={Target}
+            title="Nenhuma meta criada"
+            description="Defina metas financeiras para acompanhar seu progresso e planejar aportes mensais."
+            {...(!showArchived
+              ? {
+                  action: {
+                    label: "Nova meta",
+                    onClick: () => {
+                      setEditingId(null);
+                      setTitle("");
+                      setTarget("");
+                      setCurrent("0");
+                      setDeadline("");
+                      setOpen(true);
+                    },
+                  },
+                }
+              : {})}
+          />
         )}
 
         <div className="grid gap-4 lg:grid-cols-2">

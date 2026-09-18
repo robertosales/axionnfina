@@ -77,7 +77,7 @@ function ReportsPage() {
         error={cashflow.error}
         onRetry={() => void cashflow.refetch()}
       >
-        <Card className="overflow-hidden">
+        <Card className="shadow-none bg-card overflow-hidden">
           <div className="border-b border-border/60 px-5 py-5 sm:px-6">
             <h2 className="text-lg font-semibold">Receitas e despesas</h2>
             <p className="mt-1 text-sm text-muted-foreground">

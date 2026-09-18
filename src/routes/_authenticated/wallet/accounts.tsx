@@ -236,7 +236,7 @@ function AccountsPage() {
                 return (
                   <Card
                     key={account.id}
-                    className="flex flex-wrap items-center justify-between gap-3 p-4"
+                    className="flex flex-wrap items-center justify-between gap-3 bg-card p-4 shadow-none"
                   >
                     <div className="flex min-w-0 items-center gap-4">
                       <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary/15 text-primary">
@@ -314,7 +314,7 @@ function AccountsPage() {
               })}
             </div>
           ) : (
-            <Card className="flex flex-col items-center justify-center p-12 text-center">
+            <Card className="flex flex-col items-center justify-center bg-card p-12 text-center shadow-none">
               <Wallet className="size-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">
                 {showArchived ? "Nenhuma conta arquivada" : "Nenhuma conta"}
@@ -357,18 +357,18 @@ function AccountsPage() {
             {connectorsQuery.isLoading ? (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Card key={i} className="h-20 animate-pulse bg-muted" />
+                  <Card key={i} className="h-20 animate-pulse bg-muted shadow-none" />
                 ))}
               </div>
             ) : connectorsQuery.data?.error ? (
-              <Card className="p-6 text-sm text-muted-foreground">
+              <Card className="p-6 text-sm text-muted-foreground shadow-none bg-card">
                 Não foi possível carregar as instituições da Pluggy ({connectorsQuery.data.error}).
                 Verifique as credenciais configuradas.
               </Card>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {(connectorsQuery.data?.connectors ?? []).map((connector) => (
-                  <Card key={connector.id} className="flex items-center gap-3 p-4">
+                  <Card key={connector.id} className="flex items-center gap-3 bg-card p-4 shadow-none">
                     {connector.imageUrl ? (
                       <img
                         src={connector.imageUrl}

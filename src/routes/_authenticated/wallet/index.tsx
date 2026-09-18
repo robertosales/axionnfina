@@ -85,34 +85,34 @@ function WalletPage() {
             <>
               {/* KPIs */}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <Card className="p-5">
+                <Card className="shadow-none bg-card p-5">
                   <p className="text-sm text-muted-foreground">Patrimônio Líquido</p>
-                  <p className="mt-1 text-2xl font-bold">
+                  <p className="numeric mt-1 text-2xl font-bold">
                     {formatBRL(summary.totals.total_balance)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {summary.totals.total_accounts} contas ativas
                   </p>
                 </Card>
-                <Card className="p-5">
+                <Card className="shadow-none bg-card p-5">
                   <p className="text-sm text-muted-foreground">Saldo Disponível</p>
-                  <p className="mt-1 text-2xl font-bold text-chart-2">
+                  <p className="numeric mt-1 text-2xl font-bold text-chart-2">
                     {formatBRL(summary.totals.liquid_balance)}
                   </p>
                   <p className="text-xs text-muted-foreground">Corrente + Poupança</p>
                 </Card>
-                <Card className="p-5">
+                <Card className="shadow-none bg-card p-5">
                   <p className="text-sm text-muted-foreground">Investimentos</p>
-                  <p className="mt-1 text-2xl font-bold text-chart-1">
+                  <p className="numeric mt-1 text-2xl font-bold text-chart-1">
                     {formatBRL(summary.totals.investment_balance)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {summary.totals.investment_count} contas
                   </p>
                 </Card>
-                <Card className="p-5">
+                <Card className="shadow-none bg-card p-5">
                   <p className="text-sm text-muted-foreground">Limite de Crédito</p>
-                  <p className="mt-1 text-2xl font-bold text-chart-4">
+                  <p className="numeric mt-1 text-2xl font-bold text-chart-4">
                     {formatBRL(summary.totals.total_credit_limit)}
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -123,7 +123,7 @@ function WalletPage() {
 
               {/* Por Instituição */}
               {summary.by_institution && summary.by_institution.length > 0 && (
-                <Card className="p-6">
+                <Card className="shadow-none bg-card p-6">
                   <h2 className="font-semibold">Por Instituição</h2>
                   <div className="mt-4 space-y-3">
                     {summary.by_institution.map((inst) => (
@@ -143,7 +143,7 @@ function WalletPage() {
                             </p>
                           </div>
                         </div>
-                        <p className="font-semibold">{formatBRL(inst.balance)}</p>
+                        <p className="numeric font-semibold">{formatBRL(inst.balance)}</p>
                       </div>
                     ))}
                   </div>
@@ -191,7 +191,7 @@ function WalletPage() {
                             </p>
                           </div>
                         </div>
-                        <p className="font-semibold">{formatBRL(account.balance)}</p>
+                        <p className="numeric font-semibold">{formatBRL(account.balance)}</p>
                       </div>
                     );
                   })}
@@ -199,7 +199,7 @@ function WalletPage() {
               </Card>
             </>
           ) : (
-            <Card className="flex flex-col items-center justify-center p-12 text-center">
+            <Card className="flex flex-col items-center justify-center bg-card p-12 text-center shadow-none">
               <Wallet className="size-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">Nenhuma conta cadastrada</h3>
               <p className="mt-2 text-sm text-muted-foreground">

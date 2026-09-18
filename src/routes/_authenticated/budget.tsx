@@ -5,11 +5,12 @@ import { useFinancialConfirmation } from "@/components/finance/use-financial-con
 import { ValidatedInput } from "@/components/finance/ValidatedInput";
 import { parseFinancialInput } from "@/lib/financial-input";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { Plus, Wallet } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { BudgetProgress } from "@/components/finance/BudgetProgress";
+import { EmptyState } from "@/components/finance/EmptyState";
 import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { AppShell } from "@/components/layout/AppShell";
@@ -129,18 +130,31 @@ function BudgetPage() {
       </header>
       <DataState loading={isLoading} error={queryError || isError} onRetry={() => void refetch()}>
         {budgetItems.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            {isLoading
-              ? "Carregando orçamento…"
-              : "Nenhuma categoria de orçamento cadastrada ainda."}
-          </p>
+          <EmptyState
+            icon={Wallet}
+            title="Nenhuma categoria de orçamento"
+            description="Defina orçamentos por categoria para acompanhar seus gastos mensais."
+            {...(!showArchived
+              ? {
+                  action: {
+                    label: "Nova categoria",
+                    onClick: () => {
+                      setEditingId(null);
+                      setCategory("");
+                      setPlanned("");
+                      setOpen(true);
+                    },
+                  },
+                }
+              : {})}
+          />
         )}
 
         <div className="grid gap-4 lg:grid-cols-2">
           {budgetItems.map((item) => (
             <Card
               key={item.id}
-              className="flex items-start gap-2 rounded-xl border-border/60 p-5 shadow-elevation-1"
+              className="flex items-start gap-2 rounded-xl border-border/60 bg-card p-5 shadow-none"
             >
               <div className="min-w-0 flex-1">
                 <BudgetProgress item={item} />

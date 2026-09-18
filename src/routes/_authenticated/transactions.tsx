@@ -718,7 +718,7 @@ function TransactionsPage() {
 
       <section
         aria-label="Filtros de transações"
-        className="mb-5 rounded-lg border border-border bg-card p-4 shadow-elevation-1"
+        className="mb-5 rounded-lg border border-border bg-card p-4 shadow-none"
       >
         <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
           <SlidersHorizontal className="size-4 text-primary" aria-hidden /> Filtrar transações

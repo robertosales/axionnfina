@@ -75,6 +75,11 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  /* Skeleton / freshness */
+  --color-skeleton: var(--skeleton);
+  --color-skeleton-highlight: var(--skeleton-highlight);
+  --color-freshness: var(--freshness);
+
   --shadow-elevation-1: var(--elevation-1);
   --shadow-elevation-2: var(--elevation-2);
   --shadow-elevation-3: var(--elevation-3);
@@ -137,6 +142,13 @@
   --sidebar-accent-foreground: oklch(0.3 0.06 272);
   --sidebar-border: oklch(0.9 0.008 258);
   --sidebar-ring: oklch(0.51 0.21 273);
+
+  /* Skeleton / loading placeholder */
+  --skeleton: oklch(0.92 0.007 275);
+  --skeleton-highlight: oklch(0.88 0.01 275);
+
+  /* Freshness stamp */
+  --freshness: oklch(0.55 0.02 275);
 
   --gradient-primary: linear-gradient(var(--action), var(--action));
   --gradient-surface: var(--card);
@@ -202,6 +214,13 @@
   --sidebar-accent-foreground: oklch(0.9 0.07 292);
   --sidebar-border: oklch(0.265 0.015 275);
   --sidebar-ring: oklch(0.72 0.18 292);
+
+  /* Skeleton / loading placeholder */
+  --skeleton: oklch(0.28 0.015 275);
+  --skeleton-highlight: oklch(0.33 0.018 275);
+
+  /* Freshness stamp */
+  --freshness: oklch(0.62 0.018 275);
 
   --gradient-primary: linear-gradient(var(--action), var(--action));
   --gradient-surface: var(--card);
@@ -305,4 +324,24 @@
     outline: 2px solid var(--color-ring);
     outline-offset: 2px;
   }
+}
+
+@utility skeleton {
+  background-color: var(--color-skeleton);
+  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@utility freshness-stamp {
+  color: var(--color-freshness);
+  font-size: 0.75rem;
+  line-height: 1rem;
 }

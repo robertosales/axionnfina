@@ -1,83 +1,29 @@
 import { Key, QrCode, ShieldCheck, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  useMFAFactors,
-  useMFAEnroll,
-  useMFAChallenge,
-  useMFAVerify,
-  useMFAUnenroll,
-} from "@/hooks/use-mfa";
+import { useMFASetupFlow } from "./use-mfa-setup-flow";
 
-/**
- * MFASetup — Componente para configurar e gerenciar MFA (TOTP).
- */
 export function MFASetup() {
-  const { data: factors = [], isLoading } = useMFAFactors();
-  const enroll = useMFAEnroll();
-  const challenge = useMFAChallenge();
-  const verify = useMFAVerify();
-  const unenroll = useMFAUnenroll();
-
-  const [step, setStep] = useState<"list" | "enroll" | "verify">("list");
-  const [factorName, setFactorName] = useState("");
-  const [qrCodeUri, setQrCodeUri] = useState("");
-  const [secret, setSecret] = useState("");
-  const [factorId, setFactorId] = useState("");
-  const [challengeId, setChallengeId] = useState("");
-  const [code, setCode] = useState("");
-
-  const handleEnroll = async () => {
-    if (!factorName.trim()) return;
-
-    try {
-      const result = await enroll.mutateAsync(factorName);
-      setQrCodeUri(result.totp?.uri ?? "");
-      setSecret(result.totp?.secret ?? "");
-      setFactorId(result.id);
-      setStep("verify");
-    } catch (err) {
-      toast.error("Erro ao criar fator MFA");
-    }
-  };
-
-  const handleVerify = async () => {
-    if (code.length !== 6) return;
-
-    try {
-      // Criar challenge
-      const challengeResult = await challenge.mutateAsync(factorId);
-
-      // Verificar código
-      await verify.mutateAsync({
-        factorId,
-        challengeId: challengeResult.id,
-        code,
-      });
-
-      toast.success("MFA configurado com sucesso!");
-      setStep("list");
-      setCode("");
-      setFactorName("");
-    } catch (err) {
-      toast.error("Código inválido. Tente novamente.");
-    }
-  };
-
-  const handleDisable = async (fid: string) => {
-    try {
-      await unenroll.mutateAsync(fid);
-      toast.success("MFA removido");
-    } catch {
-      toast.error("Erro ao remover MFA");
-    }
-  };
+  const {
+    factors,
+    isLoading,
+    step,
+    setStep,
+    factorName,
+    setFactorName,
+    secret,
+    code,
+    setCode,
+    enroll,
+    verify,
+    handleEnroll,
+    handleVerify,
+    handleDisable,
+  } = useMFASetupFlow();
 
   if (isLoading) {
     return (

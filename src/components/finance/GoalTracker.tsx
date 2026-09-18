@@ -16,7 +16,7 @@ export function GoalTracker({ goal, actions }: { goal: Goal; actions?: ReactNode
   const requiredMonthly = (goal.target - goal.current) / monthsLeft;
 
   return (
-    <Card className="relative flex flex-row items-center gap-4 p-4 pr-12 sm:gap-5">
+    <Card className="relative flex flex-row items-center gap-4 bg-card p-4 pr-12 shadow-none sm:gap-5">
       {actions && <div className="absolute right-3 top-3">{actions}</div>}
       <svg viewBox="0 0 100 100" className="size-24 shrink-0 -rotate-90" role="img">
         <title>{`${Math.round(ratio * 100)}% concluído`}</title>

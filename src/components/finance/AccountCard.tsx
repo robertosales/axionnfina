@@ -3,12 +3,11 @@ import { Building2, CreditCard, Landmark, LineChart, PiggyBank, RefreshCw } from
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useSyncAccount } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Account } from "@/shared/finance-types";
 import { Link } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { useAccountSync } from "./use-account-sync";
 
 const typeMeta = {
   CHECKING: { icon: Landmark, label: "Conta corrente" },
@@ -27,13 +26,13 @@ function syncLabel(iso: string | null): string {
 }
 
 export function AccountCard({ account }: { account: Account }) {
-  const syncAccount = useSyncAccount();
+  const { sync, isPending } = useAccountSync();
   const meta = typeMeta[account.type] ?? { icon: Building2, label: "Conta" };
   const Icon = meta.icon;
   const negative = account.balance < 0;
 
   return (
-    <Card className="flex min-w-0 flex-row flex-wrap items-center gap-4 p-4 sm:p-5">
+    <Card className="flex min-w-0 flex-row flex-wrap items-center gap-4 bg-card p-4 shadow-none sm:p-5">
       <span className="grid size-11 shrink-0 place-items-center rounded-md bg-primary/15 text-primary">
         <Icon className="size-5" aria-hidden />
       </span>
@@ -70,13 +69,8 @@ export function AccountCard({ account }: { account: Account }) {
           variant="ghost"
           size="sm"
           className="mt-1 h-7 px-2 text-xs text-muted-foreground"
-          onClick={() =>
-            syncAccount.mutate(account.id, {
-              onError: () => toast.error("Não foi possível sincronizar. Verifique a conexão."),
-              onSuccess: () => toast.success("Sincronização solicitada."),
-            })
-          }
-          disabled={!account.openFinance || !account.connectionId || syncAccount.isPending}
+          onClick={() => sync(account.id)}
+          disabled={!account.openFinance || !account.connectionId || isPending}
           title={
             account.openFinance
               ? "Sincronizar dados da conta"

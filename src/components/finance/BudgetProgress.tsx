@@ -25,7 +25,14 @@ export function BudgetProgress({ item }: { item: BudgetItem }) {
         </span>
       </div>
 
-      <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-muted">
+      <div
+        className="relative h-2.5 w-full overflow-hidden rounded-full bg-muted"
+        role="progressbar"
+        aria-valuenow={Math.round(ratio * 100)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${item.category}: ${Math.round(ratio * 100)}% utilizado`}
+      >
         <div
           className={cn("h-full rounded-full transition-[width] duration-300 ease-out", fill)}
           style={{ width: `${Math.min(pct, 100)}%` }}

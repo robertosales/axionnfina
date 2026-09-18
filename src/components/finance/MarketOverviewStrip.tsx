@@ -28,7 +28,7 @@ export function MarketOverviewStrip({
   if (!overview && indicators.length === 0) return null;
 
   return (
-    <Card className="p-5">
+    <Card className="bg-card p-5 shadow-none">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
         <LineChart className="size-4" /> Como está o mercado hoje
       </div>

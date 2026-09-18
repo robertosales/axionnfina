@@ -17,6 +17,7 @@ type Props = {
   description?: string;
   sparkline?: Array<{ value: number }>;
   tone?: "default" | "success" | "warning" | "danger";
+  freshness?: string;
 };
 
 const toneRing: Record<NonNullable<Props["tone"]>, string> = {
@@ -49,13 +50,15 @@ export function KPICard({
   description,
   sparkline,
   tone = "default",
+  freshness,
 }: Props) {
   const positive = (change ?? 0) >= 0;
 
   return (
     <Card
       className={cn(
-        "surface-elevated relative h-full border-l-2 p-4 sm:p-5",
+        "relative h-full border-l-2 p-4 sm:p-5",
+        "bg-card shadow-none",
         toneBorder[tone],
       )}
     >
@@ -136,15 +139,26 @@ export function KPICard({
           </div>
         )}
       </div>
+
+      {freshness && (
+        <p className="freshness-stamp mt-2 text-right" aria-label={`Atualizado ${freshness}`}>
+          {freshness}
+        </p>
+      )}
     </Card>
   );
 }
 
-export function KPICardSkeleton() {
+export function KPICardSkeleton({ className }: { className?: string }) {
   return (
-    <Card className="rounded-xl p-5">
-      <Skeleton className="h-4 w-24" />
-      <Skeleton className="mt-4 h-7 w-32" />
+    <Card className={cn("border-l-2 border-l-border p-5 shadow-none", className)}>
+      <div className="flex items-center gap-3">
+        <Skeleton className="size-10 rounded-md" />
+        <div className="flex-1">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="mt-2 h-7 w-32" />
+        </div>
+      </div>
       <Skeleton className="mt-3 h-3 w-40" />
     </Card>
   );

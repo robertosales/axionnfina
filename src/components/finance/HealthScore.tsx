@@ -2,7 +2,7 @@
  * HealthScore — KPI card que mostra a saúde financeira do usuário (0-100).
  * Calculado com base em: fluxo de caixa, reserva, dívidas e contas vencidas.
  */
-import { Activity, TrendingUp, TrendingDown } from "lucide-react";
+import { Activity } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 
 import { Card } from "@/components/ui/card";
@@ -41,7 +41,7 @@ export function HealthScore({ score, breakdown, confidence, sparkline }: HealthS
   const offset = circumference * (1 - score / 100);
 
   return (
-    <Card className="surface-elevated relative gap-0 overflow-hidden p-5">
+    <Card className="relative gap-0 overflow-hidden bg-card p-5 shadow-none">
       <div className="flex items-start justify-between gap-3">
         <span className="text-sm font-medium text-muted-foreground">Saúde financeira</span>
         <span className={cn("rounded-md bg-muted/60 p-2", level.color)}>

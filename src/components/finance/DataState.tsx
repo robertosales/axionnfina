@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CircleAlert, Inbox, LoaderCircle } from "lucide-react";
 
 export function DataState({
@@ -9,6 +10,7 @@ export function DataState({
   children,
   onRetry,
   suppressEmpty,
+  loadingVariant = "spinner",
 }: {
   loading?: boolean;
   error?: unknown;
@@ -17,8 +19,19 @@ export function DataState({
   onRetry?: () => void;
   /** When true, renders nothing instead of the default empty message. */
   suppressEmpty?: boolean;
+  /** "spinner" shows a loading text; "skeleton" renders children-shaped placeholders. */
+  loadingVariant?: "spinner" | "skeleton";
 }) {
-  if (loading)
+  if (loading) {
+    if (loadingVariant === "skeleton") {
+      return (
+        <div role="status" aria-label="Carregando" className="space-y-3">
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+      );
+    }
     return (
       <p
         role="status"
@@ -28,6 +41,7 @@ export function DataState({
         Carregando dados…
       </p>
     );
+  }
   if (error)
     return (
       <div

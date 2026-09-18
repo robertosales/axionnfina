@@ -1,5 +1,6 @@
 import { FinancialForm } from "@/components/finance/FinancialForm";
 import { DataState } from "@/components/finance/DataState";
+import { EmptyState } from "@/components/finance/EmptyState";
 import { MoneyInput } from "@/components/finance/MoneyInput";
 import { ValidatedInput } from "@/components/finance/ValidatedInput";
 import { parseFinancialInput } from "@/lib/financial-input";
@@ -187,7 +188,10 @@ function SettingsPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             {isLoading && <p className="text-sm text-muted-foreground">Carregando contas…</p>}
             {!isLoading && accounts.length === 0 && (
-              <p className="text-sm text-muted-foreground">Nenhuma conta cadastrada.</p>
+              <EmptyState
+                title="Nenhuma conta cadastrada"
+                className="sm:col-span-2"
+              />
             )}
             {accounts.map((account) => (
               <AccountCard key={account.id} account={account} />

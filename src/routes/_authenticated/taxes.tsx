@@ -1,4 +1,5 @@
 import { DataState } from "@/components/finance/DataState";
+import { EmptyState } from "@/components/finance/EmptyState";
 import { FinancialForm } from "@/components/finance/FinancialForm";
 import { MoneyInput } from "@/components/finance/MoneyInput";
 import { useFinancialConfirmation } from "@/components/finance/use-financial-confirmation";
@@ -254,9 +255,10 @@ function TaxesPage() {
             </Badge>
           </div>
           {events.length === 0 ? (
-            <p className="mt-4 text-sm text-muted-foreground">
-              Nenhum evento {showArchived ? "arquivado" : "ativo"}.
-            </p>
+            <EmptyState
+              title={`Nenhum evento ${showArchived ? "arquivado" : "ativo"}.`}
+              className="mt-4"
+            />
           ) : (
             <ul className="mt-4 divide-y divide-border/60">
               {events.map((event) => (

@@ -183,7 +183,7 @@ export function InvestmentPlanTracking() {
                         <span className="mr-1 inline-block h-2 w-0.5 bg-primary" /> marca = meta
                       </p>
                       <p className="text-right text-xs">
-                        Próximo aporte: <strong>{formatBRL(line.suggestedContribution)}</strong>
+                        Próximo aporte: <strong className="numeric">{formatBRL(line.suggestedContribution)}</strong>
                       </p>
                     </div>
                   </div>
@@ -197,8 +197,8 @@ export function InvestmentPlanTracking() {
                 </div>
                 <div className="rounded-xl bg-muted/50 p-4">
                   <p className="text-xs text-muted-foreground">Aporte mensal do plano</p>
-                  <p className="numeric mt-1 font-semibold">
-                    {formatBRL(progress.targetMonthlyContribution)}
+                  <p className="mt-1 font-semibold">
+                    <span className="numeric">{formatBRL(progress.targetMonthlyContribution)}</span>
                   </p>
                 </div>
                 <div className="rounded-xl bg-muted/50 p-4">

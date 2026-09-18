@@ -17,7 +17,7 @@ export function InvestmentPurpose({ positions }: { positions: Position[] }) {
           <h3 className="text-sm font-medium">Situação atual</h3>
           <p className="numeric mt-2 text-xl font-semibold">{formatBRL(total)}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Resultado bruto não realizado: {formatBRL(profit)}. O resultado líquido depende de
+            Resultado bruto não realizado: <span className="numeric">{formatBRL(profit)}</span>. O resultado líquido depende de
             impostos, taxas e datas de aquisição.
           </p>
         </div>

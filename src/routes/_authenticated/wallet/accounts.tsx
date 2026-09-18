@@ -1,4 +1,5 @@
 import { DataState } from "@/components/finance/DataState";
+import { EmptyState } from "@/components/finance/EmptyState";
 import { FinancialForm } from "@/components/finance/FinancialForm";
 import { MoneyInput } from "@/components/finance/MoneyInput";
 import { useFinancialConfirmation } from "@/components/finance/use-financial-confirmation";
@@ -314,22 +315,19 @@ function AccountsPage() {
               })}
             </div>
           ) : (
-            <Card className="flex flex-col items-center justify-center bg-card p-12 text-center shadow-none">
-              <Wallet className="size-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">
-                {showArchived ? "Nenhuma conta arquivada" : "Nenhuma conta"}
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {showArchived
-                  ? "As contas arquivadas aparecerão aqui."
-                  : "Adicione sua primeira conta financeira."}
-              </p>
-              {!showArchived && (
-                <Button className="mt-4" onClick={handleOpenNew}>
-                  <Plus className="mr-2 size-4" /> Criar Conta
-                </Button>
-              )}
-            </Card>
+            <EmptyState
+              icon={Wallet}
+              title={showArchived ? "Nenhuma conta arquivada" : "Nenhuma conta"}
+              description={showArchived
+                ? "As contas arquivadas aparecerão aqui."
+                : "Adicione sua primeira conta financeira."}
+              {...(!showArchived ? {
+                action: {
+                  label: "Criar Conta",
+                  onClick: handleOpenNew,
+                },
+              } : {})}
+            />
           )}
 
           {/* Instituições Pluggy (Open Finance) */}

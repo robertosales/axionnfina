@@ -1,4 +1,5 @@
 import { DataState } from "@/components/finance/DataState";
+import { EmptyState } from "@/components/finance/EmptyState";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BellRing, RefreshCw } from "lucide-react";
 import { useState } from "react";
@@ -252,9 +253,10 @@ function InsightsPage() {
         </div>
       </DataState>
       {!isLoading && !isError && agentInsights.length === 0 && (
-        <p className="mt-4 text-sm text-muted-foreground">
-          Nenhum insight {showArchived ? "arquivado" : "ativo"} no momento.
-        </p>
+        <EmptyState
+          title={`Nenhum insight ${showArchived ? "arquivado" : "ativo"} no momento.`}
+          className="mt-4"
+        />
       )}
     </AppShell>
   );

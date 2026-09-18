@@ -1,4 +1,5 @@
 import { DataState } from "@/components/finance/DataState";
+import { EmptyState } from "@/components/finance/EmptyState";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import {
   ArrowRightLeft,
@@ -199,21 +200,19 @@ function WalletPage() {
               </Card>
             </>
           ) : (
-            <Card className="flex flex-col items-center justify-center bg-card p-12 text-center shadow-none">
-              <Wallet className="size-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">Nenhuma conta cadastrada</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Adicione suas contas ou conecte um banco via Open Finance.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Link to="/wallet/connect">
-                  <Button variant="outline">Conectar Banco</Button>
-                </Link>
-                <Link to="/wallet/accounts">
-                  <Button>Adicionar Conta Manual</Button>
-                </Link>
-              </div>
-            </Card>
+            <EmptyState
+              icon={Wallet}
+              title="Nenhuma conta cadastrada"
+              description="Adicione suas contas ou conecte um banco via Open Finance."
+              action={{
+                label: "Conectar Banco",
+                asChild: (
+                  <Link to="/wallet/connect">
+                    <Button variant="outline">Conectar Banco</Button>
+                  </Link>
+                ),
+              }}
+            />
           )}
         </div>
       </DataState>

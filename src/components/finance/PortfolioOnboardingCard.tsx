@@ -122,7 +122,7 @@ export function PortfolioOnboardingCard({ onManual }: { onManual: () => void }) 
                       <span className="block font-normal text-muted-foreground">{row.name}</span>
                     </td>
                     <td>{row.assetClass}</td>
-                    <td>{formatBRL(row.marketValue)}</td>
+                    <td className="numeric">{formatBRL(row.marketValue)}</td>
                     <td>
                       {row.valid ? (
                         <span className="inline-flex items-center gap-1 text-success">

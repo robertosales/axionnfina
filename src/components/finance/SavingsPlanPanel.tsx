@@ -157,8 +157,8 @@ export function SavingsPlanPanel() {
             </div>
             <div className="rounded-md border border-success/30 bg-success/5 p-3">
               <p className="text-[11px] text-muted-foreground">Economia confirmada</p>
-              <p className="numeric mt-1 text-lg font-semibold text-success">
-                {formatBRL(realizedSaving)}
+              <p className="mt-1 text-lg font-semibold text-success">
+                <span className="numeric">{formatBRL(realizedSaving)}</span>
               </p>
             </div>
           </div>
@@ -217,8 +217,8 @@ export function SavingsPlanPanel() {
                     </div>
                     <div className="text-left sm:text-right">
                       <p className="text-[10px] text-muted-foreground">Potencial estimado</p>
-                      <p className="numeric text-lg font-semibold">
-                        {formatBRL(plan.expectedMonthlySaving)}/mês
+                      <p className="text-lg font-semibold">
+                        <span className="numeric">{formatBRL(plan.expectedMonthlySaving)}</span>/mês
                       </p>
                     </div>
                   </div>
@@ -275,7 +275,7 @@ export function SavingsPlanPanel() {
                       <div>
                         <h4 className="text-sm font-semibold">{plan.title}</h4>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Meta: {formatBRL(plan.expectedMonthlySaving)}/mês
+                          Meta: <span className="numeric">{formatBRL(plan.expectedMonthlySaving)}</span>/mês
                         </p>
                       </div>
                       <Target className="size-5 text-primary" aria-hidden />
@@ -285,8 +285,8 @@ export function SavingsPlanPanel() {
                     </div>
                     <div className="mt-4 flex items-center justify-between rounded-lg bg-muted/40 p-3">
                       <span className="text-xs text-muted-foreground">Economia confirmada</span>
-                      <span className="numeric text-sm font-semibold text-success">
-                        {formatBRL(total)}
+                      <span className="text-sm font-semibold text-success">
+                        <span className="numeric">{formatBRL(total)}</span>
                       </span>
                     </div>
                     <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -331,7 +331,7 @@ export function SavingsPlanPanel() {
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             Informe o gasto real. A economia confirmada será a diferença positiva em relação à média
-            de {formatBRL(checkInPlan?.baselineMonthly ?? 0)}.
+            de <span className="numeric">{formatBRL(checkInPlan?.baselineMonthly ?? 0)}</span>.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">

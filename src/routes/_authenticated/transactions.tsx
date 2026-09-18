@@ -1106,7 +1106,7 @@ function TransactionsPage() {
                       <td className="p-2">{row.rowNumber}</td>
                       <td>{row.date ? row.date.split("-").reverse().join("/") : "—"}</td>
                       <td>{row.description || "-"}</td>
-                      <td>{Number.isFinite(row.amount) ? formatBRL(row.amount) : "—"}</td>
+                      <td className="numeric">{Number.isFinite(row.amount) ? formatBRL(row.amount) : "—"}</td>
                       <td className={row.valid ? "text-success" : "text-danger"}>
                         {row.valid ? "Pronta" : row.errors.join(", ")}
                       </td>

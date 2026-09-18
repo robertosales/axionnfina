@@ -187,6 +187,7 @@ export async function upsertAccount(data: {
   metadata?: Record<string, unknown>;
   branch?: string;
   account_number?: string;
+  logo_url?: string | null;
 }): Promise<string | null> {
   if (data.id) {
     const { id, metadata, ...changes } = data;
@@ -230,6 +231,7 @@ export async function upsertAccount(data: {
         credit_limit: data.credit_limit ?? null,
         subtype: data.subtype ?? null,
         metadata: (data.metadata ?? {}) as Json,
+        logo_url: data.logo_url ?? null,
       })
       .select("id")
       .single();

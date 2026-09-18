@@ -1,6 +1,7 @@
 import { DataState } from "@/components/finance/DataState";
 import { EmptyState } from "@/components/finance/EmptyState";
 import { FinancialForm } from "@/components/finance/FinancialForm";
+import { LogoUpload } from "@/components/finance/LogoUpload";
 import { MoneyInput } from "@/components/finance/MoneyInput";
 import { useFinancialConfirmation } from "@/components/finance/use-financial-confirmation";
 import { ValidatedInput } from "@/components/finance/ValidatedInput";
@@ -97,7 +98,7 @@ function AccountsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("accounts")
-        .select("id, institution_id")
+        .select("id, institution_id, logo_url")
         .is("archived_at", null);
       if (error) throw error;
       return data ?? [];
@@ -113,6 +114,7 @@ function AccountsPage() {
     type: "checking" as AccountType,
     balance: "0",
     is_primary: false,
+    logo_url: null as string | null,
   });
   const accounts = showArchived ? (archivedAccounts.data ?? []) : (summary?.accounts ?? []);
   const accountsLoading = showArchived ? archivedAccounts.isLoading : isLoading;
@@ -126,6 +128,7 @@ function AccountsPage() {
       type: "checking",
       balance: "0",
       is_primary: false,
+      logo_url: null,
     });
     setDialogOpen(true);
   };
@@ -134,6 +137,7 @@ function AccountsPage() {
     setEditId(account.id);
     const institutionId =
       accountDetailsQuery.data?.find((detail) => detail.id === account.id)?.institution_id ?? "";
+    const logoUrl = accountDetailsQuery.data?.find((detail) => detail.id === account.id)?.logo_url ?? null;
     setForm({
       name: account.name,
       institution: account.institution_name ?? "",
@@ -141,6 +145,7 @@ function AccountsPage() {
       type: account.type,
       balance: String(account.balance),
       is_primary: account.is_primary,
+      logo_url: logoUrl,
     });
     setDialogOpen(true);
   };
@@ -167,6 +172,7 @@ function AccountsPage() {
         type: form.type,
         balance: parseFinancialInput(form.balance),
         is_primary: form.is_primary,
+        logo_url: form.logo_url,
       });
 
       toast.success(editId ? "Conta atualizada" : "Conta criada");
@@ -412,15 +418,22 @@ function AccountsPage() {
                 <DialogTitle>{editId ? "Editar Conta" : "Nova Conta"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-2">
-                <div className="space-y-2">
-                  <Label htmlFor="account-name">Nome</Label>
-                  <ValidatedInput
-                    required
-                    id="account-name"
-                    placeholder="Ex: Conta Itaú"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                <div className="flex items-center gap-4">
+                  <LogoUpload
+                    value={form.logo_url}
+                    onChange={(url) => setForm({ ...form, logo_url: url })}
+                    fallbackText={form.name || form.institution || "BK"}
                   />
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="account-name">Nome</Label>
+                    <ValidatedInput
+                      required
+                      id="account-name"
+                      placeholder="Ex: Conta Itaú"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Instituição</Label>

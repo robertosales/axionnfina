@@ -52,6 +52,7 @@ export function useUpsertAccount() {
       branch?: string;
       accountNumber?: string;
       openFinance?: boolean;
+      logo_url?: string | null;
     }) => {
       await requireUserId();
       return upsertAccount({
@@ -63,6 +64,7 @@ export function useUpsertAccount() {
         open_finance: input.openFinance ?? false,
         branch: input.branch?.trim() || "",
         account_number: input.accountNumber?.trim() || "",
+        ...(input.logo_url !== undefined ? { logo_url: input.logo_url } : {}),
       });
     },
     onSuccess: () => {

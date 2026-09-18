@@ -60,6 +60,7 @@ export function useUpsertAccount() {
       open_finance?: boolean;
       external_id?: string;
       metadata?: Record<string, unknown>;
+      logo_url?: string | null;
     }) => upsertAccount(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["wallet-summary"] });

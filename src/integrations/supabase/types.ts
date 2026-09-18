@@ -167,6 +167,7 @@ export type Database = {
           is_manual: boolean
           is_primary: boolean
           last_sync_at: string | null
+          logo_url: string | null
           metadata: Json | null
           name: string
           open_finance: boolean
@@ -195,6 +196,7 @@ export type Database = {
           is_manual?: boolean
           is_primary?: boolean
           last_sync_at?: string | null
+          logo_url?: string | null
           metadata?: Json | null
           name: string
           open_finance?: boolean
@@ -223,6 +225,7 @@ export type Database = {
           is_manual?: boolean
           is_primary?: boolean
           last_sync_at?: string | null
+          logo_url?: string | null
           metadata?: Json | null
           name?: string
           open_finance?: boolean
@@ -628,6 +631,7 @@ export type Database = {
           id: string
           is_virtual: boolean
           last_four: string
+          logo_url: string | null
           updated_at: string
           user_id: string
         }
@@ -645,6 +649,7 @@ export type Database = {
           id?: string
           is_virtual?: boolean
           last_four: string
+          logo_url?: string | null
           updated_at?: string
           user_id: string
         }
@@ -662,6 +667,7 @@ export type Database = {
           id?: string
           is_virtual?: boolean
           last_four?: string
+          logo_url?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -2949,6 +2955,91 @@ export type Database = {
         }
         Relationships: []
       }
+      piggy_banks: {
+        Row: {
+          balance: number
+          color: string | null
+          created_at: string
+          goal_id: string | null
+          icon: string | null
+          id: string
+          name: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          color?: string | null
+          created_at?: string
+          goal_id?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          color?: string | null
+          created_at?: string
+          goal_id?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piggy_banks_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      piggy_bank_movements: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          id: string
+          note: string | null
+          origin: string
+          piggy_bank_id: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date?: string
+          id?: string
+          note?: string | null
+          origin?: string
+          piggy_bank_id: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          id?: string
+          note?: string | null
+          origin?: string
+          piggy_bank_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piggy_bank_movements_piggy_bank_id_fkey"
+            columns: ["piggy_bank_id"]
+            isOneToOne: false
+            referencedRelation: "piggy_banks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       apply_transaction_balance_delta: {
@@ -3114,6 +3205,30 @@ export type Database = {
       upsert_transaction_idempotent: {
         Args: { p_data: Json; p_idempotency_key: string }
         Returns: string
+      }
+      create_piggy_bank: {
+        Args: { p_name: string; p_icon?: string | null; p_color?: string | null; p_goal_id?: string | null }
+        Returns: string
+      }
+      deposit_to_piggy_bank: {
+        Args: { p_piggy_bank_id: string; p_amount: number; p_account_id: string; p_note?: string | null }
+        Returns: undefined
+      }
+      withdraw_from_piggy_bank: {
+        Args: { p_piggy_bank_id: string; p_amount: number; p_account_id: string; p_note?: string | null }
+        Returns: undefined
+      }
+      archive_piggy_bank: {
+        Args: { p_piggy_bank_id: string }
+        Returns: undefined
+      }
+      close_piggy_bank: {
+        Args: { p_piggy_bank_id: string }
+        Returns: undefined
+      }
+      unarchive_piggy_bank: {
+        Args: { p_piggy_bank_id: string }
+        Returns: undefined
       }
     }
     Enums: {

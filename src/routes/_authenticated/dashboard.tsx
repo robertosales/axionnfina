@@ -5,12 +5,14 @@ import { snapshotChange, syncFreshness, wealthSummary } from "@/lib/wealth-summa
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  ArrowDownRight,
   ArrowUpRight,
   Bot,
   CalendarClock,
   Eye,
   EyeOff,
   Landmark,
+  Minus,
   Plus,
   Shield,
   Sparkles,
@@ -27,11 +29,12 @@ import { BudgetProgress } from "@/components/finance/BudgetProgress";
 import { ChartCard } from "@/components/finance/ChartCard";
 import { FinancialNextStepCard } from "@/components/finance/FinancialNextStepCard";
 import { HealthScore } from "@/components/finance/HealthScore";
-import { KPICard } from "@/components/finance/KPICard";
+import { KPICard, KPICardSkeleton } from "@/components/finance/KPICard";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAnomalyDetection, useMoneyAge } from "@/hooks/use-anomaly-detection";
 import { useRealtimeAccounts, useRealtimeTransactions } from "@/hooks/use-realtime";
 import { useSessionUser } from "@/hooks/use-session-user";
@@ -79,6 +82,18 @@ const severityTone = {
   warning: "border-warning/40 bg-warning/5",
   danger: "border-danger/40 bg-danger/5",
 } as const;
+
+function NetWorthSkeleton() {
+  return (
+    <Card className="min-w-0 overflow-hidden border-primary/25 bg-primary/[0.03] p-5 shadow-none sm:p-6">
+      <Skeleton className="h-4 w-32" />
+      <Skeleton className="mt-3 h-10 w-48" />
+      <Skeleton className="mt-2 h-4 w-64" />
+      <Skeleton className="mt-5 h-8 w-full" />
+      <Skeleton className="mt-4 h-44 w-full" />
+    </Card>
+  );
+}
 
 function Dashboard() {
   const { name } = useSessionUser();
@@ -200,6 +215,24 @@ function Dashboard() {
           ? "warning"
           : "default";
 
+  const netWorthPositive = netWorth >= 0;
+  const netWorthChangeTone =
+    monthlyChange === null
+      ? "text-muted-foreground"
+      : monthlyChange > 0
+        ? "text-success"
+        : monthlyChange < 0
+          ? "text-danger"
+          : "text-muted-foreground";
+
+  const freshnessLabel = freshness.connected === 0
+    ? "Dados manuais"
+    : freshness.unknown > 0
+      ? "Sync parcial"
+      : freshness.oldest
+        ? `Atualizado ${new Date(freshness.oldest).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+        : "";
+
   return (
     <AppShell>
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -259,7 +292,7 @@ function Dashboard() {
       </nav>
 
       {hidden ? (
-        <Card className="p-8 text-center text-muted-foreground">
+        <Card className="bg-card p-8 text-center shadow-none text-muted-foreground">
           <EyeOff className="mx-auto mb-3 size-6" aria-hidden />
           <p>Informações financeiras ocultas.</p>
         </Card>
@@ -267,7 +300,7 @@ function Dashboard() {
         <>
           {/* Chamada única de estado vazio */}
           {showEmptyCta && (
-            <Card className="mb-8 flex flex-col items-center gap-3 border-primary/30 bg-primary/5 p-6 text-center">
+            <Card className="mb-8 flex flex-col items-center gap-3 border-primary/30 bg-primary/5 p-6 shadow-none text-center">
               <Sparkles className="size-8 text-primary" aria-hidden />
               <h2 className="text-lg font-semibold">Comece conectando suas contas</h2>
               <p className="max-w-md text-sm text-muted-foreground">
@@ -283,124 +316,80 @@ function Dashboard() {
             </Card>
           )}
 
-          {/* Zona 1 — KPIs */}
-          <section
-            aria-label="Indicadores"
-            className="mb-8 grid gap-4 sm:grid-cols-2 2xl:grid-cols-4"
-          >
-            <KPICard
-              label="Quanto você deve"
-              description="Soma dos saldos negativos e cartões de crédito. Zero é o ideal."
-              value={
-                accountsError
-                  ? "Indisponível"
-                  : loadingAccounts
-                    ? "Carregando…"
-                    : formatBRL(totalDebts)
-              }
-              icon={TrendingUp}
-              tone={loadingAccounts || accountsError ? "default" : debtsTone}
-            />
-            <KPICard
-              label="Dinheiro disponível"
-              description="Dinheiro em conta corrente/poupança que você pode usar hoje, sem contar investimentos."
-              value={
-                accountsError
-                  ? "Indisponível"
-                  : loadingAccounts
-                    ? "Carregando…"
-                    : formatBRL(liquidity)
-              }
-              icon={Wallet}
-              sparkline={cashflow.map((p) => ({ value: p.saldo }))}
-              tone={loadingAccounts || accountsError ? "default" : liquidityTone}
-            />
-            <KPICard
-              label="Sobra do mês"
-              description="Percentual da renda que sobrou depois das despesas deste mês. Quanto maior, melhor."
-              value={
-                transactionsError
-                  ? "Indisponível"
-                  : loadingTransactions
-                    ? "Carregando…"
-                    : monthlyIncome > 0
-                      ? formatPercent(savingsRate)
-                      : "Sem receitas"
-              }
-              hint={
-                previousMonth && previousMonth.receitas > 0
-                  ? `${formatPercent(savingsRate - previousSavingsRate).replace("%", "")} p.p. em relação ao mês anterior`
-                  : "Sem receitas anteriores para comparar"
-              }
-              icon={ArrowUpRight}
-              tone={loadingTransactions || transactionsError ? "default" : savingsTone}
-            />
-            <KPICard
-              label="Próxima conta a pagar"
-              description="Valor e data da conta em aberto mais próxima do vencimento."
-              value={
-                billsError
-                  ? "Indisponível"
-                  : loadingBills
-                    ? "Carregando…"
-                    : formatBRL(nextBill?.amount ?? 0)
-              }
-              hint={
-                nextBill
-                  ? `${nextBill.name} · ${formatShortDate(nextBill.dueDate)}`
-                  : "Sem contas abertas"
-              }
-              icon={CalendarClock}
-              tone={loadingBills || billsError ? "default" : billTone}
-            />
-          </section>
-
-          {/* Zona 2 — Hero: patrimônio líquido */}
+          {/* Zona 1 — Hero: patrimônio líquido (número principal) */}
           <section aria-label="Resumo patrimonial" className="mb-8">
-            <Card className="min-w-0 overflow-hidden border-primary/25 bg-primary/[0.03] p-5 sm:p-6">
-              <p className="text-sm font-medium text-muted-foreground">Patrimônio líquido</p>
-              <DataState
-                loading={loadingAccounts || loadingInvestments}
-                error={accountsError || investmentsError}
-                onRetry={() => {
-                  void queryClient.invalidateQueries({ queryKey: ["accounts"] });
-                  void queryClient.invalidateQueries({ queryKey: ["investments"] });
-                }}
-              >
-                <p className="numeric mt-2 break-words text-3xl font-semibold tracking-tight sm:text-4xl">
-                  {formatBRL(netWorth)}
-                </p>
+            {loadingAccounts || loadingInvestments ? (
+              <NetWorthSkeleton />
+            ) : (accountsError || investmentsError) ? (
+              <Card className="bg-card p-5 shadow-none sm:p-6" role="alert">
+                <p className="text-sm font-medium text-muted-foreground">Patrimônio líquido</p>
+                <p className="mt-2 text-sm text-danger">Não foi possível carregar o patrimônio.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => {
+                    void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+                    void queryClient.invalidateQueries({ queryKey: ["investments"] });
+                  }}
+                >
+                  Tentar novamente
+                </Button>
+              </Card>
+            ) : (
+              <Card className="min-w-0 overflow-hidden border-primary/25 bg-primary/[0.03] p-5 shadow-none sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Patrimônio líquido</p>
+                    <p className="numeric mt-2 break-words text-3xl font-semibold tracking-tight sm:text-4xl">
+                      {formatBRL(netWorth)}
+                    </p>
+                  </div>
+                  {monthlyChange !== null && (
+                    <span
+                      className={cn(
+                        "numeric inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
+                        monthlyChange > 0 && "bg-success/10 text-success",
+                        monthlyChange < 0 && "bg-danger/10 text-danger",
+                        monthlyChange === 0 && "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {monthlyChange > 0 ? (
+                        <TrendingUp className="size-3.5" />
+                      ) : monthlyChange < 0 ? (
+                        <ArrowDownRight className="size-3.5" />
+                      ) : (
+                        <Minus className="size-3.5" />
+                      )}
+                      {formatPercent(monthlyChange)} este mês
+                    </span>
+                  )}
+                </div>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {usesInvestmentAccounts
                     ? "Saldos das contas, incluindo contas de investimento."
                     : "Saldos das contas e posições de investimento."}
                 </p>
-              </DataState>
-              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
-                <p>
-                  Snapshots: mês {monthlyChange === null ? "—" : formatPercent(monthlyChange)} · ano{" "}
-                  {annualChange === null ? "—" : formatPercent(annualChange)}
-                </p>
-                <div className="flex gap-1" aria-label="Período do histórico">
-                  {[6, 12].map((months) => (
-                    <Button
-                      key={months}
-                      variant={historyMonths === months ? "secondary" : "ghost"}
-                      size="sm"
-                      aria-pressed={historyMonths === months}
-                      onClick={() => setHistoryMonths(months)}
-                    >
-                      {months} meses
-                    </Button>
-                  ))}
+
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
+                  <p>
+                    Ano {annualChange === null ? "—" : formatPercent(annualChange)}
+                  </p>
+                  <div className="flex gap-1" aria-label="Período do histórico">
+                    {[6, 12].map((months) => (
+                      <Button
+                        key={months}
+                        variant={historyMonths === months ? "secondary" : "ghost"}
+                        size="sm"
+                        aria-pressed={historyMonths === months}
+                        onClick={() => setHistoryMonths(months)}
+                      >
+                        {months} meses
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <DataState
-                loading={loadingHistory}
-                error={historyError}
-                empty={netWorthSeries.length === 0}
-                suppressEmpty={showEmptyCta}
-              >
+
                 <div
                   className="mt-4 h-44"
                   role="img"
@@ -429,6 +418,7 @@ function Dashboard() {
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
+
                 <details className="mt-2 text-sm">
                   <summary className="focus-ring cursor-pointer rounded text-muted-foreground">
                     Consultar histórico em tabela
@@ -451,24 +441,95 @@ function Dashboard() {
                     </tbody>
                   </table>
                 </details>
-              </DataState>
-              <p className="mt-4 text-sm text-muted-foreground">
-                {freshness.connected === 0
-                  ? "Dados manuais ou importados. Atualização sob sua responsabilidade."
-                  : freshness.unknown > 0
-                    ? "Há contas sem data de sincronização informada."
-                    : `Sincronização mais antiga: ${freshness.oldest ? new Date(freshness.oldest).toLocaleString("pt-BR") : "não informada"}.`}
-                {freshness.stale && " Dados possivelmente desatualizados."}{" "}
-                <Link to="/wallet/connect" className="focus-ring rounded text-primary underline">
-                  Ver conexões
-                </Link>
-              </p>
-            </Card>
+
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+                  <p>
+                    {freshness.connected === 0
+                      ? "Dados manuais ou importados."
+                      : freshness.unknown > 0
+                        ? "Há contas sem data de sincronização."
+                        : `Sincronização mais antiga: ${freshness.oldest ? new Date(freshness.oldest).toLocaleString("pt-BR") : "não informada"}.`}
+                    {freshness.stale && " Dados possivelmente desatualizados."}{" "}
+                    <Link to="/wallet/connect" className="focus-ring rounded text-primary underline">
+                      Ver conexões
+                    </Link>
+                  </p>
+                  {freshnessLabel && (
+                    <span className="freshness-stamp" aria-label={freshnessLabel}>
+                      {freshnessLabel}
+                    </span>
+                  )}
+                </div>
+              </Card>
+            )}
+          </section>
+
+          {/* Zona 2 — KPIs subordinados */}
+          <section
+            aria-label="Indicadores"
+            className="mb-8 grid gap-4 sm:grid-cols-2 2xl:grid-cols-4"
+          >
+            {loadingAccounts || loadingInvestments ? (
+              <>
+                <KPICardSkeleton />
+                <KPICardSkeleton />
+                <KPICardSkeleton />
+                <KPICardSkeleton />
+              </>
+            ) : (
+              <>
+                <KPICard
+                  label="Quanto você deve"
+                  description="Soma dos saldos negativos e cartões de crédito. Zero é o ideal."
+                  value={accountsError ? "Indisponível" : formatBRL(totalDebts)}
+                  icon={TrendingUp}
+                  tone={accountsError ? "default" : debtsTone}
+                />
+                <KPICard
+                  label="Dinheiro disponível"
+                  description="Dinheiro em conta corrente/poupança que você pode usar hoje, sem contar investimentos."
+                  value={accountsError ? "Indisponível" : formatBRL(liquidity)}
+                  icon={Wallet}
+                  sparkline={cashflow.map((p) => ({ value: p.saldo }))}
+                  tone={accountsError ? "default" : liquidityTone}
+                />
+                <KPICard
+                  label="Sobra do mês"
+                  description="Percentual da renda que sobrou depois das despesas deste mês. Quanto maior, melhor."
+                  value={
+                    transactionsError
+                      ? "Indisponível"
+                      : monthlyIncome > 0
+                        ? formatPercent(savingsRate)
+                        : "Sem receitas"
+                  }
+                  hint={
+                    previousMonth && previousMonth.receitas > 0
+                      ? `${formatPercent(savingsRate - previousSavingsRate).replace("%", "")} p.p. em relação ao mês anterior`
+                      : "Sem receitas anteriores para comparar"
+                  }
+                  icon={ArrowUpRight}
+                  tone={transactionsError ? "default" : savingsTone}
+                />
+                <KPICard
+                  label="Próxima conta a pagar"
+                  description="Valor e data da conta em aberto mais próxima do vencimento."
+                  value={billsError ? "Indisponível" : formatBRL(nextBill?.amount ?? 0)}
+                  hint={
+                    nextBill
+                      ? `${nextBill.name} · ${formatShortDate(nextBill.dueDate)}`
+                      : "Sem contas abertas"
+                  }
+                  icon={CalendarClock}
+                  tone={billsError ? "default" : billTone}
+                />
+              </>
+            )}
           </section>
 
           {/* Zona 3 — Insights do agente (IA) */}
           <section aria-label="Insights do agente" className="mb-8">
-            <Card className="border-primary/50 bg-primary/[0.04] p-5 sm:p-6">
+            <Card className="border-primary/50 bg-primary/[0.04] p-5 shadow-none sm:p-6">
               <div className="flex items-center gap-2">
                 <span className="grid size-8 place-items-center rounded-lg bg-primary/15 text-primary">
                   <Sparkles className="size-4" aria-hidden />
@@ -537,7 +598,7 @@ function Dashboard() {
 
               <div>
                 <h2 className="mb-3 text-base font-semibold">Próximas contas</h2>
-                <Card className="p-0">
+                <Card className="bg-card p-0 shadow-none">
                   <DataState loading={loadingBills} error={billsError}>
                     {!loadingBills && !billsError && openBills.length === 0 && (
                       <p className="p-4 text-sm text-muted-foreground">Nenhuma conta em aberto.</p>
@@ -587,7 +648,7 @@ function Dashboard() {
                 </Card>
               </div>
 
-              <Card className="p-5">
+              <Card className="bg-card p-5 shadow-none">
                 <h3 className="text-sm font-semibold">Saúde do orçamento</h3>
                 <DataState
                   loading={loadingBudget}
@@ -659,7 +720,7 @@ function Dashboard() {
                 />
               </DataState>
 
-              <Card className="p-5">
+              <Card className="bg-card p-5 shadow-none">
                 <h2 className="font-semibold">Sua próxima conquista</h2>
                 <DataState
                   loading={loadingGoals}
@@ -695,7 +756,7 @@ function Dashboard() {
                 suppressEmpty={showEmptyCta}
               />
 
-              <Card className="p-5">
+              <Card className="bg-card p-5 shadow-none">
                 <div className="flex items-center gap-2">
                   <Shield className="size-4 text-primary" aria-hidden />
                   <h2 className="text-sm font-semibold">Detecção de anomalias</h2>
@@ -731,12 +792,12 @@ function Dashboard() {
           </section>
 
           {/* Zona 6 — Bastidores (recolhido por padrão) */}
-          <details className="rounded-lg border border-border bg-card p-5 shadow-elevation-1">
+          <details className="rounded-lg border border-border bg-card p-5 shadow-none">
             <summary className="focus-ring cursor-pointer rounded font-semibold">
               Contas, origem dos dados e detalhes de investimentos
             </summary>
             <div className="mt-6 grid gap-6 lg:grid-cols-3">
-              <Card className="p-5 lg:col-span-1">
+              <Card className="bg-card p-5 shadow-none lg:col-span-1">
                 <h2 className="text-base font-semibold">Contas e origem dos dados</h2>
                 <DataState
                   loading={loadingAccounts}

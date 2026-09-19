@@ -159,6 +159,7 @@ export function useDepositToPiggyBank() {
       void qc.invalidateQueries({ queryKey: ["piggy-banks"] });
       void qc.invalidateQueries({ queryKey: ["piggy-bank-movements"] });
       void qc.invalidateQueries({ queryKey: ["wallet-summary"] });
+      void qc.invalidateQueries({ queryKey: ["accounts"] });
       toast.success("Aporte realizado!");
     },
     onError: (err: Error) => {
@@ -183,6 +184,7 @@ export function useWithdrawFromPiggyBank() {
       void qc.invalidateQueries({ queryKey: ["piggy-banks"] });
       void qc.invalidateQueries({ queryKey: ["piggy-bank-movements"] });
       void qc.invalidateQueries({ queryKey: ["wallet-summary"] });
+      void qc.invalidateQueries({ queryKey: ["accounts"] });
       toast.success("Resgate realizado!");
     },
     onError: (err: Error) => {
@@ -303,6 +305,7 @@ export function useTransferPiggyBank() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["piggy-banks"] });
       void qc.invalidateQueries({ queryKey: ["piggy-bank-movements"] });
+      void qc.invalidateQueries({ queryKey: ["wallet-summary"] });
       toast.success("Transferência realizada!");
     },
     onError: (err: Error) => {

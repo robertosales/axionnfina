@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { upsertAccount } from "@/lib/account-service";
+import { resolveBankLogoByCompe } from "@/lib/bank-logos";
 import { syncConnection } from "@/lib/pluggy.functions";
 import type { Account, AccountType } from "@/shared/finance-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,31 +13,37 @@ export function useAccounts() {
       const { data, error } = await supabase
         .from("accounts")
         .select(
-          "id, name, institution, type, balance, open_finance, last_sync_at, branch, account_number, metadata, record_origin, logo_url",
+          "id, name, institution, type, balance, open_finance, last_sync_at, branch, account_number, metadata, record_origin, logo_url, institutions(code, logo_url)",
         )
         .is("archived_at", null)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return (data ?? []).map((row) => ({
-        id: row.id,
-        institution: row.institution,
-        name: row.name,
-        type: dbToUiAccountType[row.type as DbAccountType],
-        balance: Number(row.balance),
-        lastSyncedAt: row.last_sync_at,
-        connectionId:
-          row.metadata &&
-          typeof row.metadata === "object" &&
-          !Array.isArray(row.metadata) &&
-          typeof row.metadata["connection_id"] === "string"
-            ? row.metadata["connection_id"]
-            : null,
-        recordOrigin: row.record_origin as NonNullable<Account["recordOrigin"]>,
-        openFinance: row.open_finance,
-        branch: row.branch ?? "",
-        accountNumber: row.account_number ?? "",
-        logoUrl: row.logo_url ?? null,
-      }));
+      return (data ?? []).map((row) => {
+        const inst = row.institutions as { code?: string; logo_url?: string } | null;
+        const resolvedLogo = row.logo_url
+          ?? inst?.logo_url
+          ?? (inst?.code ? resolveBankLogoByCompe(inst.code) : null);
+        return {
+          id: row.id,
+          institution: row.institution,
+          name: row.name,
+          type: dbToUiAccountType[row.type as DbAccountType],
+          balance: Number(row.balance),
+          lastSyncedAt: row.last_sync_at,
+          connectionId:
+            row.metadata &&
+            typeof row.metadata === "object" &&
+            !Array.isArray(row.metadata) &&
+            typeof row.metadata["connection_id"] === "string"
+              ? row.metadata["connection_id"]
+              : null,
+          recordOrigin: row.record_origin as NonNullable<Account["recordOrigin"]>,
+          openFinance: row.open_finance,
+          branch: row.branch ?? "",
+          accountNumber: row.account_number ?? "",
+          logoUrl: resolvedLogo,
+        };
+      });
     },
   });
 }
@@ -72,6 +79,8 @@ export function useUpsertAccount() {
       void queryClient.invalidateQueries({ queryKey: ["accounts"] });
       void queryClient.invalidateQueries({ queryKey: ["wallet-summary"] });
       void queryClient.invalidateQueries({ queryKey: ["invoice-card-options"] });
+      void queryClient.invalidateQueries({ queryKey: ["account-edit-details"] });
+      void queryClient.invalidateQueries({ queryKey: ["account-logos"] });
     },
   });
 }

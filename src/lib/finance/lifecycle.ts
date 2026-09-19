@@ -107,6 +107,8 @@ export function useEntityLifecycle(entity: LifecycleEntity) {
     if (entity === "account") {
       void queryClient.invalidateQueries({ queryKey: ["wallet-summary"] });
       void queryClient.invalidateQueries({ queryKey: ["invoice-card-options"] });
+      void queryClient.invalidateQueries({ queryKey: ["account-edit-details"] });
+      void queryClient.invalidateQueries({ queryKey: ["account-logos"] });
     }
     if (entity === "transaction") {
       void queryClient.invalidateQueries({ queryKey: ["accounts"] });

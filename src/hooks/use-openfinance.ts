@@ -53,6 +53,9 @@ export function useTriggerSync() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account-connections"] });
+      qc.invalidateQueries({ queryKey: ["accounts"] });
+      qc.invalidateQueries({ queryKey: ["wallet-summary"] });
+      qc.invalidateQueries({ queryKey: ["transactions"] });
     },
   });
 }
@@ -106,6 +109,8 @@ export function useRevokeConnection() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account-connections"] });
+      qc.invalidateQueries({ queryKey: ["accounts"] });
+      qc.invalidateQueries({ queryKey: ["wallet-summary"] });
     },
   });
 }

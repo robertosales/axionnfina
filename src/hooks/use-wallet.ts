@@ -66,6 +66,8 @@ export function useUpsertAccount() {
       qc.invalidateQueries({ queryKey: ["wallet-summary"] });
       qc.invalidateQueries({ queryKey: ["accounts"] });
       qc.invalidateQueries({ queryKey: ["invoice-card-options"] });
+      qc.invalidateQueries({ queryKey: ["account-edit-details"] });
+      qc.invalidateQueries({ queryKey: ["account-logos"] });
     },
   });
 }
@@ -77,7 +79,10 @@ export function useArchiveAccount() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["wallet-summary"] });
       qc.invalidateQueries({ queryKey: ["accounts"] });
+      qc.invalidateQueries({ queryKey: ["accounts", "archived"] });
       qc.invalidateQueries({ queryKey: ["invoice-card-options"] });
+      qc.invalidateQueries({ queryKey: ["account-edit-details"] });
+      qc.invalidateQueries({ queryKey: ["account-logos"] });
     },
   });
 }
@@ -90,6 +95,7 @@ export function useSetPrimaryAccount() {
       qc.invalidateQueries({ queryKey: ["wallet-summary"] });
       qc.invalidateQueries({ queryKey: ["accounts"] });
       qc.invalidateQueries({ queryKey: ["invoice-card-options"] });
+      qc.invalidateQueries({ queryKey: ["account-edit-details"] });
     },
   });
 }
@@ -120,6 +126,8 @@ export function useCreateBalanceSnapshot() {
     }) => createBalanceSnapshot(accountId, balance, availableBalance),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account-balances"] });
+      qc.invalidateQueries({ queryKey: ["wallet-summary"] });
+      qc.invalidateQueries({ queryKey: ["accounts"] });
     },
   });
 }
@@ -148,6 +156,8 @@ export function useCreateConnection() {
     }) => createConnection(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account-connections"] });
+      qc.invalidateQueries({ queryKey: ["accounts"] });
+      qc.invalidateQueries({ queryKey: ["wallet-summary"] });
     },
   });
 }

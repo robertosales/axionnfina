@@ -92,10 +92,16 @@ function AccountsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("accounts")
-        .select("id, institution_id, logo_url")
+        .select("id, institution_id, logo_url, institutions(id, code, logo_url)")
         .is("archived_at", null);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).map((row) => {
+        const inst = row.institutions as { code?: string; logo_url?: string } | null;
+        const resolvedLogo = row.logo_url
+          ?? inst?.logo_url
+          ?? (inst?.code ? resolveBankLogoByCompe(inst.code) : null);
+        return { id: row.id, institution_id: row.institution_id, logo_url: resolvedLogo };
+      });
     },
   });
 

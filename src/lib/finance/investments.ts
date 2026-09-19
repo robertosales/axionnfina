@@ -143,7 +143,10 @@ export function useUpsertInvestmentPosition() {
         : await supabase.from("investment_positions").insert(payload);
       if (error) throw error;
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["investments"] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["investments"] });
+      void queryClient.invalidateQueries({ queryKey: ["wallet-summary"] });
+    },
   });
 }
 
@@ -210,7 +213,10 @@ export function useImportInvestmentPositions() {
         .eq("id", batch.id);
       return { imported: valid.length, rejected: input.rows.length - valid.length };
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["investments"] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["investments"] });
+      void queryClient.invalidateQueries({ queryKey: ["wallet-summary"] });
+    },
   });
 }
 

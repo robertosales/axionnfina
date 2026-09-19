@@ -19,6 +19,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useWalletSummary } from "@/hooks/use-wallet";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveBankLogoByCompe } from "@/lib/bank-logos";
 import { formatBRL } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/wallet/")({
@@ -55,10 +56,16 @@ function WalletPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("accounts")
-        .select("id, logo_url")
+        .select("id, logo_url, institutions(code, logo_url)")
         .is("archived_at", null);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).map((row) => {
+        const inst = row.institutions as { code?: string; logo_url?: string } | null;
+        const resolvedLogo = row.logo_url
+          ?? inst?.logo_url
+          ?? (inst?.code ? resolveBankLogoByCompe(inst.code) : null);
+        return { id: row.id, logo_url: resolvedLogo };
+      });
     },
   });
 

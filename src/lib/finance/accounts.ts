@@ -115,7 +115,7 @@ export function useOpenFinanceInstitutions() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("institutions")
-        .select("id, name, short_name, code, logo_color")
+        .select("id, name, short_name, code, logo_color, logo_url")
         .eq("openfinance_participant", true)
         .order("name");
       if (error) throw error;

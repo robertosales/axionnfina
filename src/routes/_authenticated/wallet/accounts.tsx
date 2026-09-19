@@ -6,6 +6,7 @@ import { LogoUpload } from "@/components/finance/LogoUpload";
 import { MoneyInput } from "@/components/finance/MoneyInput";
 import { useFinancialConfirmation } from "@/components/finance/use-financial-confirmation";
 import { ValidatedInput } from "@/components/finance/ValidatedInput";
+import { resolveBankLogoByCompe } from "@/lib/bank-logos";
 import { parseFinancialInput } from "@/lib/financial-input";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -359,10 +360,13 @@ function AccountsPage() {
                     value={form.institution_id}
                     onValueChange={(v) => {
                       const inst = institutions.find((i) => i.id === v);
+                      const resolvedLogo = inst?.logo_url
+                        ?? (inst?.code ? resolveBankLogoByCompe(inst.code) : null);
                       setForm({
                         ...form,
                         institution_id: v,
                         institution: inst?.name ?? "",
+                        logo_url: form.logo_url || resolvedLogo,
                       });
                     }}
                   >

@@ -918,6 +918,7 @@ export type Database = {
           created_at: string
           id: string
           logo_color: string
+          logo_url: string | null
           name: string
           openfinance_participant: boolean
           short_name: string
@@ -928,6 +929,7 @@ export type Database = {
           created_at?: string
           id?: string
           logo_color?: string
+          logo_url?: string | null
           name: string
           openfinance_participant?: boolean
           short_name?: string
@@ -938,6 +940,7 @@ export type Database = {
           created_at?: string
           id?: string
           logo_color?: string
+          logo_url?: string | null
           name?: string
           openfinance_participant?: boolean
           short_name?: string

@@ -50,6 +50,19 @@ export interface WithdrawInput {
   note?: string | null;
 }
 
+export interface UpdatePiggyBankInput {
+  piggy_bank_id: string;
+  name: string;
+  icon?: string | null;
+  color?: string | null;
+}
+
+export interface TransferPiggyBankInput {
+  from_id: string;
+  to_id: string;
+  amount: number;
+}
+
 // ============================================================================
 // Queries
 // ============================================================================
@@ -231,6 +244,69 @@ export function useUnarchivePiggyBank() {
     },
     onError: (err: Error) => {
       toast.error(err.message || "Erro ao restaurar");
+    },
+  });
+}
+
+export function useUpdatePiggyBank() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: UpdatePiggyBankInput) => {
+      const { error } = await supabase.rpc("update_piggy_bank", {
+        p_piggy_bank_id: input.piggy_bank_id,
+        p_name: input.name,
+        p_icon: input.icon ?? null,
+        p_color: input.color ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["piggy-banks"] });
+      toast.success("Cofrinho atualizado!");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Erro ao atualizar cofrinho");
+    },
+  });
+}
+
+export function useDeletePiggyBank() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (piggyBankId: string) => {
+      const { error } = await supabase.rpc("delete_piggy_bank", {
+        p_piggy_bank_id: piggyBankId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["piggy-banks"] });
+      toast.success("Cofrinho excluído");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Erro ao excluir cofrinho");
+    },
+  });
+}
+
+export function useTransferPiggyBank() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: TransferPiggyBankInput) => {
+      const { error } = await supabase.rpc("transfer_piggy_bank", {
+        p_from_id: input.from_id,
+        p_to_id: input.to_id,
+        p_amount: input.amount,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["piggy-banks"] });
+      void qc.invalidateQueries({ queryKey: ["piggy-bank-movements"] });
+      toast.success("Transferência realizada!");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Erro ao transferir");
     },
   });
 }

@@ -4,14 +4,27 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 import type { PiggyBank as PiggyBankType } from "@/hooks/use-piggy-banks";
+import { EntityActionsMenu } from "./EntityActionsMenu";
 
 interface PiggyBankCardProps {
   bank: PiggyBankType;
   onDeposit: () => void;
   onWithdraw: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  archived?: boolean;
+  onRestore?: () => void;
 }
 
-export function PiggyBankCard({ bank, onDeposit, onWithdraw }: PiggyBankCardProps) {
+export function PiggyBankCard({
+  bank,
+  onDeposit,
+  onWithdraw,
+  onEdit,
+  onDelete,
+  archived = false,
+  onRestore,
+}: PiggyBankCardProps) {
   const hasGoal = bank.goal_id !== null;
 
   return (
@@ -34,9 +47,23 @@ export function PiggyBankCard({ bank, onDeposit, onWithdraw }: PiggyBankCardProp
             </p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="numeric text-lg font-semibold">{formatBRL(bank.balance)}</p>
-          <p className="text-[11px] text-muted-foreground">saldo atual</p>
+        <div className="flex items-start gap-2">
+          <div className="text-right">
+            <p className="numeric text-lg font-semibold">{formatBRL(bank.balance)}</p>
+            <p className="text-[11px] text-muted-foreground">saldo atual</p>
+          </div>
+          <EntityActionsMenu
+            entityLabel="cofrinho"
+            recordName={bank.name}
+            archived={archived}
+            onEdit={onEdit}
+            onArchive={() => onDelete()}
+            {...(onRestore ? { onRestore } : {})}
+            {...(bank.balance === 0 ? { onDelete } : {})}
+            deleteDisabledReason={
+              bank.balance > 0 ? "Transfira ou resgate o saldo antes de excluir." : undefined
+            }
+          />
         </div>
       </div>
 

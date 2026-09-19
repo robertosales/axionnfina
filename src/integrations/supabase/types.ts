@@ -3233,6 +3233,27 @@ export type Database = {
         Args: { p_piggy_bank_id: string }
         Returns: undefined
       }
+      update_piggy_bank: {
+        Args: {
+          p_piggy_bank_id: string
+          p_name: string
+          p_icon?: string | null
+          p_color?: string | null
+        }
+        Returns: undefined
+      }
+      delete_piggy_bank: {
+        Args: { p_piggy_bank_id: string }
+        Returns: undefined
+      }
+      transfer_piggy_bank: {
+        Args: {
+          p_from_id: string
+          p_to_id: string
+          p_amount: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       account_type: "checking" | "savings" | "credit" | "investment"

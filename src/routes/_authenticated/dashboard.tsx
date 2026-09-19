@@ -1,39 +1,33 @@
-import { AllocationSection, CashflowSection } from "@/components/finance/DashboardCharts";
-import { DataState } from "@/components/finance/DataState";
-import { InvestmentPurpose } from "@/components/finance/InvestmentPurpose";
-import { snapshotChange, syncFreshness, wealthSummary } from "@/lib/wealth-summary";
+﻿import { snapshotChange, syncFreshness, wealthSummary } from "@/lib/wealth-summary";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  Bot,
-  CalendarClock,
-  Eye,
-  EyeOff,
-  Minus,
-  Plus,
-  Shield,
-  Sparkles,
-  Target,
-  TrendingUp,
-  Upload,
-  Wallet,
-} from "lucide-react";
+import { Bot, Eye, EyeOff, Plus, Shield, Sparkles, Target, Upload, Wallet } from "lucide-react";
 import { useState } from "react";
-import { Area, AreaChart, ResponsiveContainer, Tooltip as RTooltip, XAxis } from "recharts";
 
-import { AccountCard } from "@/components/finance/AccountCard";
-import { BudgetProgress } from "@/components/finance/BudgetProgress";
-import { ChartCard } from "@/components/finance/ChartCard";
+import {
+  BalanceLineChart,
+  CreditCardSection,
+  ExpenseCategoryCard,
+  IncomeCategoryCard,
+  MinhasContasCard,
+  MonthlyBalanceCard,
+  MonthlySavingsCard,
+  ObjetivosCard,
+  PendingAlertsCard,
+  PerfilCard,
+  SpendingFrequencyCard,
+  SummaryCards,
+} from "@/components/finance/dashboard";
+import { CashflowSection } from "@/components/finance/DashboardCharts";
+import { DataState } from "@/components/finance/DataState";
 import { FinancialNextStepCard } from "@/components/finance/FinancialNextStepCard";
 import { HealthScore } from "@/components/finance/HealthScore";
-import { KPICard, KPICardSkeleton } from "@/components/finance/KPICard";
+import { InvestmentPurpose } from "@/components/finance/InvestmentPurpose";
+import { BudgetProgress } from "@/components/finance/BudgetProgress";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useAnomalyDetection, useMoneyAge } from "@/hooks/use-anomaly-detection";
 import { useRealtimeAccounts, useRealtimeTransactions } from "@/hooks/use-realtime";
 import { useSessionUser } from "@/hooks/use-session-user";
@@ -50,7 +44,7 @@ import {
 } from "@/lib/finance-data";
 import { calculateHealthScore } from "@/lib/financial-health";
 import { analyzeFinancialReadiness } from "@/lib/financial-next-step";
-import { daysUntil, formatBRL, formatPercent, formatShortDate } from "@/lib/format";
+import { formatBRL, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -82,29 +76,15 @@ const severityTone = {
   danger: "border-danger/40 bg-danger/5",
 } as const;
 
-function NetWorthSkeleton() {
-  return (
-    <Card className="min-w-0 overflow-hidden border-primary/25 bg-primary/[0.03] p-5 shadow-none sm:p-6">
-      <Skeleton className="h-4 w-32" />
-      <Skeleton className="mt-3 h-10 w-48" />
-      <Skeleton className="mt-2 h-4 w-64" />
-      <Skeleton className="mt-5 h-8 w-full" />
-      <Skeleton className="mt-4 h-44 w-full" />
-    </Card>
-  );
-}
-
 function Dashboard() {
-  const { name } = useSessionUser();
+  const sessionUser = useSessionUser();
+  const { name } = sessionUser;
   const queryClient = useQueryClient();
   const [hidden, setHidden] = useState(false);
-  const [historyMonths, setHistoryMonths] = useState(6);
 
-  // Realtime subscriptions
   useRealtimeAccounts();
   useRealtimeTransactions();
 
-  // Anomaly detection
   const { anomalies } = useAnomalyDetection();
   const { daysSinceLastIncome } = useMoneyAge();
 
@@ -143,7 +123,6 @@ function Dashboard() {
   } = wealthSummary(accounts, totalInvestments);
   const freshness = syncFreshness(accounts);
   const monthlyChange = snapshotChange(netWorthSeries, 1);
-  const annualChange = snapshotChange(netWorthSeries, 12);
 
   const currentMonth = cashflow.at(-1);
   const previousMonth = cashflow.at(-2);
@@ -151,14 +130,9 @@ function Dashboard() {
     currentMonth && currentMonth.receitas > 0
       ? (currentMonth.saldo / currentMonth.receitas) * 100
       : 0;
-  const previousSavingsRate =
-    previousMonth && previousMonth.receitas > 0
-      ? (previousMonth.saldo / previousMonth.receitas) * 100
-      : 0;
   const openBills = upcomingBills.filter(
     (bill) => bill.dbStatus === "pending" || bill.dbStatus === "overdue",
   );
-  const nextBill = openBills[0];
   const nextStep = analyzeFinancialReadiness({
     accounts,
     transactions: transactions.filter((transaction) => !transaction.pending),
@@ -193,51 +167,31 @@ function Dashboard() {
     transactionCount: transactions.length,
   });
 
-  // No real data yet: show a single call-to-action instead of repeating
-  // empty messages inside each card.
   const baseDataLoaded = !loadingAccounts && !loadingTransactions;
   const hasData = accounts.length > 0 || transactions.length > 0;
   const showEmptyCta = baseDataLoaded && !hasData && !accountsError && !transactionsError;
 
-  // Semantic tones for the KPI strip
-  const debtsTone = totalDebts > 0 ? "danger" : "success";
-  const liquidityTone = liquidity > 0 ? "success" : liquidity < 0 ? "danger" : "default";
-  const savingsTone =
-    monthlyIncome <= 0 ? "default" : savingsRate > 0 ? "success" : savingsRate < 0 ? "danger" : "default";
-  const nextBillDays = nextBill ? daysUntil(nextBill.dueDate) : null;
-  const billTone =
-    nextBill === undefined || nextBillDays === null
-      ? "default"
-      : nextBillDays < 0
-        ? "danger"
-        : nextBillDays <= 7
-          ? "warning"
-          : "default";
+  const creditCardTotal = accounts
+    .filter((a) => a.type === "CREDIT_CARD")
+    .reduce((sum, a) => sum + a.balance, 0);
 
-  const netWorthPositive = netWorth >= 0;
-  const netWorthChangeTone =
-    monthlyChange === null
-      ? "text-muted-foreground"
-      : monthlyChange > 0
-        ? "text-success"
-        : monthlyChange < 0
-          ? "text-danger"
-          : "text-muted-foreground";
-
-  const freshnessLabel = freshness.connected === 0
-    ? "Dados manuais"
-    : freshness.unknown > 0
-      ? "Sync parcial"
-      : freshness.oldest
-        ? `Atualizado ${new Date(freshness.oldest).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
-        : "";
+  const freshnessLabel =
+    freshness.connected === 0
+      ? "Dados manuais"
+      : freshness.unknown > 0
+        ? "Sync parcial"
+        : freshness.oldest
+          ? `Atualizado ${new Date(freshness.oldest).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+          : "";
 
   return (
     <AppShell>
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm text-muted-foreground">Olá, {name}</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Visão geral</h1>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+            Visão geral
+          </h1>
         </div>
         <Button
           variant="outline"
@@ -291,7 +245,6 @@ function Dashboard() {
         </Card>
       ) : (
         <>
-          {/* Chamada única de estado vazio */}
           {showEmptyCta && (
             <Card className="mb-8 flex flex-col items-center gap-3 border-primary/30 bg-primary/5 p-6 shadow-none text-center">
               <Sparkles className="size-8 text-primary" aria-hidden />
@@ -309,443 +262,140 @@ function Dashboard() {
             </Card>
           )}
 
-          {/* Zona 1 — Hero: patrimônio líquido (número principal) */}
-          <section aria-label="Resumo patrimonial" className="mb-8">
-            {loadingAccounts || loadingInvestments ? (
-              <NetWorthSkeleton />
-            ) : (accountsError || investmentsError) ? (
-              <Card className="bg-card p-5 shadow-none sm:p-6" role="alert">
-                <p className="text-sm font-medium text-muted-foreground">Patrimônio líquido</p>
-                <p className="mt-2 text-sm text-danger">Não foi possível carregar o patrimônio.</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-3"
-                  onClick={() => {
-                    void queryClient.invalidateQueries({ queryKey: ["accounts"] });
-                    void queryClient.invalidateQueries({ queryKey: ["investments"] });
-                  }}
-                >
-                  Tentar novamente
-                </Button>
-              </Card>
-            ) : (
-              <Card className="min-w-0 overflow-hidden border-primary/25 bg-primary/[0.03] p-5 shadow-none sm:p-6">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Patrimônio líquido</p>
-                    <p className="numeric mt-2 break-words text-3xl font-semibold tracking-tight sm:text-4xl">
-                      {formatBRL(netWorth)}
-                    </p>
-                  </div>
-                  {monthlyChange !== null && (
-                    <span
-                      className={cn(
-                        "numeric inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
-                        monthlyChange > 0 && "bg-success/10 text-success",
-                        monthlyChange < 0 && "bg-danger/10 text-danger",
-                        monthlyChange === 0 && "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {monthlyChange > 0 ? (
-                        <TrendingUp className="size-3.5" />
-                      ) : monthlyChange < 0 ? (
-                        <ArrowDownRight className="size-3.5" />
-                      ) : (
-                        <Minus className="size-3.5" />
-                      )}
-                      {formatPercent(monthlyChange)} este mês
-                    </span>
-                  )}
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {usesInvestmentAccounts
-                    ? "Saldos das contas, incluindo contas de investimento."
-                    : "Saldos das contas e posições de investimento."}
+          <section aria-label="Resumo financeiro" className="mb-6">
+            <SummaryCards
+              liquidity={liquidity}
+              monthlyIncome={monthlyIncome}
+              monthlyExpenses={monthlyExpenses}
+              creditCardTotal={creditCardTotal}
+              isLoading={loadingAccounts || loadingInvestments}
+              hidden={hidden}
+            />
+          </section>
+
+          <section aria-label="Perfil e desempenho" className="mb-6 grid gap-4 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <PerfilCard user={sessionUser} />
+            </div>
+            <Card className="bg-card p-4 shadow-none sm:p-5">
+              <p className="text-sm text-muted-foreground">Meu Desempenho</p>
+              <div className="mt-2 flex items-baseline gap-3">
+                <p className="numeric text-2xl font-semibold">
+                  {loadingAccounts ? "—" : formatBRL(netWorth)}
                 </p>
-
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
-                  <p>
-                    Ano {annualChange === null ? "—" : formatPercent(annualChange)}
-                  </p>
-                  <div className="flex gap-1" aria-label="Período do histórico">
-                    {[6, 12].map((months) => (
-                      <Button
-                        key={months}
-                        variant={historyMonths === months ? "secondary" : "ghost"}
-                        size="sm"
-                        aria-pressed={historyMonths === months}
-                        onClick={() => setHistoryMonths(months)}
-                      >
-                        {months} meses
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <div
-                  className="mt-4 h-44"
-                  role="img"
-                  aria-label="Evolução do patrimônio; valores disponíveis na tabela abaixo"
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={netWorthSeries.slice(-historyMonths)} accessibilityLayer>
-                      <XAxis dataKey="month" axisLine={false} tickLine={false} fontSize={12} />
-                      <RTooltip
-                        formatter={(value: number) => formatBRL(value)}
-                        contentStyle={{
-                          background: "var(--popover)",
-                          color: "var(--foreground)",
-                          border: "1px solid var(--border)",
-                          borderRadius: 8,
-                        }}
-                      />
-                      <Area
-                        dataKey="value"
-                        name="Patrimônio"
-                        stroke="var(--color-primary)"
-                        fill="var(--color-primary)"
-                        fillOpacity={0.12}
-                        isAnimationActive={false}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <details className="mt-2 text-sm">
-                  <summary className="focus-ring cursor-pointer rounded text-muted-foreground">
-                    Consultar histórico em tabela
-                  </summary>
-                  <table className="mt-2 w-full">
-                    <caption className="sr-only">Snapshots patrimoniais</caption>
-                    <thead>
-                      <tr>
-                        <th className="text-left">Mês</th>
-                        <th className="text-right">Patrimônio</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {netWorthSeries.slice(-historyMonths).map((point) => (
-                        <tr key={point.date}>
-                          <td>{point.date.slice(0, 7)}</td>
-                          <td className="numeric text-right">{formatBRL(point.value)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </details>
-
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-                  <p>
-                    {freshness.connected === 0
-                      ? "Dados manuais ou importados."
-                      : freshness.unknown > 0
-                        ? "Há contas sem data de sincronização."
-                        : `Sincronização mais antiga: ${freshness.oldest ? new Date(freshness.oldest).toLocaleString("pt-BR") : "não informada"}.`}
-                    {freshness.stale && " Dados possivelmente desatualizados."}{" "}
-                    <Link to="/wallet/connect" className="focus-ring rounded text-primary underline">
-                      Ver conexões
-                    </Link>
-                  </p>
-                  {freshnessLabel && (
-                    <span className="freshness-stamp" aria-label={freshnessLabel}>
-                      {freshnessLabel}
-                    </span>
-                  )}
-                </div>
-              </Card>
-            )}
-          </section>
-
-          {/* Zona 2 — KPIs subordinados */}
-          <section
-            aria-label="Indicadores"
-            className="mb-8 grid gap-4 sm:grid-cols-2 2xl:grid-cols-4"
-          >
-            {loadingAccounts || loadingInvestments ? (
-              <>
-                <KPICardSkeleton />
-                <KPICardSkeleton />
-                <KPICardSkeleton />
-                <KPICardSkeleton />
-              </>
-            ) : (
-              <>
-                <KPICard
-                  label="Quanto você deve"
-                  description="Soma dos saldos negativos e cartões de crédito. Zero é o ideal."
-                  value={accountsError ? "Indisponível" : formatBRL(totalDebts)}
-                  icon={TrendingUp}
-                  tone={accountsError ? "default" : debtsTone}
-                />
-                <KPICard
-                  label="Dinheiro disponível"
-                  description="Dinheiro em conta corrente/poupança que você pode usar hoje, sem contar investimentos."
-                  value={accountsError ? "Indisponível" : formatBRL(liquidity)}
-                  icon={Wallet}
-                  sparkline={cashflow.map((p) => ({ value: p.saldo }))}
-                  tone={accountsError ? "default" : liquidityTone}
-                />
-                <KPICard
-                  label="Sobra do mês"
-                  description="Percentual da renda que sobrou depois das despesas deste mês. Quanto maior, melhor."
-                  value={
-                    transactionsError
-                      ? "Indisponível"
-                      : monthlyIncome > 0
-                        ? formatPercent(savingsRate)
-                        : "Sem receitas"
-                  }
-                  hint={
-                    previousMonth && previousMonth.receitas > 0
-                      ? `${formatPercent(savingsRate - previousSavingsRate).replace("%", "")} p.p. em relação ao mês anterior`
-                      : "Sem receitas anteriores para comparar"
-                  }
-                  icon={ArrowUpRight}
-                  tone={transactionsError ? "default" : savingsTone}
-                />
-                <KPICard
-                  label="Próxima conta a pagar"
-                  description="Valor e data da conta em aberto mais próxima do vencimento."
-                  value={billsError ? "Indisponível" : formatBRL(nextBill?.amount ?? 0)}
-                  hint={
-                    nextBill
-                      ? `${nextBill.name} · ${formatShortDate(nextBill.dueDate)}`
-                      : "Sem contas abertas"
-                  }
-                  icon={CalendarClock}
-                  tone={billsError ? "default" : billTone}
-                />
-              </>
-            )}
-          </section>
-
-          {/* Zona 3 — Insights do agente (IA) */}
-          <section aria-label="Insights do agente" className="mb-8">
-            <Card className="border-primary/50 bg-primary/[0.04] p-5 shadow-none sm:p-6">
-              <div className="flex items-center gap-2">
-                <span className="grid size-8 place-items-center rounded-lg bg-primary/15 text-primary">
-                  <Sparkles className="size-4" aria-hidden />
-                </span>
-                <h2 className="text-base font-semibold">Insights do agente</h2>
-                <Badge variant="outline" className="rounded-full border-primary/40 text-primary">
-                  IA
-                </Badge>
-              </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                <DataState
-                  loading={loadingInsights}
-                  error={insightsError}
-                  empty={agentInsights.length === 0}
-                  suppressEmpty={showEmptyCta}
-                >
-                  {agentInsights.slice(0, 3).map((insight) => (
-                    <article
-                      key={insight.id}
-                      className={cn("rounded-lg border p-3", severityTone[insight.severity])}
-                    >
-                      <h3 className="text-sm font-medium">{insight.title}</h3>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                        {insight.body}
-                      </p>
-                    </article>
-                  ))}
-                </DataState>
-                {daysSinceLastIncome !== null && daysSinceLastIncome > 45 && (
-                  <article className="rounded-lg border border-warning/40 bg-warning/5 p-3">
-                    <h3 className="text-sm font-medium">
-                      Última receita há {daysSinceLastIncome} dias
-                    </h3>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      Considere verificar se há receitas pendentes ou se o fluxo de renda está
-                      consistente.
-                    </p>
-                  </article>
+                {monthlyChange !== null && (
+                  <span
+                    className={cn(
+                      "numeric inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
+                      monthlyChange > 0 && "bg-success/10 text-success",
+                      monthlyChange < 0 && "bg-danger/10 text-danger",
+                      monthlyChange === 0 && "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {formatPercent(monthlyChange)} este mês
+                  </span>
                 )}
               </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {freshnessLabel && <span className="freshness-stamp">{freshnessLabel}</span>}
+              </p>
             </Card>
           </section>
 
-          {/* Zona 4 — Seu próximo passo */}
-          <div className="mb-8">
-            <FinancialNextStepCard
-              analysis={nextStep}
-              isLoading={loadingNextStep}
-              hasError={nextStepError}
-              compact={hasData}
-            />
-          </div>
-
-          {/* Zona 5 — Duas colunas */}
-          <section aria-label="Detalhes" className="mb-8 grid min-w-0 gap-6 lg:grid-cols-3">
-            {/* Coluna principal */}
+          <div className="grid gap-6 lg:grid-cols-3">
             <div className="min-w-0 space-y-6 lg:col-span-2">
+              <FinancialNextStepCard
+                analysis={nextStep}
+                isLoading={loadingNextStep}
+                hasError={nextStepError}
+                compact={hasData}
+              />
+
+              <IncomeCategoryCard
+                transactions={transactions}
+                isLoading={loadingTransactions}
+                hidden={hidden}
+              />
+
+              <ExpenseCategoryCard
+                transactions={transactions}
+                isLoading={loadingTransactions}
+                hidden={hidden}
+              />
+
+              <SpendingFrequencyCard
+                transactions={transactions}
+                isLoading={loadingTransactions}
+                hidden={hidden}
+              />
+
+              <MonthlyBalanceCard
+                transactions={transactions}
+                isLoading={loadingTransactions}
+                hidden={hidden}
+              />
+
+              <PendingAlertsCard
+                payables={upcomingBills}
+                transactions={transactions}
+                budgets={budgetItems}
+                isLoading={loadingBills || loadingTransactions || loadingBudget}
+                hidden={hidden}
+              />
+
+              <ObjetivosCard goals={goals} isLoading={loadingGoals} hidden={hidden} />
+
+              <section aria-label="Insights do agente">
+                <Card className="border-primary/50 bg-primary/[0.04] p-5 shadow-none sm:p-6">
+                  <div className="flex items-center gap-2">
+                    <span className="grid size-8 place-items-center rounded-lg bg-primary/15 text-primary">
+                      <Sparkles className="size-4" aria-hidden />
+                    </span>
+                    <h2 className="text-base font-semibold">Insights do agente</h2>
+                    <Badge variant="outline" className="rounded-full border-primary/40 text-primary">
+                      IA
+                    </Badge>
+                  </div>
+                  <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <DataState
+                      loading={loadingInsights}
+                      error={insightsError}
+                      empty={agentInsights.length === 0}
+                      suppressEmpty={showEmptyCta}
+                    >
+                      {agentInsights.slice(0, 3).map((insight) => (
+                        <article
+                          key={insight.id}
+                          className={cn("rounded-lg border p-3", severityTone[insight.severity])}
+                        >
+                          <h3 className="text-sm font-medium">{insight.title}</h3>
+                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                            {insight.body}
+                          </p>
+                        </article>
+                      ))}
+                    </DataState>
+                    {daysSinceLastIncome !== null && daysSinceLastIncome > 45 && (
+                      <article className="rounded-lg border border-warning/40 bg-warning/5 p-3">
+                        <h3 className="text-sm font-medium">
+                          Última receita há {daysSinceLastIncome} dias
+                        </h3>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          Considere verificar se há receitas pendentes ou se o fluxo de renda está
+                          consistente.
+                        </p>
+                      </article>
+                    )}
+                  </div>
+                </Card>
+              </section>
+
               <CashflowSection
                 cashflowTruncated={cashflowTruncated}
                 cashflow={cashflow}
                 loadingTransactions={loadingTransactions}
                 transactionsError={transactionsError}
                 transactions={transactions}
-                suppressEmpty={showEmptyCta}
-              />
-
-              <div>
-                <h2 className="mb-3 text-base font-semibold">Próximas contas</h2>
-                <Card className="bg-card p-0 shadow-none">
-                  <DataState loading={loadingBills} error={billsError}>
-                    {!loadingBills && !billsError && openBills.length === 0 && (
-                      <p className="p-4 text-sm text-muted-foreground">Nenhuma conta em aberto.</p>
-                    )}
-                    <ul className="divide-y divide-border/60">
-                      {openBills.slice(0, 4).map((bill) => {
-                        const days = daysUntil(bill.dueDate);
-                        return (
-                          <li key={bill.id} className="flex items-center justify-between gap-3 p-4">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium">{bill.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatShortDate(bill.dueDate)} ·{" "}
-                                {days < 0 ? `${Math.abs(days)} d em atraso` : `em ${days} d`}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="numeric text-sm font-semibold">
-                                {formatBRL(bill.amount)}
-                              </p>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "mt-1 rounded-full text-[10px]",
-                                  bill.status === "OVERDUE" && "border-danger/50 text-danger",
-                                  bill.status === "SCHEDULED" && "border-success/50 text-success",
-                                )}
-                              >
-                                {bill.status === "OVERDUE"
-                                  ? "Atrasada"
-                                  : bill.status === "SCHEDULED"
-                                    ? "Agendada"
-                                    : "Pendente"}
-                              </Badge>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    <Link
-                      to="/bills"
-                      className="focus-ring m-4 inline-block rounded text-sm text-primary underline"
-                    >
-                      Ver todas as contas
-                    </Link>
-                  </DataState>
-                </Card>
-              </div>
-
-              <Card className="bg-card p-5 shadow-none">
-                <h3 className="text-sm font-semibold">Saúde do orçamento</h3>
-                <DataState
-                  loading={loadingBudget}
-                  error={budgetError}
-                  empty={budgetItems.length === 0}
-                  suppressEmpty={showEmptyCta}
-                >
-                  <div className="mt-4 space-y-4">
-                    {budgetItems.slice(0, 4).map((item) => (
-                      <BudgetProgress key={item.id} item={item} />
-                    ))}
-                  </div>
-                </DataState>
-              </Card>
-
-              <ChartCard
-                title="Transações recentes"
-                description="Últimas movimentações registradas"
-              >
-                <DataState
-                  loading={loadingTransactions}
-                  error={transactionsError}
-                  empty={transactions.length === 0}
-                  suppressEmpty={showEmptyCta}
-                >
-                  <ul className="divide-y divide-border">
-                    {transactions.slice(0, 5).map((transaction) => (
-                      <li
-                        key={transaction.id}
-                        className="flex flex-wrap justify-between gap-3 py-3"
-                      >
-                        <div className="min-w-0">
-                          <p className="break-words text-sm font-medium">
-                            {transaction.description}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatShortDate(transaction.date)} ·{" "}
-                            {transaction.kind === "income"
-                              ? "Receita"
-                              : transaction.kind === "expense"
-                                ? "Despesa"
-                                : "Transferência"}{" "}
-                            · {transaction.category}
-                          </p>
-                        </div>
-                        <p className="numeric text-sm font-semibold">
-                          {formatBRL(transaction.amount)}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    to="/transactions"
-                    className="focus-ring mt-3 inline-block rounded text-sm text-primary underline"
-                  >
-                    Ver transações
-                  </Link>
-                </DataState>
-              </ChartCard>
-            </div>
-
-            {/* Coluna lateral */}
-            <div className="min-w-0 space-y-6">
-              <DataState loading={loadingNextStep} error={nextStepError}>
-                <HealthScore
-                  score={healthScore}
-                  breakdown={healthBreakdown}
-                  confidence={healthConfidence}
-                />
-              </DataState>
-
-              <Card className="bg-card p-5 shadow-none">
-                <h2 className="font-semibold">Sua próxima conquista</h2>
-                <DataState
-                  loading={loadingGoals}
-                  error={goalsError}
-                  empty={goals.length === 0}
-                  suppressEmpty={showEmptyCta}
-                >
-                  {[...goals]
-                    .filter((goal) => goal.target > 0 && goal.current < goal.target)
-                    .sort((a, b) => b.current / b.target - a.current / a.target)
-                    .slice(0, 1)
-                    .map((goal) => (
-                      <div key={goal.id}>
-                        <p className="mt-3 text-sm">{goal.name}</p>
-                        <p className="numeric mt-1 text-lg font-semibold">
-                          {formatBRL(Math.max(0, goal.target - goal.current))} para chegar lá
-                        </p>
-                      </div>
-                    ))}
-                </DataState>
-                <Link
-                  to="/goals"
-                  className="focus-ring mt-3 inline-block rounded text-sm text-primary underline"
-                >
-                  Acompanhar metas
-                </Link>
-              </Card>
-
-              <AllocationSection
-                loadingInvestments={loadingInvestments}
-                investmentsError={investmentsError}
-                allocation={allocation}
                 suppressEmpty={showEmptyCta}
               />
 
@@ -781,31 +431,8 @@ function Dashboard() {
                   </DataState>
                 </div>
               </Card>
-            </div>
-          </section>
 
-          {/* Zona 6 — Bastidores (recolhido por padrão) */}
-          <details className="rounded-lg border border-border bg-card p-5 shadow-none">
-            <summary className="focus-ring cursor-pointer rounded font-semibold">
-              Contas, origem dos dados e detalhes de investimentos
-            </summary>
-            <div className="mt-6 grid gap-6 lg:grid-cols-3">
-              <Card className="bg-card p-5 shadow-none lg:col-span-1">
-                <h2 className="text-base font-semibold">Contas e origem dos dados</h2>
-                <DataState
-                  loading={loadingAccounts}
-                  error={accountsError}
-                  empty={accounts.length === 0}
-                  suppressEmpty={showEmptyCta}
-                >
-                  <div className="mt-4 grid gap-3">
-                    {accounts.map((account) => (
-                      <AccountCard key={account.id} account={account} />
-                    ))}
-                  </div>
-                </DataState>
-              </Card>
-              <div className="lg:col-span-2">
+              <Card className="bg-card p-5 shadow-none">
                 <h2 className="text-base font-semibold">
                   Investimentos: objetivos, riscos e próximos vencimentos
                 </h2>
@@ -814,9 +441,59 @@ function Dashboard() {
                     <InvestmentPurpose positions={positions} />
                   </DataState>
                 </div>
-              </div>
+              </Card>
             </div>
-          </details>
+
+            <div className="min-w-0 space-y-6">
+              <BalanceLineChart
+                data={cashflow}
+                isLoading={loadingTransactions}
+                hidden={hidden}
+              />
+
+              <MinhasContasCard
+                accounts={accounts}
+                isLoading={loadingAccounts}
+                hidden={hidden}
+              />
+
+              <CreditCardSection
+                accounts={accounts}
+                isLoading={loadingAccounts}
+                hidden={hidden}
+              />
+
+              <MonthlySavingsCard
+                savingsRate={savingsRate}
+                isLoading={loadingTransactions}
+                hidden={hidden}
+              />
+
+              <DataState loading={loadingNextStep} error={nextStepError}>
+                <HealthScore
+                  score={healthScore}
+                  breakdown={healthBreakdown}
+                  confidence={healthConfidence}
+                />
+              </DataState>
+
+              <Card className="bg-card p-5 shadow-none">
+                <h3 className="text-sm font-semibold">Saúde do orçamento</h3>
+                <DataState
+                  loading={loadingBudget}
+                  error={budgetError}
+                  empty={budgetItems.length === 0}
+                  suppressEmpty={showEmptyCta}
+                >
+                  <div className="mt-4 space-y-4">
+                    {budgetItems.slice(0, 4).map((item) => (
+                      <BudgetProgress key={item.id} item={item} />
+                    ))}
+                  </div>
+                </DataState>
+              </Card>
+            </div>
+          </div>
         </>
       )}
     </AppShell>

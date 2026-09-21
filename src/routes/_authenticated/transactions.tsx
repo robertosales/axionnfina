@@ -410,6 +410,29 @@ function TransactionsPage() {
   const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
     () => [
       {
+        id: "select",
+        size: 40,
+        header: () => {
+          const visibleIds = filteredTransactions.map((transaction) => transaction.id);
+          const allSelected =
+            visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+          return (
+            <Checkbox
+              aria-label="Selecionar todas as transações da lista"
+              checked={allSelected}
+              onCheckedChange={(checked) => setSelectedIds(checked === true ? visibleIds : [])}
+            />
+          );
+        },
+        cell: ({ row }) => (
+          <Checkbox
+            aria-label={`Selecionar ${row.original.description}`}
+            checked={selectedIds.includes(row.original.id)}
+            onCheckedChange={() => toggleSelected(row.original.id)}
+          />
+        ),
+      },
+      {
         id: "description",
         accessorKey: "description",
         header: "Descrição",

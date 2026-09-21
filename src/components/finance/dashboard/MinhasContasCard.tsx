@@ -2,6 +2,7 @@ import { Building2, CreditCard, Landmark, LineChart, PiggyBank } from "lucide-re
 import { Link } from "@tanstack/react-router";
 
 import { AccountAvatar } from "@/components/finance/AccountAvatar";
+import { OverdraftHint } from "@/components/finance/OverdraftHint";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatBRL } from "@/lib/format";
@@ -72,14 +73,22 @@ export function MinhasContasCard({
                 <p className="truncate text-sm font-medium">{account.name}</p>
                 <p className="text-xs text-muted-foreground">{account.institution}</p>
               </div>
-              <span
-                className={cn(
-                  "numeric text-sm font-semibold",
-                  isNegative ? "text-danger" : "text-foreground",
+              <div className="text-right">
+                <span
+                  className={cn(
+                    "numeric text-sm font-semibold",
+                    isNegative ? "text-danger" : "text-foreground",
+                  )}
+                >
+                  {hidden ? "•••" : formatBRL(account.balance)}
+                </span>
+                {!hidden && (
+                  <OverdraftHint
+                    balance={account.balance}
+                    creditLimit={account.creditLimit ?? null}
+                  />
                 )}
-              >
-                {hidden ? "•••" : formatBRL(account.balance)}
-              </span>
+              </div>
             </li>
           );
         })}

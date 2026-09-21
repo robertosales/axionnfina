@@ -55,6 +55,7 @@ import {
   useUpdateTransactionCategory,
 } from "@/lib/finance-data";
 import { formatBRL, formatDate, initials } from "@/lib/format";
+import { exceedsOverdraft } from "@/lib/overdraft";
 import { parseStatementCsv, type StatementRow } from "@/lib/statement-import";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/shared/finance-types";
@@ -1018,6 +1019,21 @@ function TransactionsPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {(() => {
+                    if (form.type !== "expense") return null;
+                    const selected = accounts.find((account) => account.id === form.accountId);
+                    if (!selected) return null;
+                    const value = parseFinancialInput(form.amount);
+                    if (!Number.isFinite(value) || value <= 0) return null;
+                    if (!exceedsOverdraft(selected.balance, selected.creditLimit ?? null, value)) {
+                      return null;
+                    }
+                    return (
+                      <p className="text-xs font-medium text-danger">
+                        Esta despesa ultrapassa o saldo e o limite disponível desta conta.
+                      </p>
+                    );
+                  })()}
                 </div>
               )}
             </div>

@@ -71,6 +71,7 @@ export type WalletSummary = {
     investment_balance: number;
     total_credit_limit: number;
     total_available_credit: number;
+    total_overdraft_used?: number;
   };
   by_institution: Array<{
     name: string;
@@ -86,6 +87,9 @@ export type WalletSummary = {
     type: AccountType;
     balance: number;
     available_balance: number | null;
+    credit_limit?: number | null;
+    overdraft_used?: number;
+    spendable_balance?: number;
     is_primary: boolean;
     is_manual: boolean;
     open_finance: boolean;
@@ -137,7 +141,7 @@ export async function getArchivedAccounts(): Promise<WalletSummary["accounts"]> 
   const { data, error } = await supabase
     .from("accounts")
     .select(
-      "id, name, institution, type, balance, available_balance, is_primary, is_manual, open_finance, last_sync_at, currency, archived_at, record_origin",
+      "id, name, institution, type, balance, available_balance, credit_limit, is_primary, is_manual, open_finance, last_sync_at, currency, archived_at, record_origin",
     )
     .not("archived_at", "is", null)
     .order("updated_at", { ascending: false });
@@ -152,6 +156,7 @@ export async function getArchivedAccounts(): Promise<WalletSummary["accounts"]> 
     balance: Number(account.balance),
     available_balance:
       account.available_balance === null ? null : Number(account.available_balance),
+    credit_limit: account.credit_limit === null ? null : Number(account.credit_limit),
     is_primary: account.is_primary,
     is_manual: account.is_manual,
     open_finance: account.open_finance,
@@ -177,7 +182,7 @@ export async function upsertAccount(data: {
   type?: AccountType;
   balance?: number;
   available_balance?: number;
-  credit_limit?: number;
+  credit_limit?: number | null;
   currency?: string;
   subtype?: string;
   is_primary?: boolean;

@@ -133,6 +133,11 @@ function WalletPage() {
                   <p className="text-xs text-muted-foreground">
                     Disponível: {formatBRL(summary.totals.total_available_credit ?? 0)}
                   </p>
+                  {(summary.totals.total_overdraft_used ?? 0) > 0 && (
+                    <p className="text-xs font-medium text-warning">
+                      Em uso: {formatBRL(summary.totals.total_overdraft_used ?? 0)}
+                    </p>
+                  )}
                 </Card>
               </div>
 

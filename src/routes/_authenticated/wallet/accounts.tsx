@@ -55,6 +55,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { AccountType, WalletSummary } from "@/lib/account-service";
 import { useEntityLifecycle, useInstitutions } from "@/lib/finance-data";
 import { formatBRL } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { OverdraftHint } from "@/components/finance/OverdraftHint";
 
 export const Route = createFileRoute("/_authenticated/wallet/accounts")({
   head: () => ({
@@ -113,6 +115,7 @@ function AccountsPage() {
     institution_id: "",
     type: "checking" as AccountType,
     balance: "0",
+    credit_limit: "0",
     is_primary: false,
     logo_url: null as string | null,
   });
@@ -127,6 +130,7 @@ function AccountsPage() {
       institution_id: "",
       type: "checking",
       balance: "0",
+      credit_limit: "0",
       is_primary: false,
       logo_url: null,
     });
@@ -144,6 +148,7 @@ function AccountsPage() {
       institution_id: institutionId,
       type: account.type,
       balance: String(account.balance),
+      credit_limit: String(account.credit_limit ?? 0),
       is_primary: account.is_primary,
       logo_url: logoUrl,
     });
@@ -164,6 +169,11 @@ function AccountsPage() {
         ))
       )
         return;
+      const parsedLimit = parseFinancialInput(form.credit_limit);
+      const creditLimit =
+        form.type === "checking" && Number.isFinite(parsedLimit) && parsedLimit > 0
+          ? Math.abs(parsedLimit)
+          : null;
       await upsertAccount.mutateAsync({
         ...(editId ? { id: editId } : { is_manual: true }),
         name: form.name,
@@ -171,6 +181,7 @@ function AccountsPage() {
         ...(form.institution_id ? { institution_id: form.institution_id } : {}),
         type: form.type,
         balance: parseFinancialInput(form.balance),
+        credit_limit: creditLimit,
         is_primary: form.is_primary,
         logo_url: form.logo_url,
       });
@@ -269,9 +280,21 @@ function AccountsPage() {
                       </div>
                     </div>
                     <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-3">
-                      <p className="numeric break-words text-lg font-semibold">
-                        {formatBRL(account.balance)}
-                      </p>
+                      <div className="text-right">
+                        <p
+                          className={cn(
+                            "numeric break-words text-lg font-semibold",
+                            account.balance < 0 ? "text-danger" : undefined,
+                          )}
+                        >
+                          {formatBRL(account.balance)}
+                        </p>
+                        <OverdraftHint
+                          balance={account.balance}
+                          creditLimit={account.credit_limit ?? null}
+                        />
+                      </div>
+
                       {!showArchived && !account.is_primary && (
                         <Button
                           variant="ghost"
@@ -416,6 +439,23 @@ function AccountsPage() {
                     />
                   </div>
                 </div>
+                {form.type === "checking" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="account-credit-limit">
+                      Limite de cheque especial (opcional)
+                    </Label>
+                    <MoneyInput
+                      id="account-credit-limit"
+                      step="0.01"
+                      value={form.credit_limit}
+                      onChange={(e) => setForm({ ...form, credit_limit: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Informe o limite contratado com o banco para acompanhar seu saldo
+                      disponível total. Deixe em zero se a conta não tem limite.
+                    </p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="ghost" onClick={() => setDialogOpen(false)}>

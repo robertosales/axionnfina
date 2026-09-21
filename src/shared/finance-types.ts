@@ -11,6 +11,8 @@ export type Account = {
   name: string;
   type: AccountType;
   balance: number;
+  /** Limite de cheque especial contratado (apenas contas correntes). */
+  creditLimit?: number | null;
   lastSyncedAt: string | null;
   connectionId?: string | null;
   recordOrigin?: "manual" | "open_finance" | "import" | "system";

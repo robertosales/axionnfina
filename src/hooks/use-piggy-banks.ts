@@ -126,9 +126,9 @@ export function useCreatePiggyBank() {
     mutationFn: async (input: CreatePiggyBankInput) => {
       const { data, error } = await supabase.rpc("create_piggy_bank", {
         p_name: input.name,
-        p_icon: input.icon ?? null,
-        p_color: input.color ?? null,
-        p_goal_id: input.goal_id ?? null,
+        ...(input.icon ? { p_icon: input.icon } : {}),
+        ...(input.color ? { p_color: input.color } : {}),
+        ...(input.goal_id ? { p_goal_id: input.goal_id } : {}),
       });
       if (error) throw error;
       return data as string;
@@ -151,7 +151,7 @@ export function useDepositToPiggyBank() {
         p_piggy_bank_id: input.piggy_bank_id,
         p_amount: input.amount,
         p_account_id: input.account_id,
-        p_note: input.note ?? null,
+        ...(input.note ? { p_note: input.note } : {}),
       });
       if (error) throw error;
     },
@@ -176,7 +176,7 @@ export function useWithdrawFromPiggyBank() {
         p_piggy_bank_id: input.piggy_bank_id,
         p_amount: input.amount,
         p_account_id: input.account_id,
-        p_note: input.note ?? null,
+        ...(input.note ? { p_note: input.note } : {}),
       });
       if (error) throw error;
     },
@@ -257,8 +257,8 @@ export function useUpdatePiggyBank() {
       const { error } = await supabase.rpc("update_piggy_bank", {
         p_piggy_bank_id: input.piggy_bank_id,
         p_name: input.name,
-        p_icon: input.icon ?? null,
-        p_color: input.color ?? null,
+        ...(input.icon ? { p_icon: input.icon } : {}),
+        ...(input.color ? { p_color: input.color } : {}),
       });
       if (error) throw error;
     },

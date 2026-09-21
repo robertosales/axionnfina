@@ -52,7 +52,7 @@ export function useUpsertAccount() {
       type?: AccountType;
       balance?: number;
       available_balance?: number;
-      credit_limit?: number;
+      credit_limit?: number | null;
       currency?: string;
       subtype?: string;
       is_primary?: boolean;

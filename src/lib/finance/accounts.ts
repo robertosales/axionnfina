@@ -13,7 +13,7 @@ export function useAccounts() {
       const { data, error } = await supabase
         .from("accounts")
         .select(
-          "id, name, institution, type, balance, open_finance, last_sync_at, branch, account_number, metadata, record_origin, logo_url, institutions(code, logo_url)",
+          "id, name, institution, type, balance, credit_limit, open_finance, last_sync_at, branch, account_number, metadata, record_origin, logo_url, institutions(code, logo_url)",
         )
         .is("archived_at", null)
         .order("created_at", { ascending: true });
@@ -29,6 +29,7 @@ export function useAccounts() {
           name: row.name,
           type: dbToUiAccountType[row.type as DbAccountType],
           balance: Number(row.balance),
+          creditLimit: row.credit_limit === null ? null : Number(row.credit_limit),
           lastSyncedAt: row.last_sync_at,
           connectionId:
             row.metadata &&
@@ -57,6 +58,7 @@ export function useUpsertAccount() {
       name: string;
       type: AccountType;
       balance: number;
+      creditLimit?: number | null;
       branch?: string;
       accountNumber?: string;
       openFinance?: boolean;
@@ -69,6 +71,7 @@ export function useUpsertAccount() {
         name: input.name,
         type: uiToDbAccountType[input.type],
         balance: input.balance,
+        ...(input.creditLimit !== undefined ? { credit_limit: input.creditLimit } : {}),
         open_finance: input.openFinance ?? false,
         branch: input.branch?.trim() || "",
         account_number: input.accountNumber?.trim() || "",

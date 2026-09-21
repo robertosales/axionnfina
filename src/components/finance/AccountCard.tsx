@@ -1,6 +1,7 @@
 import { Building2, CreditCard, Landmark, LineChart, PiggyBank, RefreshCw } from "lucide-react";
 
 import { AccountAvatar } from "@/components/finance/AccountAvatar";
+import { OverdraftHint } from "@/components/finance/OverdraftHint";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -69,6 +70,12 @@ export function AccountCard({ account }: { account: Account }) {
         >
           {formatBRL(account.balance)}
         </p>
+        <OverdraftHint
+          balance={account.balance}
+          creditLimit={account.creditLimit ?? null}
+          showBar
+          className="min-w-[10rem]"
+        />
         <Button
           variant="ghost"
           size="sm"

@@ -164,6 +164,14 @@ function TransactionsPage() {
   const updateTransaction = useUpdateTransaction();
   const updateCategory = useUpdateTransactionCategory();
   const lifecycle = useEntityLifecycle("transaction");
+  const bulkArchive = useBulkArchiveTransactions();
+  const bulkDelete = useBulkDeleteTransactions();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    );
+  }, []);
 
   const [open, setOpen] = useState(Boolean(Route.useSearch().new));
   const [editTransactionId, setEditTransactionId] = useState<string | null>(null);

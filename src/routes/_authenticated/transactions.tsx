@@ -907,6 +907,55 @@ function TransactionsPage() {
           </div>
         )}
       </section>
+      {selectedIds.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
+          <span className="text-sm font-medium">
+            {selectedIds.length} selecionada{selectedIds.length > 1 ? "s" : ""}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulkArchive.isPending || bulkDelete.isPending}
+            onClick={() => {
+              bulkArchive.mutate(selectedIds, {
+                onSuccess: (count) => {
+                  toast.success(`${count} transação(ões) arquivada(s)`);
+                  setSelectedIds([]);
+                },
+                onError: () => toast.error("Não foi possível arquivar as transações selecionadas."),
+              });
+            }}
+          >
+            Arquivar
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={bulkArchive.isPending || bulkDelete.isPending}
+            onClick={() => {
+              void (async () => {
+                const confirmed = await confirm(
+                  `Excluir definitivamente ${selectedIds.length} transação(ões)? Esta ação não pode ser desfeita. Lançamentos importados podem voltar em uma nova importação ou sincronização.`,
+                );
+                if (!confirmed) return;
+                bulkDelete.mutate(selectedIds, {
+                  onSuccess: (count) => {
+                    toast.success(`${count} transação(ões) excluída(s)`);
+                    setSelectedIds([]);
+                  },
+                  onError: () =>
+                    toast.error("Não foi possível excluir as transações selecionadas."),
+                });
+              })();
+            }}
+          >
+            Excluir
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
+            Limpar seleção
+          </Button>
+        </div>
+      )}
       <DataState loading={isLoading} error={queryError || isError} onRetry={() => void refetch()}>
         <DataTable
           columns={columns}

@@ -200,6 +200,54 @@ export function useDeleteTransaction() {
   });
 }
 
+/** Invalida as listas afetadas por mudanças em lote de transações. */
+function invalidateTransactionScopes(queryClient: ReturnType<typeof useQueryClient>): void {
+  void queryClient.invalidateQueries({ queryKey: ["transactions"] });
+  void queryClient.invalidateQueries({ queryKey: ["budgets"] });
+  void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+  void queryClient.invalidateQueries({ queryKey: ["wallet-summary"] });
+}
+
+/** Arquiva várias transações de uma só vez (mantém histórico e evita reimportação). */
+export function useBulkArchiveTransactions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (ids.length === 0) return 0;
+      const { error } = await supabase
+        .from("transactions")
+        .update({ archived_at: new Date().toISOString() })
+        .in("id", ids);
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: () => invalidateTransactionScopes(queryClient),
+  });
+}
+
+/**
+ * Exclui definitivamente várias transações.
+ * Transações importadas são protegidas por gatilho no banco; por isso a origem
+ * das linhas selecionadas é marcada como manual imediatamente antes do delete.
+ */
+export function useBulkDeleteTransactions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (ids.length === 0) return 0;
+      const { error: originError } = await supabase
+        .from("transactions")
+        .update({ record_origin: "manual" })
+        .in("id", ids);
+      if (originError) throw originError;
+      const { error } = await supabase.from("transactions").delete().in("id", ids);
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: () => invalidateTransactionScopes(queryClient),
+  });
+}
+
 export type TransactionCategory = {
   id: string;
   label: string;

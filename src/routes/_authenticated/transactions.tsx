@@ -45,6 +45,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { parseStatementXml } from "@/lib/document-import";
 import {
   useAccounts,
+  useBulkArchiveTransactions,
+  useBulkDeleteTransactions,
   useCreateTransaction,
   useChangeTransactionStatus,
   useEntityLifecycle,

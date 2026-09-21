@@ -1973,6 +1973,91 @@ export type Database = {
           },
         ]
       }
+      piggy_bank_movements: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          id: string
+          note: string | null
+          origin: string
+          piggy_bank_id: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date?: string
+          id?: string
+          note?: string | null
+          origin?: string
+          piggy_bank_id: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          id?: string
+          note?: string | null
+          origin?: string
+          piggy_bank_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piggy_bank_movements_piggy_bank_id_fkey"
+            columns: ["piggy_bank_id"]
+            isOneToOne: false
+            referencedRelation: "piggy_banks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      piggy_banks: {
+        Row: {
+          balance: number
+          color: string | null
+          created_at: string
+          goal_id: string | null
+          icon: string | null
+          id: string
+          name: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          color?: string | null
+          created_at?: string
+          goal_id?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          color?: string | null
+          created_at?: string
+          goal_id?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piggy_banks_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       private_fixed_income_offers: {
         Row: {
           archived_at: string | null
@@ -2958,91 +3043,6 @@ export type Database = {
         }
         Relationships: []
       }
-      piggy_banks: {
-        Row: {
-          balance: number
-          color: string | null
-          created_at: string
-          goal_id: string | null
-          icon: string | null
-          id: string
-          name: string
-          status: string
-          user_id: string
-        }
-        Insert: {
-          balance?: number
-          color?: string | null
-          created_at?: string
-          goal_id?: string | null
-          icon?: string | null
-          id?: string
-          name: string
-          status?: string
-          user_id: string
-        }
-        Update: {
-          balance?: number
-          color?: string | null
-          created_at?: string
-          goal_id?: string | null
-          icon?: string | null
-          id?: string
-          name?: string
-          status?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "piggy_banks_goal_id_fkey"
-            columns: ["goal_id"]
-            isOneToOne: false
-            referencedRelation: "goals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      piggy_bank_movements: {
-        Row: {
-          amount: number
-          created_at: string
-          date: string
-          id: string
-          note: string | null
-          origin: string
-          piggy_bank_id: string
-          type: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          date?: string
-          id?: string
-          note?: string | null
-          origin?: string
-          piggy_bank_id: string
-          type: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          date?: string
-          id?: string
-          note?: string | null
-          origin?: string
-          piggy_bank_id?: string
-          type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "piggy_bank_movements_piggy_bank_id_fkey"
-            columns: ["piggy_bank_id"]
-            isOneToOne: false
-            referencedRelation: "piggy_banks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Functions: {
       apply_transaction_balance_delta: {
@@ -3050,9 +3050,17 @@ export type Database = {
         Returns: undefined
       }
       archive_account: { Args: { p_account_id: string }; Returns: boolean }
+      archive_piggy_bank: {
+        Args: { p_piggy_bank_id: string }
+        Returns: undefined
+      }
       calculate_irpf_monthly: {
         Args: { p_month: number; p_year: number }
         Returns: Json
+      }
+      close_piggy_bank: {
+        Args: { p_piggy_bank_id: string }
+        Returns: undefined
       }
       confirm_credit_invoice: {
         Args: { p_invoice_id: string }
@@ -3098,9 +3106,31 @@ export type Database = {
         Returns: string
       }
       create_manual_transaction: { Args: { p_data: Json }; Returns: string }
+      create_piggy_bank: {
+        Args: {
+          p_color?: string
+          p_goal_id?: string
+          p_icon?: string
+          p_name: string
+        }
+        Returns: string
+      }
       create_transaction_from_external: {
         Args: { p_external_transaction_id: string }
         Returns: string
+      }
+      delete_piggy_bank: {
+        Args: { p_piggy_bank_id: string }
+        Returns: undefined
+      }
+      deposit_to_piggy_bank: {
+        Args: {
+          p_account_id: string
+          p_amount: number
+          p_note?: string
+          p_piggy_bank_id: string
+        }
+        Returns: undefined
       }
       detect_transfer_candidates: {
         Args: { p_user_id: string; p_window_days?: number }
@@ -3203,54 +3233,35 @@ export type Database = {
             }
             Returns: number
           }
+      transfer_piggy_bank: {
+        Args: { p_amount: number; p_from_id: string; p_to_id: string }
+        Returns: undefined
+      }
       trigger_sync: { Args: { p_connection_id: string }; Returns: Json }
-      upsert_account: { Args: { p_data: Json }; Returns: string }
-      upsert_transaction_idempotent: {
-        Args: { p_data: Json; p_idempotency_key: string }
-        Returns: string
-      }
-      create_piggy_bank: {
-        Args: { p_name: string; p_icon?: string | null; p_color?: string | null; p_goal_id?: string | null }
-        Returns: string
-      }
-      deposit_to_piggy_bank: {
-        Args: { p_piggy_bank_id: string; p_amount: number; p_account_id: string; p_note?: string | null }
-        Returns: undefined
-      }
-      withdraw_from_piggy_bank: {
-        Args: { p_piggy_bank_id: string; p_amount: number; p_account_id: string; p_note?: string | null }
-        Returns: undefined
-      }
-      archive_piggy_bank: {
-        Args: { p_piggy_bank_id: string }
-        Returns: undefined
-      }
-      close_piggy_bank: {
-        Args: { p_piggy_bank_id: string }
-        Returns: undefined
-      }
       unarchive_piggy_bank: {
         Args: { p_piggy_bank_id: string }
         Returns: undefined
       }
       update_piggy_bank: {
         Args: {
-          p_piggy_bank_id: string
+          p_color?: string
+          p_icon?: string
           p_name: string
-          p_icon?: string | null
-          p_color?: string | null
+          p_piggy_bank_id: string
         }
         Returns: undefined
       }
-      delete_piggy_bank: {
-        Args: { p_piggy_bank_id: string }
-        Returns: undefined
+      upsert_account: { Args: { p_data: Json }; Returns: string }
+      upsert_transaction_idempotent: {
+        Args: { p_data: Json; p_idempotency_key: string }
+        Returns: string
       }
-      transfer_piggy_bank: {
+      withdraw_from_piggy_bank: {
         Args: {
-          p_from_id: string
-          p_to_id: string
+          p_account_id: string
           p_amount: number
+          p_note?: string
+          p_piggy_bank_id: string
         }
         Returns: undefined
       }

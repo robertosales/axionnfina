@@ -23,12 +23,22 @@ A tela de importação já lê PDF de extrato e esse layout do Itaú é reconhec
 - reconhecer o cabeçalho de saldo do Itaú e sugerir o saldo final do extrato para conferência;
 - avisar quando a soma dos lançamentos não bater com o saldo do extrato, indicando que falta saldo anterior — foi exatamente o que aconteceu antes.
 
+## Seleção múltipla e exclusão em lote (novo)
+
+Na tela de Transações, incluir uma caixa de seleção em cada linha e uma no cabeçalho ("selecionar tudo o que está na tela"). Ao marcar itens, aparece uma barra com "X selecionadas" e os botões **Arquivar** e **Excluir**, mais "limpar seleção".
+
+- Excluir pede confirmação, dizendo quantas serão apagadas e que a ação é definitiva.
+- Transações importadas hoje só podem ser arquivadas. Para atender ao pedido, a exclusão em lote também aceitará importadas, com aviso claro de que elas podem voltar em uma nova sincronização/importação.
+- Depois da exclusão, os saldos das contas envolvidas são atualizados automaticamente (o sistema já faz esse ajuste por lançamento).
+
 ## Detalhes técnicos
 
 - Carga por SQL restrita a `account_id = c2121d0a-…` e ao usuário dono: `insert into public.transactions` com `record_origin = 'import'`, `status = 'settled'`, `external_id` no formato `pdf:statement:<conta>:<data>:<valor>:<descrição>`.
 - Categoria: todos entram sem categoria (a recategorização em massa já existe em Transações); tipo derivado do sinal do valor (`income`/`expense`).
 - `accounts.credit_limit = 10000`, `balance = available_balance = current_balance = -1183.21`.
 - Sem migration e sem mudança de schema. Ajustes no interpretador ficam em `src/lib/document-import.ts` (parser de texto do extrato) com testes em `document-import.test.ts`.
+- Seleção em lote: coluna de seleção no `data-table` de `src/routes/_authenticated/transactions.tsx` + novos hooks `useBulkArchiveTransactions` / `useBulkDeleteTransactions` em `src/lib/finance/transactions.ts` (delete por `in (ids)`, invalidando transações, contas, carteira e orçamentos). A trava de origem importada é contornada ajustando `record_origin` para manual apenas nas linhas selecionadas, dentro da mesma operação.
+
 
 ## Fora do escopo
 

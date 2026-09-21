@@ -23,6 +23,7 @@ import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CopyButton, DataTable } from "@/components/ui/data-table";
 import {
   Dialog,

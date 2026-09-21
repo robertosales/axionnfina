@@ -626,7 +626,16 @@ function TransactionsPage() {
         ),
       },
     ],
-    [updateCategory, lifecycle, openEditTransaction, toggleStatus, changingStatus],
+    [
+      updateCategory,
+      lifecycle,
+      openEditTransaction,
+      toggleStatus,
+      changingStatus,
+      filteredTransactions,
+      selectedIds,
+      toggleSelected,
+    ],
   );
 
   /* Sub-componente expandido */

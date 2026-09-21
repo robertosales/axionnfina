@@ -23,6 +23,7 @@ import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CopyButton, DataTable } from "@/components/ui/data-table";
 import {
   Dialog,
@@ -45,6 +46,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { parseStatementXml } from "@/lib/document-import";
 import {
   useAccounts,
+  useBulkArchiveTransactions,
+  useBulkDeleteTransactions,
   useCreateTransaction,
   useChangeTransactionStatus,
   useEntityLifecycle,
@@ -164,6 +167,14 @@ function TransactionsPage() {
   const updateTransaction = useUpdateTransaction();
   const updateCategory = useUpdateTransactionCategory();
   const lifecycle = useEntityLifecycle("transaction");
+  const bulkArchive = useBulkArchiveTransactions();
+  const bulkDelete = useBulkDeleteTransactions();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    );
+  }, []);
 
   const [open, setOpen] = useState(Boolean(Route.useSearch().new));
   const [editTransactionId, setEditTransactionId] = useState<string | null>(null);
@@ -400,6 +411,29 @@ function TransactionsPage() {
   const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
     () => [
       {
+        id: "select",
+        size: 40,
+        header: () => {
+          const visibleIds = filteredTransactions.map((transaction) => transaction.id);
+          const allSelected =
+            visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+          return (
+            <Checkbox
+              aria-label="Selecionar todas as transações da lista"
+              checked={allSelected}
+              onCheckedChange={(checked) => setSelectedIds(checked === true ? visibleIds : [])}
+            />
+          );
+        },
+        cell: ({ row }) => (
+          <Checkbox
+            aria-label={`Selecionar ${row.original.description}`}
+            checked={selectedIds.includes(row.original.id)}
+            onCheckedChange={() => toggleSelected(row.original.id)}
+          />
+        ),
+      },
+      {
         id: "description",
         accessorKey: "description",
         header: "Descrição",
@@ -593,7 +627,16 @@ function TransactionsPage() {
         ),
       },
     ],
-    [updateCategory, lifecycle, openEditTransaction, toggleStatus, changingStatus],
+    [
+      updateCategory,
+      lifecycle,
+      openEditTransaction,
+      toggleStatus,
+      changingStatus,
+      filteredTransactions,
+      selectedIds,
+      toggleSelected,
+    ],
   );
 
   /* Sub-componente expandido */
@@ -864,6 +907,55 @@ function TransactionsPage() {
           </div>
         )}
       </section>
+      {selectedIds.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
+          <span className="text-sm font-medium">
+            {selectedIds.length} selecionada{selectedIds.length > 1 ? "s" : ""}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulkArchive.isPending || bulkDelete.isPending}
+            onClick={() => {
+              bulkArchive.mutate(selectedIds, {
+                onSuccess: (count) => {
+                  toast.success(`${count} transação(ões) arquivada(s)`);
+                  setSelectedIds([]);
+                },
+                onError: () => toast.error("Não foi possível arquivar as transações selecionadas."),
+              });
+            }}
+          >
+            Arquivar
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={bulkArchive.isPending || bulkDelete.isPending}
+            onClick={() => {
+              void (async () => {
+                const confirmed = await confirm(
+                  `Excluir definitivamente ${selectedIds.length} transação(ões)? Esta ação não pode ser desfeita. Lançamentos importados podem voltar em uma nova importação ou sincronização.`,
+                );
+                if (!confirmed) return;
+                bulkDelete.mutate(selectedIds, {
+                  onSuccess: (count) => {
+                    toast.success(`${count} transação(ões) excluída(s)`);
+                    setSelectedIds([]);
+                  },
+                  onError: () =>
+                    toast.error("Não foi possível excluir as transações selecionadas."),
+                });
+              })();
+            }}
+          >
+            Excluir
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
+            Limpar seleção
+          </Button>
+        </div>
+      )}
       <DataState loading={isLoading} error={queryError || isError} onRetry={() => void refetch()}>
         <DataTable
           columns={columns}

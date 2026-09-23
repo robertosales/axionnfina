@@ -15,13 +15,17 @@ export function useReportData(filters: ReportFilters) {
       const historyStart = new Date(`${filters.start}T12:00:00`);
       historyStart.setMonth(historyStart.getMonth() - 3);
       const historyIso = historyStart.toISOString().slice(0, 10);
+      const firstMonth = `${filters.start.slice(0, 7)}-01`;
+      const endMonth = new Date(`${filters.end.slice(0, 7)}-01T12:00:00`);
+      endMonth.setMonth(endMonth.getMonth() + 1);
+      const nextMonth = endMonth.toISOString().slice(0, 10);
       const [transactionsResult, categoriesResult, snapshotsResult, balancesResult, budgetsResult, invoicesResult, invoiceItemsResult, piggyResult, investmentsResult] = await Promise.all([
         supabase.from("transactions").select("id, account_id, description, merchant, merchant_name, category, category_id, subcategory_id, method, type, amount, occurred_at, status, is_recurring, archived_at, record_origin, accounts(name)").gte("occurred_at", historyIso).lte("occurred_at", `${filters.end}T23:59:59`).is("archived_at", null).order("occurred_at", { ascending: false }),
         supabase.from("transaction_categories").select("id, label, name"),
         supabase.from("net_worth_snapshots").select("month, net_worth, liquidity").gte("month", `${historyStart.getFullYear() - 2}-01-01`).order("month"),
         supabase.from("account_balances").select("account_id, balance, snapshot_date").gte("snapshot_date", `${historyStart.getFullYear() - 2}-01-01`).order("snapshot_date"),
-        supabase.from("budgets").select("category, planned, month").gte("month", `${filters.start.slice(0, 7)}-01`).lte("month", `${filters.end.slice(0, 7)}-31`).is("archived_at", null),
-        supabase.from("credit_card_invoices").select("id, card_id, reference_month, due_date, total_amount, status").gte("reference_month", filters.start.slice(0, 7)).lte("reference_month", filters.end.slice(0, 7)),
+        supabase.from("budgets").select("category, planned, month").gte("month", firstMonth).lt("month", nextMonth).is("archived_at", null),
+        supabase.from("credit_card_invoices").select("id, card_id, reference_month, due_date, total_amount, status").gte("reference_month", firstMonth).lt("reference_month", nextMonth),
         supabase.from("credit_card_invoice_items").select("invoice_id, amount, installment, description, purchase_date").gte("purchase_date", filters.start).lte("purchase_date", filters.end),
         supabase.from("piggy_bank_movements").select("amount, date, type").gte("date", filters.start).lte("date", filters.end),
         supabase.from("investment_transactions").select("net_amount, gross_amount, occurred_at, type").gte("occurred_at", filters.start).lte("occurred_at", `${filters.end}T23:59:59`),

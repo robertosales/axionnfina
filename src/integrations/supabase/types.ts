@@ -20,7 +20,9 @@ export type Database = {
           available_balance: number | null
           balance: number
           created_at: string
+          credit_limit: number | null
           id: string
+          overdraft_rate_monthly: number | null
           snapshot_date: string
           source: string
           user_id: string
@@ -30,7 +32,9 @@ export type Database = {
           available_balance?: number | null
           balance?: number
           created_at?: string
+          credit_limit?: number | null
           id?: string
+          overdraft_rate_monthly?: number | null
           snapshot_date?: string
           source?: string
           user_id: string
@@ -40,7 +44,9 @@ export type Database = {
           available_balance?: number | null
           balance?: number
           created_at?: string
+          credit_limit?: number | null
           id?: string
+          overdraft_rate_monthly?: number | null
           snapshot_date?: string
           source?: string
           user_id?: string
@@ -171,6 +177,7 @@ export type Database = {
           metadata: Json | null
           name: string
           open_finance: boolean
+          overdraft_rate_monthly: number | null
           record_origin: string
           subtype: string | null
           type: Database["public"]["Enums"]["account_type"]
@@ -200,6 +207,7 @@ export type Database = {
           metadata?: Json | null
           name: string
           open_finance?: boolean
+          overdraft_rate_monthly?: number | null
           record_origin?: string
           subtype?: string | null
           type?: Database["public"]["Enums"]["account_type"]
@@ -229,6 +237,7 @@ export type Database = {
           metadata?: Json | null
           name?: string
           open_finance?: boolean
+          overdraft_rate_monthly?: number | null
           record_origin?: string
           subtype?: string | null
           type?: Database["public"]["Enums"]["account_type"]
@@ -516,6 +525,8 @@ export type Database = {
           external_id: string
           id: string
           installment: string | null
+          installment_count: number | null
+          installment_number: number | null
           invoice_id: string
           purchase_date: string
           transaction_id: string | null
@@ -528,6 +539,8 @@ export type Database = {
           external_id: string
           id?: string
           installment?: string | null
+          installment_count?: number | null
+          installment_number?: number | null
           invoice_id: string
           purchase_date: string
           transaction_id?: string | null
@@ -540,6 +553,8 @@ export type Database = {
           external_id?: string
           id?: string
           installment?: string | null
+          installment_count?: number | null
+          installment_number?: number | null
           invoice_id?: string
           purchase_date?: string
           transaction_id?: string | null

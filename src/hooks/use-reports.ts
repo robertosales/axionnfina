@@ -34,7 +34,7 @@ export function useReportData(filters: ReportFilters) {
         id: row.id, description: row.description, merchant: row.merchant_name ?? row.merchant ?? "", category: row.category || "Sem categoria",
         kind: row.type as DbTransactionType, amount: Number(row.amount), date: row.occurred_at, accountName: row.accounts?.name ?? "—", accountId: row.account_id,
         pending: row.status === "pending", status: row.status, isRecurring: row.is_recurring, archivedAt: row.archived_at,
-        recordOrigin: row.record_origin as ReportTransaction["recordOrigin"], method: row.method,
+        ...(row.record_origin ? { recordOrigin: row.record_origin } : {}), method: row.method,
         subcategory: row.subcategory_id ? categoryNames.get(row.subcategory_id) ?? null : null,
       }));
       const wealth: WealthPoint[] = (snapshotsResult.data ?? []).map((row) => ({

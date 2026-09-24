@@ -1,8 +1,26 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { StatementRow } from "@/lib/statement-import";
+import { planStatementImport, type StatementRow } from "@/lib/statement-import";
 import type { Transaction } from "@/shared/finance-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DbJson, DbTransactionType, requireUserId } from "./common";
+
+const IMPORT_KEY_CHUNK_SIZE = 100;
+
+export async function findExistingStatementKeys(keys: string[]): Promise<Set<string>> {
+  const existing = new Set<string>();
+  for (let offset = 0; offset < keys.length; offset += IMPORT_KEY_CHUNK_SIZE) {
+    const chunk = keys.slice(offset, offset + IMPORT_KEY_CHUNK_SIZE);
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("external_id")
+      .in("external_id", chunk);
+    if (error) throw error;
+    for (const row of data ?? []) {
+      if (row.external_id) existing.add(row.external_id);
+    }
+  }
+  return existing;
+}
 
 export function useTransactions(limit: number | null = 200, showArchived = false) {
   return useQuery({
@@ -100,8 +118,10 @@ export function useImportStatementTransactions() {
   return useMutation({
     mutationFn: async (input: { accountId: string; rows: StatementRow[] }) => {
       const validRows = input.rows.filter((row) => row.valid);
+      const existingKeys = await findExistingStatementKeys(validRows.map((row) => row.externalId));
+      const { newRows, duplicateCount } = planStatementImport(validRows, existingKeys);
       let imported = 0;
-      for (const row of validRows) {
+      for (const row of newRows) {
         const { error } = await supabase.rpc("upsert_transaction_idempotent", {
           p_idempotency_key: row.externalId,
           p_data: {
@@ -116,7 +136,11 @@ export function useImportStatementTransactions() {
         if (error) throw error;
         imported += 1;
       }
-      return { imported, ignored: input.rows.length - validRows.length };
+      return {
+        imported,
+        duplicates: duplicateCount,
+        ignored: input.rows.length - validRows.length,
+      };
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["transactions"] });

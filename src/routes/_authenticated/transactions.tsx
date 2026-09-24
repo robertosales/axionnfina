@@ -51,6 +51,7 @@ import {
   useCreateTransaction,
   useChangeTransactionStatus,
   useEntityLifecycle,
+  findExistingStatementKeys,
   useImportStatementTransactions,
   useTransactionCategories,
   useTransactions,
@@ -59,7 +60,7 @@ import {
 } from "@/lib/finance-data";
 import { formatBRL, formatDate, initials } from "@/lib/format";
 import { exceedsOverdraft } from "@/lib/overdraft";
-import { parseStatementCsv, type StatementRow } from "@/lib/statement-import";
+import { parseStatementCsv, planStatementImport, type StatementRow } from "@/lib/statement-import";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/shared/finance-types";
 
@@ -208,6 +209,9 @@ function TransactionsPage() {
   const [confirmingImport, setConfirmingImport] = useState(false);
   const statementOperation = useRef(false);
   const [importRows, setImportRows] = useState<StatementRow[]>([]);
+  const [importDuplicateRowNumbers, setImportDuplicateRowNumbers] = useState<Set<number>>(
+    new Set(),
+  );
   const [importAccountId, setImportAccountId] = useState("");
   const [form, setForm] = useState({
     description: "",
@@ -301,22 +305,39 @@ function TransactionsPage() {
         toast.error("O arquivo não contém linhas de extrato.");
         return;
       }
+      const validRows = rows.filter((row) => row.valid);
       setImportAccountId(accountId);
       setImportRows(rows);
       setImportOpen(true);
+      setImportDuplicateRowNumbers(
+        await findExistingStatementKeys(validRows.map((row) => row.externalId)).then(
+          (keys) => planStatementImport(validRows, keys).duplicateRowNumbers,
+          () => new Set<number>(),
+        ),
+      );
     },
     [importAccountId],
   );
 
+  const validImportRows = importRows.filter((row) => row.valid);
+  const duplicateImportCount = validImportRows.filter((row) =>
+    importDuplicateRowNumbers.has(row.rowNumber),
+  ).length;
+  const newImportCount = validImportRows.length - duplicateImportCount;
+  const invalidImportCount = importRows.length - validImportRows.length;
+
   const confirmImport = useCallback(async () => {
-    if (statementOperation.current || !importAccountId || !importRows.some((row) => row.valid))
-      return;
+    if (statementOperation.current || !importAccountId || !newImportCount) return;
     statementOperation.current = true;
     setConfirmingImport(true);
     try {
       if (
         !(await confirm(
-          `Importar ${importRows.filter((row) => row.valid).length} lançamento(s) para ${accounts.find((account) => account.id === importAccountId)?.name ?? "a conta selecionada"}? Confira os valores na prévia. Os lançamentos atualizarão o saldo da conta.`,
+          `Importar ${newImportCount} lançamento(s) novo(s) para ${accounts.find((account) => account.id === importAccountId)?.name ?? "a conta selecionada"}? ${
+            duplicateImportCount > 0
+              ? `${duplicateImportCount} linha(s) já importada(s) serão ignoradas. `
+              : ""
+          }Confira os valores na prévia. Os lançamentos atualizarão o saldo da conta.`,
         ))
       )
         return;
@@ -324,18 +345,30 @@ function TransactionsPage() {
         accountId: importAccountId,
         rows: importRows,
       });
-      toast.success(
-        `${result.imported} lançamento(s) importado(s); ${result.ignored} ignorado(s).`,
-      );
+      const summary = [
+        `${result.imported} importada(s)`,
+        ...(result.duplicates > 0 ? [`${result.duplicates} já existente(s)`] : []),
+        ...(result.ignored > 0 ? [`${result.ignored} ignorada(s)`] : []),
+      ];
+      toast.success(`${summary.join(", ")}.`);
       setImportOpen(false);
       setImportRows([]);
+      setImportDuplicateRowNumbers(new Set());
     } catch {
       toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente.");
     } finally {
       statementOperation.current = false;
       setConfirmingImport(false);
     }
-  }, [accounts, confirm, importAccountId, importRows, importTransactions]);
+  }, [
+    accounts,
+    confirm,
+    duplicateImportCount,
+    importAccountId,
+    importRows,
+    importTransactions,
+    newImportCount,
+  ]);
 
   const openEditTransaction = useCallback((transaction: Transaction) => {
     setEditTransactionId(transaction.id);
@@ -1197,6 +1230,7 @@ function TransactionsPage() {
               onValueChange={(value) => {
                 setImportAccountId(value);
                 setImportRows([]);
+                setImportDuplicateRowNumbers(new Set());
               }}
             >
               <SelectTrigger id="statement-account">
@@ -1228,6 +1262,12 @@ function TransactionsPage() {
                 Selecione a conta e o arquivo para conferir os lançamentos.
               </p>
             )}
+            {importRows.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {newImportCount} nova(s) · {duplicateImportCount} já importada(s) ·{" "}
+                {invalidImportCount} inválida(s)
+              </p>
+            )}
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[38rem] text-left text-xs">
                 <thead className="bg-muted/40">
@@ -1248,8 +1288,20 @@ function TransactionsPage() {
                       <td className="numeric">
                         {Number.isFinite(row.amount) ? formatBRL(row.amount) : "—"}
                       </td>
-                      <td className={row.valid ? "text-success" : "text-danger"}>
-                        {row.valid ? "Pronta" : row.errors.join(", ")}
+                      <td
+                        className={
+                          !row.valid
+                            ? "text-danger"
+                            : importDuplicateRowNumbers.has(row.rowNumber)
+                              ? "text-muted-foreground"
+                              : "text-success"
+                        }
+                      >
+                        {!row.valid
+                          ? row.errors.join(", ")
+                          : importDuplicateRowNumbers.has(row.rowNumber)
+                            ? "Já importada"
+                            : "Pronta"}
                       </td>
                     </tr>
                   ))}
@@ -1265,7 +1317,7 @@ function TransactionsPage() {
                 confirmingImport ||
                 !importAccountId ||
                 importTransactions.isPending ||
-                !importRows.some((row) => row.valid)
+                newImportCount === 0
               }
             >
               {importTransactions.isPending ? "Importando…" : "Confirmar importação"}

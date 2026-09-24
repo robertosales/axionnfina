@@ -89,3 +89,23 @@ export function parseStatementCsv(content: string, accountId: string): Statement
     };
   });
 }
+
+export function planStatementImport(
+  rows: StatementRow[],
+  existingKeys: ReadonlySet<string>,
+): { newRows: StatementRow[]; duplicateCount: number; duplicateRowNumbers: Set<number> } {
+  const seen = new Set<string>();
+  const newRows: StatementRow[] = [];
+  const duplicateRowNumbers = new Set<number>();
+  let duplicateCount = 0;
+  for (const row of rows) {
+    if (existingKeys.has(row.externalId) || seen.has(row.externalId)) {
+      duplicateCount += 1;
+      duplicateRowNumbers.add(row.rowNumber);
+      continue;
+    }
+    seen.add(row.externalId);
+    newRows.push(row);
+  }
+  return { newRows, duplicateCount, duplicateRowNumbers };
+}

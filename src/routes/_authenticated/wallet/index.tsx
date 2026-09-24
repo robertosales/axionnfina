@@ -19,6 +19,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useWalletSummary } from "@/hooks/use-wallet";
 import { supabase } from "@/integrations/supabase/client";
+import type { WalletSummary } from "@/lib/account-service";
 import { resolveBankLogoByCompe } from "@/lib/bank-logos";
 import { formatBRL } from "@/lib/format";
 
@@ -49,6 +50,21 @@ const TYPE_LABELS: Record<string, string> = {
   investment: "Investimento",
 };
 
+/** Reaproveita as logos já resolvidas nas contas para exibir na visão por instituição. */
+function buildInstitutionLogoMap(
+  accounts: WalletSummary["accounts"],
+  accountLogos: Array<{ id: string; logo_url: string | null }>,
+) {
+  const logos = new Map<string, string>();
+  for (const account of accounts) {
+    const institution = account.institution_name;
+    if (!institution || logos.has(institution)) continue;
+    const logo = accountLogos.find((entry) => entry.id === account.id)?.logo_url;
+    if (logo) logos.set(institution, logo);
+  }
+  return logos;
+}
+
 function WalletPage() {
   const { data: summary, isLoading, isError, refetch } = useWalletSummary();
   const { data: accountLogos = [] } = useQuery({
@@ -68,6 +84,8 @@ function WalletPage() {
       });
     },
   });
+
+  const institutionLogos = buildInstitutionLogoMap(summary?.accounts ?? [], accountLogos);
 
   return (
     <AppShell>
@@ -146,26 +164,34 @@ function WalletPage() {
                 <Card className="shadow-none bg-card p-6">
                   <h2 className="font-semibold">Por Instituição</h2>
                   <div className="mt-4 space-y-3">
-                    {summary.by_institution.map((inst) => (
-                      <div
-                        key={inst.name}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="size-8 rounded-full"
-                            style={{ backgroundColor: inst.logo_color ?? "#6366f1" }}
-                          />
-                          <div>
-                            <p className="text-sm font-medium">{inst.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {inst.account_count} conta(s)
-                            </p>
+                    {summary.by_institution.map((inst) => {
+                      const logo = institutionLogos.get(inst.name) ?? null;
+                      return (
+                        <div
+                          key={inst.name}
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
+                        >
+                          <div className="flex items-center gap-3">
+                            {logo ? (
+                              <AccountAvatar logoUrl={logo} name={inst.name} size="sm" />
+                            ) : (
+                              <div
+                                className="size-8 rounded-full"
+                                style={{ backgroundColor: inst.logo_color ?? "#6366f1" }}
+                                aria-hidden
+                              />
+                            )}
+                            <div>
+                              <p className="text-sm font-medium">{inst.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {inst.account_count} conta(s)
+                              </p>
+                            </div>
                           </div>
+                          <p className="numeric font-semibold">{formatBRL(inst.balance)}</p>
                         </div>
-                        <p className="numeric font-semibold">{formatBRL(inst.balance)}</p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </Card>
               )}

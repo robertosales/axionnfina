@@ -155,7 +155,7 @@ function DetectedOpportunityCard({
   onDismiss: () => void;
 }) {
   return (
-    <Card className="rounded-xl border-border/60 p-4 shadow-elevation-1 sm:p-5">
+    <Card className="flex h-full flex-col rounded-xl border-border/60 p-4 shadow-elevation-1 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1 basis-56">
           <Badge variant="outline" className="rounded-full text-[10px]">
@@ -177,12 +177,12 @@ function DetectedOpportunityCard({
       <div className="mt-4">
         <StatusFlow status={plan.status} />
       </div>
-      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+      <ul className="mt-3 mb-4 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
         {plan.evidence.map((item) => (
           <li key={item}>• {item}</li>
         ))}
       </ul>
-      <div className="mt-4 flex flex-wrap gap-2 border-t border-border/60 pt-4">
+      <div className="mt-auto flex flex-wrap gap-2 border-t border-border/60 pt-4">
         <Button className="h-11" onClick={onAccept} disabled={pending}>
           Adicionar ao plano <ArrowRight aria-hidden />
         </Button>
@@ -319,7 +319,7 @@ export function SavingsPlanPanel() {
         </Card>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.8fr)_minmax(17rem,1fr)] xl:gap-6">
-          <div className="space-y-4">
+          <div className="space-y-4 @container">
             <SectionHeading
               title="Oportunidades encontradas"
               description="Estimativas para você revisar antes de aceitar"
@@ -341,15 +341,17 @@ export function SavingsPlanPanel() {
                 />
               </Card>
             ) : (
-              detected.map((plan) => (
-                <DetectedOpportunityCard
-                  key={plan.id}
-                  plan={plan}
-                  pending={sync.isPending}
-                  onAccept={() => mutateStatus(plan, "accepted")}
-                  onDismiss={() => mutateStatus(plan, "dismissed")}
-                />
-              ))
+              <div className="grid gap-4 @xl:grid-cols-2">
+                {detected.map((plan) => (
+                  <DetectedOpportunityCard
+                    key={plan.id}
+                    plan={plan}
+                    pending={sync.isPending}
+                    onAccept={() => mutateStatus(plan, "accepted")}
+                    onDismiss={() => mutateStatus(plan, "dismissed")}
+                  />
+                ))}
+              </div>
             )}
           </div>
 

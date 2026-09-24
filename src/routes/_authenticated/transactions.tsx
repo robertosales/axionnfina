@@ -175,6 +175,27 @@ function TransactionsPage() {
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
     );
   }, []);
+  const selectedTransactions = useMemo(
+    () => transactions.filter((transaction) => selectedIds.includes(transaction.id)),
+    [transactions, selectedIds],
+  );
+  const manualSelectedIds = useMemo(
+    () =>
+      selectedTransactions
+        .filter((transaction) => transaction.recordOrigin === "manual")
+        .map((transaction) => transaction.id),
+    [selectedTransactions],
+  );
+  const importedSelectedCount = selectedTransactions.length - manualSelectedIds.length;
+  const bulkDeletePartial =
+    importedSelectedCount > 0 || manualSelectedIds.length < selectedIds.length;
+  const bulkDeleteHint =
+    importedSelectedCount > 0
+      ? `${importedSelectedCount} lançamento(s) importado(s) na seleção não podem ser excluídos — use “Arquivar” ou remova-os da seleção.`
+      : "Nenhuma transação manual da seleção está disponível para exclusão nesta lista.";
+  const bulkDeleteConfirmMessage = bulkDeletePartial
+    ? `Excluir definitivamente ${manualSelectedIds.length} transação(ões) manual(is)? Esta ação não pode ser desfeita. ${importedSelectedCount > 0 ? `Os ${importedSelectedCount} lançamento(s) importado(s) serão mantidos: só podem ser arquivados e podem voltar em uma nova sincronização.` : ""}`
+    : `Excluir definitivamente ${selectedIds.length} transação(ões)? Esta ação não pode ser desfeita.`;
 
   const [open, setOpen] = useState(Boolean(Route.useSearch().new));
   const [editTransactionId, setEditTransactionId] = useState<string | null>(null);
@@ -931,17 +952,20 @@ function TransactionsPage() {
           <Button
             size="sm"
             variant="destructive"
-            disabled={bulkArchive.isPending || bulkDelete.isPending}
+            disabled={
+              bulkArchive.isPending || bulkDelete.isPending || manualSelectedIds.length === 0
+            }
+            aria-describedby={bulkDeletePartial ? "bulk-delete-hint" : undefined}
             onClick={() => {
               void (async () => {
-                const confirmed = await confirm(
-                  `Excluir definitivamente ${selectedIds.length} transação(ões)? Esta ação não pode ser desfeita. Lançamentos importados podem voltar em uma nova importação ou sincronização.`,
-                );
+                const confirmed = await confirm(bulkDeleteConfirmMessage);
                 if (!confirmed) return;
-                bulkDelete.mutate(selectedIds, {
+                bulkDelete.mutate(manualSelectedIds, {
                   onSuccess: (count) => {
                     toast.success(`${count} transação(ões) excluída(s)`);
-                    setSelectedIds([]);
+                    setSelectedIds((current) =>
+                      current.filter((id) => !manualSelectedIds.includes(id)),
+                    );
                   },
                   onError: () =>
                     toast.error("Não foi possível excluir as transações selecionadas."),
@@ -949,8 +973,15 @@ function TransactionsPage() {
               })();
             }}
           >
-            Excluir
+            {bulkDeletePartial && manualSelectedIds.length > 0
+              ? `Excluir ${manualSelectedIds.length} manual${manualSelectedIds.length === 1 ? "" : "s"}`
+              : "Excluir"}
           </Button>
+          {bulkDeletePartial && (
+            <p id="bulk-delete-hint" className="basis-full text-xs text-muted-foreground">
+              {bulkDeleteHint}
+            </p>
+          )}
           <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
             Limpar seleção
           </Button>
@@ -1214,7 +1245,9 @@ function TransactionsPage() {
                       <td className="p-2">{row.rowNumber}</td>
                       <td>{row.date ? row.date.split("-").reverse().join("/") : "—"}</td>
                       <td>{row.description || "-"}</td>
-                      <td className="numeric">{Number.isFinite(row.amount) ? formatBRL(row.amount) : "—"}</td>
+                      <td className="numeric">
+                        {Number.isFinite(row.amount) ? formatBRL(row.amount) : "—"}
+                      </td>
                       <td className={row.valid ? "text-success" : "text-danger"}>
                         {row.valid ? "Pronta" : row.errors.join(", ")}
                       </td>

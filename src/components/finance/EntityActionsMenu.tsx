@@ -100,12 +100,16 @@ export function EntityActionsMenu({
           {onDelete && (
             <DropdownMenuItem
               disabled={Boolean(deleteDisabledReason)}
-              title={deleteDisabledReason}
               className="text-danger focus:bg-danger/10 focus:text-danger"
               onSelect={() => setPendingAction("delete")}
             >
               <Trash2 /> Excluir
             </DropdownMenuItem>
+          )}
+          {onDelete && deleteDisabledReason && (
+            <p className="px-2 pb-2 text-xs leading-snug text-muted-foreground">
+              {deleteDisabledReason}
+            </p>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
@@ -118,9 +122,6 @@ export function EntityActionsMenu({
           <AlertDialogHeader>
             <AlertDialogTitle>{title}</AlertDialogTitle>
             <AlertDialogDescription>{description}</AlertDialogDescription>
-            {isDeleting && deleteDisabledReason && (
-              <p className="text-sm text-danger">{deleteDisabledReason}</p>
-            )}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>

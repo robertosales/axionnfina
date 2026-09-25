@@ -55,7 +55,7 @@ export function MaskedAccount({
 
   const formatted = formatAccount(value, isVisible);
   const label = accountType ? ACCOUNT_TYPE_LABELS[accountType] ?? "Conta" : "Conta";
-  const ariaLabel = isVisible ? LABELS.hide : LABELS.show;
+  const ariaLabel = isVisible ? LABELS["hide"] : LABELS["show"];
 
   return (
     <span className={cn("inline-flex items-center gap-1.5 font-mono", className)}>

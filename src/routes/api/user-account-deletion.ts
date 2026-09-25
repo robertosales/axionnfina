@@ -65,7 +65,7 @@ export const Route = createFileRoute("/api/user-account-deletion")({
           // Criar solicitação de exclusão via RPC
           const { data: requestId, error: rpcError } = await client.rpc(
             "request_account_deletion",
-            { p_reason: reason },
+            reason !== undefined ? { p_reason: reason } : {},
           );
 
           if (rpcError) {

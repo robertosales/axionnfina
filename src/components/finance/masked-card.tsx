@@ -47,7 +47,7 @@ export function MaskedCard({ value, brand, showLabel = true, className }: Masked
 
   const formatted = formatCard(value, isVisible);
   const label = brand ? BRAND_LABELS[brand] ?? "Cartão" : "Cartão";
-  const ariaLabel = isVisible ? LABELS.hide : LABELS.show;
+  const ariaLabel = isVisible ? LABELS["hide"] : LABELS["show"];
 
   return (
     <span className={cn("inline-flex items-center gap-1.5 font-mono", className)}>

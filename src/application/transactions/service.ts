@@ -6,13 +6,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type {
-  Transaction,
-  NormalizedTransaction,
-  CategorizationResult,
-  TransactionSummary,
-  LedgerBalances,
-} from "@/domain/finance";
+import type { NormalizedTransaction, CategorizationResult } from "@/modules/transactions/types";
 import { safeIlikePattern } from "@/lib/query-sanitize";
 
 /* ------------------------------------------------------------------ */

@@ -14,7 +14,7 @@
  */
 
 // Supabase clients
-export { createClient, supabase } from "@/integrations/supabase/client";
+export { supabase } from "@/integrations/supabase/client";
 export { supabaseAdmin } from "@/integrations/supabase/client.server";
 export { createUserClient, authenticateApi } from "@/lib/api-auth.server";
 
@@ -22,7 +22,7 @@ export { createUserClient, authenticateApi } from "@/lib/api-auth.server";
 export { createClient as createServerClient } from "@/lib/supabase/server";
 
 // Security
-export { SECURITY_HEADERS, CSP_HEADER, checkRateLimit, RATE_LIMITS } from "@/lib/security";
+export { SECURITY_HEADERS, CSP_HEADER, checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/security";
 export { verifyWebhookSecret } from "@/lib/webhook-security";
 
 // Observability
@@ -32,7 +32,7 @@ export { logEvent, createRequestContext, withRequestId } from "@/lib/observabili
 export { PluggyAdapter } from "@/providers/openfinance/PluggyAdapter";
 
 // AI Provider
-export { createAiRuntime } from "@/lib/ai-provider.server";
+export { AiConfigurationError, createAiRuntime } from "@/lib/ai-provider.server";
 
 // Types
 export type { Database } from "@/integrations/supabase/types";

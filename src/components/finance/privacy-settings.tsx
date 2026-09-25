@@ -235,9 +235,9 @@ export function PrivacySettings() {
                     <p className="text-xs text-muted-foreground">{info.description}</p>
                   </div>
                   <Switch
-                    checked={isGranted}
+                    checked={isGranted ?? false}
                     disabled={info.required || grantConsent.isPending || revokeConsent.isPending}
-                    onCheckedChange={() => handleToggleConsent(purpose, isGranted)}
+                    onCheckedChange={() => handleToggleConsent(purpose, isGranted ?? false)}
                   />
                 </div>
               );

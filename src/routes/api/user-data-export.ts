@@ -57,7 +57,7 @@ export const Route = createFileRoute("/api/user-data-export")({
             .gte("posted_at", twelveMonthsAgo.toISOString());
 
           // Buscar metas financeiras
-          const { data: goals } = await client
+          const { data: goals } = await (client as unknown as { from: (t: string) => any })
             .from("financial_goals")
             .select("id, name, target_amount, current_amount, deadline, created_at")
             .eq("user_id", user.id);

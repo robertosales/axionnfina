@@ -1,10 +1,24 @@
-import type { Database } from "@/integrations/supabase/types";
+/**
+ * Tipos de apresentação financeira usados pelas telas e adaptadores.
+ *
+ * NOTA: Estes tipos são derivados do schema do banco de dados,
+ * mas definidos localmente para evitar acoplamento com @/integrations/supabase/types.
+ * Se o schema mudar, estes tipos devem ser atualizados manualmente.
+ */
 
-/** Contratos de apresentação financeira usados pelas telas e adaptadores. */
-export type TransactionStatus = Database["public"]["Enums"]["transaction_status"];
+/** Status de uma transação */
+export type TransactionStatus = "pending" | "settled" | "cancelled" | "failed" | "reversed";
+
+/** Tipo de conta bancária */
 export type AccountType = "CHECKING" | "SAVINGS" | "CREDIT_CARD" | "INVESTMENT";
+
+/** Classificação da transação */
 export type TransactionKind = "income" | "expense" | "transfer" | "investment";
 
+/** Origem do registro */
+export type RecordOrigin = "manual" | "open_finance" | "import" | "system";
+
+/** Conta bancária */
 export type Account = {
   id: string;
   institution: string;
@@ -15,13 +29,14 @@ export type Account = {
   creditLimit?: number | null;
   lastSyncedAt: string | null;
   connectionId?: string | null;
-  recordOrigin?: "manual" | "open_finance" | "import" | "system";
+  recordOrigin?: RecordOrigin;
   openFinance: boolean;
   branch?: string;
   accountNumber?: string;
   logoUrl?: string | null;
 };
 
+/** Transação financeira */
 export type Transaction = {
   id: string;
   description: string;
@@ -36,9 +51,10 @@ export type Transaction = {
   status?: TransactionStatus;
   isRecurring?: boolean;
   archivedAt?: string | null;
-  recordOrigin?: "manual" | "open_finance" | "import" | "system";
+  recordOrigin?: RecordOrigin;
 };
 
+/** Item de orçamento */
 export type BudgetItem = {
   id: string;
   category: string;
@@ -46,9 +62,10 @@ export type BudgetItem = {
   spent: number;
   rollover?: number;
   archivedAt?: string | null;
-  recordOrigin?: "manual" | "open_finance" | "import" | "system";
+  recordOrigin?: RecordOrigin;
 };
 
+/** Meta financeira */
 export type Goal = {
   id: string;
   name: string;
@@ -57,9 +74,10 @@ export type Goal = {
   dueDate: string;
   monthlySuggestion: number;
   archivedAt?: string | null;
-  recordOrigin?: "manual" | "open_finance" | "import" | "system";
+  recordOrigin?: RecordOrigin;
 };
 
+/** Conta a pagar/receber */
 export type UpcomingBill = {
   id: string;
   name: string;
@@ -67,14 +85,15 @@ export type UpcomingBill = {
   dueDate: string;
   status: "SCHEDULED" | "PENDING" | "OVERDUE";
   archivedAt?: string | null;
-  recordOrigin?: "manual" | "open_finance" | "import" | "system";
+  recordOrigin?: RecordOrigin;
 };
 
+/** Insight do agente */
 export type AgentInsight = {
   id: string;
   title: string;
   body: string;
   severity: "info" | "success" | "warning" | "danger";
   archivedAt?: string | null;
-  recordOrigin?: "manual" | "open_finance" | "import" | "system";
+  recordOrigin?: RecordOrigin;
 };

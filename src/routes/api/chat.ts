@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
 import { convertToModelMessages, stepCountIs, streamText, tool, type UIMessage } from "ai";
 import { z } from "zod";
 
-import type { Database } from "@/integrations/supabase/types";
-import { AiConfigurationError, createAiRuntime } from "@/lib/ai-provider.server";
-import { getRateLimitHeaders, RATE_LIMITS } from "@/lib/security";
-import { logEvent } from "@/lib/observability.server";
+import { createUserClient } from "@/infrastructure";
+import { AiConfigurationError, createAiRuntime } from "@/infrastructure";
+import { getRateLimitHeaders, RATE_LIMITS } from "@/infrastructure";
+import { logEvent } from "@/infrastructure";
+import { TransactionService } from "@/application/transactions";
+import { safeIlikePattern } from "@/lib/query-sanitize";
 
 const MAX_CHAT_HISTORY = 12;
 const MAX_USER_MESSAGE_CHARS = 2_000;
@@ -37,23 +38,6 @@ Regras rígidas (guardrails):
 - Quando o usuário pedir para criar uma meta, use a tool create_goal.
 - Quando o usuário mencionar uma preferência ou padrão, salve com upsert_memory.`;
 
-/** Cria um client Supabase que age como o usuário autenticado (RLS aplicada). */
-function userClient(token: string) {
-  const url = process.env["SUPABASE_URL"]!;
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
-  return createClient<Database>(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: {
-      fetch: (input, init) => {
-        const headers = new Headers(init?.headers);
-        headers.set("apikey", key);
-        headers.set("Authorization", `Bearer ${token}`);
-        return fetch(input, { ...init, headers });
-      },
-    },
-  });
-}
-
 function textFromMessage(message: UIMessage) {
   return message.parts
     .filter(
@@ -72,7 +56,7 @@ export const Route = createFileRoute("/api/chat")({
         const token = authorization.replace(/^Bearer\s+/i, "");
         if (!token) return new Response("Unauthorized", { status: 401 });
 
-        const supabase = userClient(token);
+        const supabase = createUserClient(token);
         const { data: userData, error: userError } = await supabase.auth.getUser(token);
         if (userError || !userData.user) return new Response("Unauthorized", { status: 401 });
         const userId = userData.user.id;
@@ -461,17 +445,9 @@ export const Route = createFileRoute("/api/chat")({
                 limite: z.number().optional().describe("Número máximo de resultados (padrão: 5)"),
               }),
               execute: async ({ query, limite }) => {
-                // Para busca semântica real precisaríamos gerar embedding.
-                // Por enquanto, busca por texto conteúdo.
-                const { data, error } = await supabase
-                  .from("agent_memories")
-                  .select("content, memory_type, importance")
-                  .eq("user_id", userId)
-                  .ilike("content", `%${query}%`)
-                  .order("importance", { ascending: false })
-                  .limit(limite ?? 5);
-                if (error) return { erro: error.message };
-                return { memorias: data ?? [] };
+                const transactionService = new TransactionService({ supabase });
+                const memorias = await transactionService.searchAgentMemories(userId, query, limite ?? 5);
+                return { memorias };
               },
             }),
           },

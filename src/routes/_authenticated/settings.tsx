@@ -3,6 +3,7 @@ import { DataState } from "@/components/finance/DataState";
 import { EmptyState } from "@/components/finance/EmptyState";
 import { MoneyInput } from "@/components/finance/MoneyInput";
 import { ValidatedInput } from "@/components/finance/ValidatedInput";
+import { PrivacySettings } from "@/components/finance/privacy-settings";
 import { parseFinancialInput } from "@/lib/financial-input";
 import { createFileRoute } from "@tanstack/react-router";
 import { Archive, CheckCircle2, Link2, Pencil, Plus, ShieldCheck, Tags } from "lucide-react";
@@ -396,13 +397,7 @@ function SettingsPage() {
 
           <Separator className="my-5" />
 
-          <h3 className="text-sm font-semibold">Privacidade (LGPD)</h3>
-          <Badge variant="outline" className="mt-2 rounded-full text-[10px]">
-            Tokens armazenados criptografados
-          </Badge>
-          <Button variant="outline" size="sm" className="mt-3 w-full text-danger">
-            Excluir meus dados
-          </Button>
+          <PrivacySettings />
         </Card>
       </div>
 

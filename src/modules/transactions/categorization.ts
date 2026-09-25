@@ -5,6 +5,7 @@ import {
   Transaction,
 } from "./types";
 import { createClient } from "@/lib/supabase/server";
+import { safeIlikePattern } from "@/lib/query-sanitize";
 
 interface MerchantRule {
   pattern: RegExp;
@@ -266,7 +267,7 @@ export class CategorizationEngine {
       .from("transactions")
       .select("category_id, subcategory_id")
       .eq("user_id", userId)
-      .ilike("merchant_name", `%${merchantName}%`)
+      .ilike("merchant_name", safeIlikePattern(merchantName))
       .not("category_id", "is", null)
       .order("posted_at", { ascending: false })
       .limit(10);

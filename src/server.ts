@@ -8,6 +8,7 @@ import {
   logEvent,
   withRequestId,
 } from "./lib/observability.server";
+import { SECURITY_HEADERS } from "./lib/security";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -50,6 +51,20 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+function applySecurityHeaders(response: Response): Response {
+  const headers = new Headers(response.headers);
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    if (!headers.has(key)) {
+      headers.set(key, value);
+    }
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     const requestContext = createRequestContext(request);
@@ -57,8 +72,9 @@ export default {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       const normalized = await normalizeCatastrophicSsrResponse(response);
-      completeRequest(requestContext, normalized.status);
-      return withRequestId(normalized, requestContext.requestId);
+      const secured = applySecurityHeaders(normalized);
+      completeRequest(requestContext, secured.status);
+      return withRequestId(secured, requestContext.requestId);
     } catch (error) {
       logEvent("error", "http.unhandled", { requestId: requestContext.requestId, error });
       const response = new Response(renderErrorPage(), {

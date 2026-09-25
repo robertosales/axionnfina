@@ -1,25 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
-
-import type { Database } from "@/integrations/supabase/types";
-
-function userClient(token: string) {
-  const url = process.env["SUPABASE_URL"];
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
-  if (!url || !key) throw new Error("Supabase não configurado no servidor.");
-
-  return createClient<Database>(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: {
-      fetch: (input, init) => {
-        const headers = new Headers(init?.headers);
-        headers.set("apikey", key);
-        headers.set("Authorization", `Bearer ${token}`);
-        return fetch(input, { ...init, headers });
-      },
-    },
-  });
-}
+import { createUserClient } from "@/infrastructure";
 
 function brazilRunDate() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -63,7 +43,7 @@ export const Route = createFileRoute("/api/investment-radar-daily")({
             await import("@/lib/savings-monitoring.server");
 
           if (!isCron) {
-            const authClient = userClient(token);
+            const authClient = createUserClient(token);
             const { data, error } = await authClient.auth.getUser(token);
             if (error || !data.user) return new Response("Unauthorized", { status: 401 });
 

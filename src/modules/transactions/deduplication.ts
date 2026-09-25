@@ -1,5 +1,6 @@
 import { NormalizedTransaction, ExternalTransaction } from "./types";
 import { createClient } from "@/lib/supabase/server";
+import { safeIlikePattern } from "@/lib/query-sanitize";
 
 export interface DeduplicationResult {
   isDuplicate: boolean;
@@ -46,7 +47,7 @@ export class DeduplicationEngine {
       .eq("currency", normalized.currency)
       .gte("posted_at", startDate.toISOString())
       .lte("posted_at", endDate.toISOString())
-      .ilike("description", `%${normalized.description.slice(0, 50)}%`)
+      .ilike("description", safeIlikePattern(normalized.description))
       .maybeSingle();
 
     if (error) {

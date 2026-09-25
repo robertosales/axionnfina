@@ -32,6 +32,8 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiInvestmentRadarRouteImport } from './routes/api/investment-radar'
 import { Route as ApiInvestmentRadarDailyRouteImport } from './routes/api/investment-radar-daily'
 import { Route as ApiTransactionsRouteImport } from './routes/api/transactions'
+import { Route as ApiUserAccountDeletionRouteImport } from './routes/api/user-account-deletion'
+import { Route as ApiUserDataExportRouteImport } from './routes/api/user-data-export'
 import { Route as AuthenticatedWalletIndexRouteImport } from './routes/_authenticated/wallet/index'
 import { Route as AuthenticatedWalletAccountsRouteImport } from './routes/_authenticated/wallet/accounts'
 import { Route as AuthenticatedWalletConnectRouteImport } from './routes/_authenticated/wallet/connect'
@@ -157,6 +159,16 @@ const ApiTransactionsRoute = ApiTransactionsRouteImport.update({
   path: '/api/transactions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUserAccountDeletionRoute = ApiUserAccountDeletionRouteImport.update({
+  id: '/api/user-account-deletion',
+  path: '/api/user-account-deletion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUserDataExportRoute = ApiUserDataExportRouteImport.update({
+  id: '/api/user-data-export',
+  path: '/api/user-data-export',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedWalletIndexRoute =
   AuthenticatedWalletIndexRouteImport.update({
     id: '/wallet/',
@@ -221,6 +233,8 @@ export interface FileRoutesByFullPath {
   '/api/investment-radar': typeof ApiInvestmentRadarRoute
   '/api/investment-radar-daily': typeof ApiInvestmentRadarDailyRoute
   '/api/transactions': typeof ApiTransactionsRouteWithChildren
+  '/api/user-account-deletion': typeof ApiUserAccountDeletionRoute
+  '/api/user-data-export': typeof ApiUserDataExportRoute
   '/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/wallet/imports': typeof AuthenticatedWalletImportsRoute
@@ -252,6 +266,8 @@ export interface FileRoutesByTo {
   '/api/investment-radar': typeof ApiInvestmentRadarRoute
   '/api/investment-radar-daily': typeof ApiInvestmentRadarDailyRoute
   '/api/transactions': typeof ApiTransactionsRouteWithChildren
+  '/api/user-account-deletion': typeof ApiUserAccountDeletionRoute
+  '/api/user-data-export': typeof ApiUserDataExportRoute
   '/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/wallet/imports': typeof AuthenticatedWalletImportsRoute
@@ -285,6 +301,8 @@ export interface FileRoutesById {
   '/api/investment-radar': typeof ApiInvestmentRadarRoute
   '/api/investment-radar-daily': typeof ApiInvestmentRadarDailyRoute
   '/api/transactions': typeof ApiTransactionsRouteWithChildren
+  '/api/user-account-deletion': typeof ApiUserAccountDeletionRoute
+  '/api/user-data-export': typeof ApiUserDataExportRoute
   '/_authenticated/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/_authenticated/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/_authenticated/wallet/imports': typeof AuthenticatedWalletImportsRoute
@@ -318,6 +336,8 @@ export interface FileRouteTypes {
     | '/api/investment-radar'
     | '/api/investment-radar-daily'
     | '/api/transactions'
+    | '/api/user-account-deletion'
+    | '/api/user-data-export'
     | '/wallet/accounts'
     | '/wallet/connect'
     | '/wallet/imports'
@@ -349,6 +369,8 @@ export interface FileRouteTypes {
     | '/api/investment-radar'
     | '/api/investment-radar-daily'
     | '/api/transactions'
+    | '/api/user-account-deletion'
+    | '/api/user-data-export'
     | '/wallet/accounts'
     | '/wallet/connect'
     | '/wallet/imports'
@@ -381,6 +403,8 @@ export interface FileRouteTypes {
     | '/api/investment-radar'
     | '/api/investment-radar-daily'
     | '/api/transactions'
+    | '/api/user-account-deletion'
+    | '/api/user-data-export'
     | '/_authenticated/wallet/accounts'
     | '/_authenticated/wallet/connect'
     | '/_authenticated/wallet/imports'
@@ -400,6 +424,8 @@ export interface RootRouteChildren {
   ApiInvestmentRadarRoute: typeof ApiInvestmentRadarRoute
   ApiInvestmentRadarDailyRoute: typeof ApiInvestmentRadarDailyRoute
   ApiTransactionsRoute: typeof ApiTransactionsRouteWithChildren
+  ApiUserAccountDeletionRoute: typeof ApiUserAccountDeletionRoute
+  ApiUserDataExportRoute: typeof ApiUserDataExportRoute
   ApiLedgerBalancesRoute: typeof ApiLedgerBalancesRoute
   ApiWebhooksOpenfinanceProviderRoute: typeof ApiWebhooksOpenfinanceProviderRoute
 }
@@ -567,6 +593,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTransactionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/user-account-deletion': {
+      id: '/api/user-account-deletion'
+      path: '/api/user-account-deletion'
+      fullPath: '/api/user-account-deletion'
+      preLoaderRoute: typeof ApiUserAccountDeletionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/user-data-export': {
+      id: '/api/user-data-export'
+      path: '/api/user-data-export'
+      fullPath: '/api/user-data-export'
+      preLoaderRoute: typeof ApiUserDataExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/wallet/': {
       id: '/_authenticated/wallet/'
       path: '/wallet'
@@ -686,6 +726,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiInvestmentRadarRoute: ApiInvestmentRadarRoute,
   ApiInvestmentRadarDailyRoute: ApiInvestmentRadarDailyRoute,
   ApiTransactionsRoute: ApiTransactionsRouteWithChildren,
+  ApiUserAccountDeletionRoute: ApiUserAccountDeletionRoute,
+  ApiUserDataExportRoute: ApiUserDataExportRoute,
   ApiLedgerBalancesRoute: ApiLedgerBalancesRoute,
   ApiWebhooksOpenfinanceProviderRoute: ApiWebhooksOpenfinanceProviderRoute,
 }

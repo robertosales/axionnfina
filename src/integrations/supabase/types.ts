@@ -1645,6 +1645,87 @@ export type Database = {
           },
         ]
       }
+      lgpd_consents: {
+        Row: {
+          created_at: string
+          description: string
+          granted_at: string | null
+          id: string
+          ip_address: unknown
+          purpose: Database["public"]["Enums"]["consent_purpose"]
+          revoked_at: string | null
+          status: Database["public"]["Enums"]["consent_status"]
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          granted_at?: string | null
+          id?: string
+          ip_address?: unknown
+          purpose: Database["public"]["Enums"]["consent_purpose"]
+          revoked_at?: string | null
+          status?: Database["public"]["Enums"]["consent_status"]
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          granted_at?: string | null
+          id?: string
+          ip_address?: unknown
+          purpose?: Database["public"]["Enums"]["consent_purpose"]
+          revoked_at?: string | null
+          status?: Database["public"]["Enums"]["consent_status"]
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      lgpd_data_requests: {
+        Row: {
+          created_at: string
+          download_expires_at: string | null
+          download_url: string | null
+          id: string
+          metadata: Json | null
+          processed_at: string | null
+          request_type: Database["public"]["Enums"]["lgpd_request_type"]
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          download_expires_at?: string | null
+          download_url?: string | null
+          id?: string
+          metadata?: Json | null
+          processed_at?: string | null
+          request_type: Database["public"]["Enums"]["lgpd_request_type"]
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          download_expires_at?: string | null
+          download_url?: string | null
+          id?: string
+          metadata?: Json | null
+          processed_at?: string | null
+          request_type?: Database["public"]["Enums"]["lgpd_request_type"]
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       net_worth_snapshots: {
         Row: {
           created_at: string
@@ -2973,6 +3054,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_privacy_settings: {
+        Row: {
+          allow_analytics: boolean
+          allow_marketing: boolean
+          created_at: string
+          data_retention_days: number
+          id: string
+          mask_sensitive_data: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allow_analytics?: boolean
+          allow_marketing?: boolean
+          created_at?: string
+          data_retention_days?: number
+          id?: string
+          mask_sensitive_data?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allow_analytics?: boolean
+          allow_marketing?: boolean
+          created_at?: string
+          data_retention_days?: number
+          id?: string
+          mask_sensitive_data?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_sessions_metadata: {
         Row: {
           city: string | null
@@ -3165,6 +3279,7 @@ export type Database = {
         }[]
       }
       get_ledger_balances: { Args: { p_as_of_date?: string }; Returns: Json }
+      get_privacy_settings: { Args: never; Returns: Json }
       get_security_summary: { Args: never; Returns: Json }
       get_sync_errors: {
         Args: { p_connection_id: string; p_limit?: number }
@@ -3178,7 +3293,15 @@ export type Database = {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
       }
+      get_user_consents: { Args: never; Returns: Json }
       get_wallet_summary: { Args: never; Returns: Json }
+      grant_consent: {
+        Args: {
+          p_description: string
+          p_purpose: Database["public"]["Enums"]["consent_purpose"]
+        }
+        Returns: string
+      }
       log_security_event: {
         Args: {
           p_country?: string
@@ -3213,7 +3336,13 @@ export type Database = {
         Returns: string
       }
       refresh_account_balances_view: { Args: never; Returns: undefined }
+      request_account_deletion: { Args: { p_reason?: string }; Returns: string }
+      request_data_export: { Args: never; Returns: string }
       revoke_all_sessions: { Args: never; Returns: number }
+      revoke_consent: {
+        Args: { p_purpose: Database["public"]["Enums"]["consent_purpose"] }
+        Returns: boolean
+      }
       revoke_device: { Args: { p_device_id: string }; Returns: boolean }
       seed_default_ledger_accounts: {
         Args: { p_user_id: string }
@@ -3266,6 +3395,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_privacy_settings: {
+        Args: {
+          p_allow_analytics?: boolean
+          p_allow_marketing?: boolean
+          p_data_retention_days?: number
+          p_mask_sensitive_data?: boolean
+        }
+        Returns: undefined
+      }
       upsert_account: { Args: { p_data: Json }; Returns: string }
       upsert_transaction_idempotent: {
         Args: { p_data: Json; p_idempotency_key: string }
@@ -3295,9 +3433,17 @@ export type Database = {
       card_brand: "visa" | "mastercard" | "elo" | "amex" | "other"
       categorization_source: "mcc" | "rule" | "user" | "ml" | "llm" | "manual"
       connection_status: "active" | "inactive" | "error" | "pending"
+      consent_purpose:
+        | "data_processing"
+        | "analytics"
+        | "marketing"
+        | "open_finance"
+        | "ai_processing"
+        | "third_party_sharing"
       consent_status: "pending" | "authorised" | "revoked" | "expired"
       insight_severity: "info" | "warning" | "critical"
       ledger_entry_type: "debit" | "credit"
+      lgpd_request_type: "export" | "deletion" | "rectification" | "portability"
       security_event_type:
         | "login"
         | "logout"
@@ -3482,9 +3628,18 @@ export const Constants = {
       card_brand: ["visa", "mastercard", "elo", "amex", "other"],
       categorization_source: ["mcc", "rule", "user", "ml", "llm", "manual"],
       connection_status: ["active", "inactive", "error", "pending"],
+      consent_purpose: [
+        "data_processing",
+        "analytics",
+        "marketing",
+        "open_finance",
+        "ai_processing",
+        "third_party_sharing",
+      ],
       consent_status: ["pending", "authorised", "revoked", "expired"],
       insight_severity: ["info", "warning", "critical"],
       ledger_entry_type: ["debit", "credit"],
+      lgpd_request_type: ["export", "deletion", "rectification", "portability"],
       security_event_type: [
         "login",
         "logout",

@@ -31,6 +31,6 @@ export * from "@/hooks/use-openfinance";
 export * from "@/hooks/use-realtime";
 export * from "@/hooks/use-reports";
 export * from "@/hooks/use-piggy-banks";
-export * from "@/hooks/use-wallet";
+export { useWalletSummary, useArchivedAccounts, useArchiveAccount, useSetPrimaryAccount, useAccountBalances, useCreateBalanceSnapshot, useAccountConnections, useCreateConnection, useCreditCards, useInvoiceCardOptions } from "@/hooks/use-wallet";
 export * from "@/hooks/use-anomaly-detection";
 export * from "@/hooks/use-lgpd";

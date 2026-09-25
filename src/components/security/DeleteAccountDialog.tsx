@@ -50,17 +50,17 @@ export function DeleteAccountDialog({
         metadata: { action: "account_delete_initiated" },
       });
 
-      await supabase.auth.signOut();
-      await supabase.rpc("revoke_all_sessions");
-
-      await fetch("/api/auth/delete-account", {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.session.access_token}`,
-        },
-      }).catch(() => {
-        // Fallback: usar auth.admin diretamente se a API não existir
+      const { error: deletionError } = await supabase.rpc("request_account_deletion", {
+        p_reason: "Exclusão solicitada pelo usuário",
       });
+
+      if (deletionError) {
+        toast.error("Erro ao solicitar exclusão da conta");
+        return;
+      }
+
+      await supabase.rpc("revoke_all_sessions");
+      await supabase.auth.signOut();
 
       toast.success("Conta excluída com sucesso");
       onOpenChange(false);

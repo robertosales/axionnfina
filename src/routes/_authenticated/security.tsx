@@ -21,6 +21,7 @@ import { MFASetup } from "@/components/security/MFASetup";
 import { StepUpDialog } from "@/components/security/StepUpDialog";
 import { PasswordChangeDialog } from "@/components/security/PasswordChangeDialog";
 import { DeleteAccountDialog } from "@/components/security/DeleteAccountDialog";
+import { SecurityAlerts } from "@/components/security/SecurityAlerts";
 import { SecurityNotifications } from "@/components/security/SecurityNotifications";
 import { RevokeConsentButton } from "@/components/security/RevokeConsentButton";
 import { Badge } from "@/components/ui/badge";
@@ -431,7 +432,8 @@ function SecurityPage() {
           </div>
         </Card>
 
-        {/* Notifications */}
+        {/* Alerts */}
+        <SecurityAlerts />
         <SecurityNotifications />
 
         {/* Step-Up Dialog */}

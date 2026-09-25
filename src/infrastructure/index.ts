@@ -14,7 +14,7 @@
  */
 
 // Supabase clients
-export { createClient, supabase } from "@/integrations/supabase/client";
+export { supabase } from "@/integrations/supabase/client";
 export { supabaseAdmin } from "@/integrations/supabase/client.server";
 export { createUserClient, authenticateApi } from "@/lib/api-auth.server";
 

@@ -13,7 +13,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useStepUpAuth, getStepUpLabel, type StepUpOperation } from "@/hooks/use-step-up-auth";
+import {
+  useStepUpAuth,
+  getStepUpLabel,
+  type StepUpOperation,
+} from "@/hooks/use-step-up-auth";
+import { useMFAFactors } from "@/hooks/use-mfa";
 
 type StepUpDialogProps = {
   open: boolean;
@@ -38,6 +43,8 @@ export function StepUpDialog({
   const [totpCode, setTotpCode] = useState("");
   const { verifyWithPassword, verifyWithTOTP, isVerifying, error, clearError } =
     useStepUpAuth();
+  const { data: factors = [] } = useMFAFactors();
+  const factorId = factors[0]?.id ?? "";
 
   const handleVerify = async () => {
     let success = false;
@@ -45,8 +52,7 @@ export function StepUpDialog({
     if (method === "password") {
       success = await verifyWithPassword(password);
     } else {
-      // Para TOTP, precisaríamos do factorId — simplificação para MVP
-      success = await verifyWithPassword(password);
+      success = await verifyWithTOTP(factorId, totpCode);
     }
 
     if (success) {

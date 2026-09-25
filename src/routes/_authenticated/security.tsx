@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Monitor,
   Key,
+  Monitor,
   ShieldCheck,
   Globe,
   LogOut,
@@ -17,6 +18,11 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { MFASetup } from "@/components/security/MFASetup";
+import { StepUpDialog } from "@/components/security/StepUpDialog";
+import { PasswordChangeDialog } from "@/components/security/PasswordChangeDialog";
+import { DeleteAccountDialog } from "@/components/security/DeleteAccountDialog";
+import { SecurityNotifications } from "@/components/security/SecurityNotifications";
+import { RevokeConsentButton } from "@/components/security/RevokeConsentButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -29,6 +35,8 @@ import {
   useSecuritySummary,
   useSessions,
 } from "@/hooks/use-security";
+import { useDeviceFingerprint } from "@/hooks/use-device-fingerprint";
+import { useSecurityActions } from "@/hooks/use-security-actions";
 import type { SecuritySummary } from "@/hooks/use-security";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -105,6 +113,7 @@ function DeviceIcon({ type }: { type: string }) {
 
 function SummaryCard({
   summary,
+  isLoading,
 }: {
   summary: SecuritySummary | undefined;
   isLoading: boolean;
@@ -162,6 +171,20 @@ function SecurityPage() {
   const { data: sessions = [], isLoading: sessionsLoading } = useSessions();
   const revokeDevice = useRevokeDevice();
   const revokeAllSessions = useRevokeAllSessions();
+  const fingerprint = useDeviceFingerprint();
+  const { checkLoginRisk } = useSecurityActions();
+
+  const [stepUpOpen, setStepUpOpen] = useState(false);
+  const [stepUpOperation, setStepUpOperation] = useState<"password_change" | "account_delete" | "consent_revoke" | undefined>(undefined);
+  const [passwordChangeOpen, setPasswordChangeOpen] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+
+  useEffect(() => {
+    if (fingerprint) {
+      void checkLoginRisk(null, null, null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRevokeDevice = async (deviceId: string, name: string) => {
     try {
@@ -179,6 +202,24 @@ function SecurityPage() {
     } catch {
       toast.error("Erro ao revogar sessões");
     }
+  };
+
+  const openStepUp = (operation: "password_change" | "account_delete" | "consent_revoke") => {
+    setStepUpOperation(operation);
+    setStepUpOpen(true);
+  };
+
+  const handleStepUpVerified = () => {
+    toast.success("Verificação de segurança confirmada");
+    if (stepUpOperation === "password_change") {
+      setPasswordChangeOpen(true);
+    } else if (stepUpOperation === "account_delete") {
+      setDeleteAccountOpen(true);
+    } else if (stepUpOperation === "consent_revoke") {
+      toast.success("Consentimentos revogados");
+    }
+    setStepUpOpen(false);
+    setStepUpOperation(undefined);
   };
 
   return (
@@ -369,20 +410,51 @@ function SecurityPage() {
         <Card className="p-6">
           <h2 className="font-semibold">Ações Rápidas</h2>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openStepUp("password_change")}
+            >
               <Key className="mr-2 size-4" />
               Alterar senha
             </Button>
-            <Button variant="outline" size="sm">
-              <ShieldCheck className="mr-2 size-4" />
-              Revogar todos os consentimentos
-            </Button>
-            <Button variant="outline" size="sm" className="text-danger hover:text-danger">
+            <RevokeConsentButton />
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-danger hover:text-danger"
+              onClick={() => openStepUp("account_delete")}
+            >
               <Trash2 className="mr-2 size-4" />
               Excluir conta
             </Button>
           </div>
         </Card>
+
+        {/* Notifications */}
+        <SecurityNotifications />
+
+        {/* Step-Up Dialog */}
+        {stepUpOperation && (
+          <StepUpDialog
+            open={stepUpOpen}
+            onOpenChange={setStepUpOpen}
+            operation={stepUpOperation}
+            onVerified={handleStepUpVerified}
+          />
+        )}
+
+        {/* Password Change Dialog */}
+        <PasswordChangeDialog
+          open={passwordChangeOpen}
+          onOpenChange={setPasswordChangeOpen}
+        />
+
+        {/* Delete Account Dialog */}
+        <DeleteAccountDialog
+          open={deleteAccountOpen}
+          onOpenChange={setDeleteAccountOpen}
+        />
       </div>
     </AppShell>
   );

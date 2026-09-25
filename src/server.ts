@@ -8,7 +8,7 @@ import {
   logEvent,
   withRequestId,
 } from "./lib/observability.server";
-import { SECURITY_HEADERS } from "./lib/security";
+import { SECURITY_HEADERS, checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "./lib/security";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -65,16 +65,32 @@ function applySecurityHeaders(response: Response): Response {
   });
 }
 
+function applyRateLimiting(request: Request): Record<string, string> {
+  const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown";
+  const path = new URL(request.url).pathname;
+  const config = path.startsWith("/auth") ? RATE_LIMITS.login : RATE_LIMITS.api;
+  const key = `${path.startsWith("/auth") ? "login" : "api"}:${ip}`;
+  const result = checkRateLimit(key, config.maxRequests, config.windowMs);
+  return getRateLimitHeaders(key, config).headers;
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     const requestContext = createRequestContext(request);
     try {
+      const rateLimitHeaders = applyRateLimiting(request);
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       const normalized = await normalizeCatastrophicSsrResponse(response);
       const secured = applySecurityHeaders(normalized);
-      completeRequest(requestContext, secured.status);
-      return withRequestId(secured, requestContext.requestId);
+      const finalHeaders = { ...rateLimitHeaders, ...Object.fromEntries(secured.headers) };
+      const finalResponse = new Response(secured.body, {
+        status: secured.status,
+        statusText: secured.statusText,
+        headers: finalHeaders,
+      });
+      completeRequest(requestContext, finalResponse.status);
+      return withRequestId(finalResponse, requestContext.requestId);
     } catch (error) {
       logEvent("error", "http.unhandled", { requestId: requestContext.requestId, error });
       const response = new Response(renderErrorPage(), {

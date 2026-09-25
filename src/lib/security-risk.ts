@@ -243,7 +243,7 @@ export function assessFinancialOperationRisk(params: {
   return { level, score, reasons, recommendations };
 }
 
-function getRiskLevel(score: number): RiskLevel {
+export function getRiskLevel(score: number): RiskLevel {
   if (score >= 70) return "critical";
   if (score >= 50) return "high";
   if (score >= 25) return "medium";

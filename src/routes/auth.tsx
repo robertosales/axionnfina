@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Coins, Loader2 } from "lucide-react";
+import { Coins, Loader2, AlertTriangle } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
@@ -8,8 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
+import { useSecurityActions } from "@/hooks/use-security-actions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -41,6 +43,33 @@ function AuthPage() {
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<Mode>("signin");
+  const [showRiskAlert, setShowRiskAlert] = useState(false);
+  const [riskMessage, setRiskMessage] = useState("");
+  const { checkLoginRisk, logAuthEvent } = useSecurityActions();
+
+  useEffect(() => {
+    let active = true;
+
+    void supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn("[Auth] Could not restore the stored session.", error.message);
+          return;
+        }
+
+        if (active && data.session) {
+          void navigate({ to: "/dashboard", replace: true });
+        }
+      })
+      .catch((error) => {
+        console.error("[Auth] Failed to read the stored session.", error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [navigate]);
 
   useEffect(() => {
     let active = true;
@@ -67,9 +96,10 @@ function AuthPage() {
     };
   }, [navigate]);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
+    setShowRiskAlert(false);
     try {
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
@@ -86,8 +116,25 @@ function AuthPage() {
           return;
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: signinData, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+
+        if (signinData.session) {
+          const risk = await checkLoginRisk(
+            null,
+            navigator.userAgent,
+            null,
+          );
+          if (risk && (risk.level === "high" || risk.level === "critical")) {
+            setRiskMessage(
+              `Atividade suspeita detectada: ${risk.reasons.join(", ")}. Verifique sua conta.`
+            );
+            setShowRiskAlert(true);
+          }
+          await logAuthEvent("login", risk?.level === "critical" ? "high" : "low", {
+            riskDetected: !!risk && (risk.level === "high" || risk.level === "critical"),
+          });
+        }
       }
       await navigate({ to: "/dashboard", replace: true });
     } catch (error) {
@@ -181,6 +228,12 @@ function AuthPage() {
                   autoComplete={mode === "signin" ? "current-password" : "new-password"}
                 />
               </div>
+              {showRiskAlert && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="size-4" />
+                  <AlertDescription>{riskMessage}</AlertDescription>
+                </Alert>
+              )}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="size-4 animate-spin" aria-hidden />}
                 {mode === "signin" ? "Entrar" : "Criar conta"}

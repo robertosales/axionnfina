@@ -89,4 +89,4 @@
 export * from "./domain";
 export * from "./application";
 export * from "./infrastructure";
-export * from "./presentation";
+// Presentation layer: importe de "@/presentation" diretamente (evita conflito de nomes).

@@ -40,7 +40,7 @@ export function useConsents() {
     queryFn: async (): Promise<Consent[]> => {
       const { data, error } = await supabase.rpc("get_user_consents");
       if (error) throw error;
-      return (data as Consent[]) ?? [];
+      return (data as unknown as Consent[]) ?? [];
     },
   });
 }
@@ -94,7 +94,7 @@ export function usePrivacySettings() {
     queryFn: async (): Promise<PrivacySettings> => {
       const { data, error } = await supabase.rpc("get_privacy_settings");
       if (error) throw error;
-      return data as PrivacySettings;
+      return data as unknown as PrivacySettings;
     },
   });
 }
@@ -104,10 +104,10 @@ export function useUpdatePrivacySettings() {
   return useMutation({
     mutationFn: async (settings: Partial<PrivacySettings>) => {
       const { error } = await supabase.rpc("update_privacy_settings", {
-        p_mask_sensitive_data: settings.mask_sensitive_data,
-        p_data_retention_days: settings.data_retention_days,
-        p_allow_analytics: settings.allow_analytics,
-        p_allow_marketing: settings.allow_marketing,
+        ...(settings.mask_sensitive_data !== undefined && { p_mask_sensitive_data: settings.mask_sensitive_data }),
+        ...(settings.data_retention_days !== undefined && { p_data_retention_days: settings.data_retention_days }),
+        ...(settings.allow_analytics !== undefined && { p_allow_analytics: settings.allow_analytics }),
+        ...(settings.allow_marketing !== undefined && { p_allow_marketing: settings.allow_marketing }),
       });
       if (error) throw error;
     },
@@ -138,9 +138,7 @@ export function useRequestDataExport() {
 export function useRequestAccountDeletion() {
   return useMutation({
     mutationFn: async ({ reason }: { reason?: string }) => {
-      const { data, error } = await supabase.rpc("request_account_deletion", {
-        p_reason: reason,
-      });
+      const { data, error } = await supabase.rpc("request_account_deletion", reason !== undefined ? { p_reason: reason } : {});
       if (error) throw error;
       return data as string;
     },

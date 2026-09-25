@@ -41,7 +41,7 @@ export function MaskedDocument({ value, type, showLabel = true, className }: Mas
 
   const formatted = formatDocument(value, isVisible);
   const label = detectedType === "cpf" ? "CPF" : "CNPJ";
-  const ariaLabel = isVisible ? LABELS.hide : LABELS.show;
+  const ariaLabel = isVisible ? LABELS["hide"] : LABELS["show"];
 
   return (
     <span className={cn("inline-flex items-center gap-1.5 font-mono", className)}>

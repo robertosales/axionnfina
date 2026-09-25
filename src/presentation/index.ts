@@ -14,7 +14,7 @@
  */
 
 // Hooks de dados (data access)
-export * from "@/lib/finance";
+export * from "@/presentation/hooks/finance";
 
 // Hooks de UI
 export * from "@/hooks/use-masking";

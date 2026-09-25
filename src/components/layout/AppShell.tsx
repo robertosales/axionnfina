@@ -21,6 +21,12 @@ import {
   Sun,
   Target,
   Wallet,
+  Bell,
+  Landmark,
+  FolderKanban,
+  Tag,
+  ScrollText,
+  ChevronDown,
 } from "lucide-react";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
@@ -28,6 +34,7 @@ import { CommandPalette } from "@/components/layout/CommandPalette";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +46,12 @@ import {
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSessionUser } from "@/hooks/use-session-user";
+import {
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotifications,
+  useUnreadNotificationsCount,
+} from "@/lib/finance/notifications";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -56,6 +69,8 @@ const navItems: NavItem[] = [
   { to: "/wallet", label: "Carteira", icon: Wallet, group: "Vida financeira" },
   { to: "/wallet/accounts", label: "Contas bancárias", icon: CreditCard, group: "Vida financeira" },
   { to: "/transactions", label: "Transações", icon: Receipt, group: "Vida financeira" },
+  { to: "/wallet/statement", label: "Extrato de contas", icon: ScrollText, group: "Vida financeira" },
+  { to: "/tags", label: "Tags", icon: Tag, group: "Vida financeira" },
   {
     to: "/bills",
     label: "Contas a pagar e receber",
@@ -63,9 +78,11 @@ const navItems: NavItem[] = [
     group: "Vida financeira",
   },
   { to: "/wallet/imports", label: "Importar documentos", icon: FileText, group: "Vida financeira" },
+  { to: "/loans", label: "Empréstimos", icon: Landmark, group: "Vida financeira" },
   { to: "/reconciliation", label: "Conferir saldos", icon: Receipt, group: "Vida financeira" },
   { to: "/investments", label: "Investimentos", icon: LineChart, group: "Investimentos" },
   { to: "/goals", label: "Metas", icon: Target, group: "Planejamento" },
+  { to: "/projects", label: "Projetos", icon: FolderKanban, group: "Planejamento" },
   { to: "/piggy-banks", label: "Cofrinhos", icon: Coins, group: "Planejamento" },
   { to: "/budget", label: "Orçamento", icon: PiggyBank, group: "Planejamento" },
   { to: "/reports", label: "Relatórios", icon: FileText, group: "Planejamento" },
@@ -106,6 +123,62 @@ function useTheme() {
   return { dark, toggle };
 }
 
+function NotificationBell() {
+  const { data: count = 0 } = useUnreadNotificationsCount();
+  const { data: notifications = [] } = useNotifications();
+  const markRead = useMarkNotificationRead();
+  const markAll = useMarkAllNotificationsRead();
+  const unread = notifications.filter((n) => !n.read).slice(0, 8);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="Notificações" className="relative">
+          <Bell className="size-4" />
+          {count > 0 && (
+            <Badge variant="destructive" className="absolute -top-1 -right-1 size-4 text-[9px]">
+              {count > 9 ? "9+" : count}
+            </Badge>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80">
+        <DropdownMenuLabel className="flex items-center justify-between">
+          <span>Notificações</span>
+          {count > 0 && (
+            <button
+              type="button"
+              className="text-xs font-normal text-primary hover:underline"
+              onClick={() => void markAll.mutateAsync()}
+            >
+              Marcar todas como lidas
+            </button>
+          )}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {unread.length === 0 ? (
+          <p className="px-2 py-4 text-center text-xs text-muted-foreground">
+            Nenhuma notificação não lida.
+          </p>
+        ) : (
+          unread.map((n) => (
+            <DropdownMenuItem
+              key={n.id}
+              className="flex-col items-start gap-1"
+              onSelect={(e) => {
+                e.preventDefault();
+                void markRead.mutateAsync(n.id);
+              }}
+            >
+              <span className="text-xs font-medium">{n.title}</span>
+              <span className="text-[11px] text-muted-foreground">{n.message}</span>
+            </DropdownMenuItem>
+          ))
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function Brand({ collapsed }: { collapsed: boolean }) {
   return (
     <Link
@@ -125,57 +198,122 @@ function Brand({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+const NAV_GROUPS = ["Visão geral", "Vida financeira", "Investimentos", "Planejamento", "Sistema"];
+
 function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [openGroups, setOpenGroups] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = readPreference("axionn-nav-groups");
+      if (!raw) return;
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setOpenGroups(parsed.filter((g): g is string => typeof g === "string"));
+      }
+    } catch {
+      // Mantém todos os grupos abertos se a preferência estiver indisponível.
+    }
+  }, []);
+
+  const isActive = (item: NavItem) =>
+    pathname === item.to || (item.to !== "/wallet" && pathname.startsWith(`${item.to}/`));
+
+  const renderLink = (item: NavItem) => {
+    const active = isActive(item);
+    const link = (
+      <Link
+        to={item.to}
+        onClick={onNavigate}
+        aria-label={collapsed ? item.label : undefined}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "focus-ring relative flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+          active
+            ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground before:absolute before:-left-3 before:h-6 before:w-0.5 before:rounded-r-full before:bg-action"
+            : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+          collapsed && "justify-center px-0",
+        )}
+      >
+        <item.icon
+          className={cn("size-[19px] shrink-0", active && "text-sidebar-primary")}
+          aria-hidden
+        />
+        {!collapsed && <span className="min-w-0 leading-snug">{item.label}</span>}
+        {!collapsed && item.highlight && (
+          <Badge variant="secondary" className="ml-auto rounded-full text-[10px]">
+            beta
+          </Badge>
+        )}
+      </Link>
+    );
+    if (!collapsed) return <div key={item.to}>{link}</div>;
+    return (
+      <div key={item.to}>
+        <Tooltip>
+          <TooltipTrigger asChild>{link}</TooltipTrigger>
+          <TooltipContent side="right">{item.label}</TooltipContent>
+        </Tooltip>
+      </div>
+    );
+  };
+
+  if (collapsed) {
+    return (
+      <nav aria-label="Navegação principal" className="flex flex-col gap-1 px-3">
+        {navItems.map((item, index) => (
+          <div key={item.to}>
+            {index > 0 && navItems[index - 1]?.group !== item.group && (
+              <div className="mx-3 my-3 border-t border-sidebar-border" />
+            )}
+            {renderLink(item)}
+          </div>
+        ))}
+      </nav>
+    );
+  }
+
+  const groups = openGroups ?? NAV_GROUPS;
+  const toggleGroup = (group: string) => {
+    const next = groups.includes(group)
+      ? groups.filter((g) => g !== group)
+      : [...groups, group];
+    setOpenGroups(next);
+    savePreference("axionn-nav-groups", JSON.stringify(next));
+  };
+
   return (
     <nav aria-label="Navegação principal" className="flex flex-col gap-1 px-3">
-      {navItems.map((item, index) => {
-        const active =
-          pathname === item.to || (item.to !== "/wallet" && pathname.startsWith(`${item.to}/`));
-        const link = (
-          <Link
-            to={item.to}
-            onClick={onNavigate}
-            aria-label={collapsed ? item.label : undefined}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-               "focus-ring relative flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-              active
-                 ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground before:absolute before:-left-3 before:h-6 before:w-0.5 before:rounded-r-full before:bg-action"
-                : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
-              collapsed && "justify-center px-0",
-            )}
-          >
-            <item.icon
-              className={cn("size-[19px] shrink-0", active && "text-sidebar-primary")}
-              aria-hidden
-            />
-            {!collapsed && <span className="min-w-0 leading-snug">{item.label}</span>}
-            {!collapsed && item.highlight && (
-              <Badge variant="secondary" className="ml-auto rounded-full text-[10px]">
-                beta
-              </Badge>
-            )}
-          </Link>
-        );
+      {NAV_GROUPS.map((group, groupIndex) => {
+        const items = navItems.filter((item) => item.group === group);
+        if (items.length === 0) return null;
+        const open = groups.includes(group);
+        const groupActive = items.some(isActive);
         return (
-          <div key={item.to}>
-            {navItems[index - 1]?.group !== item.group &&
-              (collapsed ? (
-                index > 0 && <div className="mx-3 my-3 border-t border-sidebar-border" />
-              ) : (
-                <p className="px-3 pb-2 pt-5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                  {item.group}
-                </p>
-              ))}
-            {collapsed ? (
-              <Tooltip>
-                <TooltipTrigger asChild>{link}</TooltipTrigger>
-                <TooltipContent side="right">{item.label}</TooltipContent>
-              </Tooltip>
-            ) : (
-              link
-            )}
+          <div key={group}>
+            {groupIndex > 0 && <div className="mx-1 my-2 border-t border-sidebar-border" />}
+            <Collapsible open={open} onOpenChange={() => toggleGroup(group)}>
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  className="focus-ring flex w-full items-center gap-2 rounded-md px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+                >
+                  <span className="min-w-0 flex-1 truncate text-left">{group}</span>
+                  {groupActive && !open && (
+                    <span className="size-1.5 shrink-0 rounded-full bg-action" aria-hidden />
+                  )}
+                  <ChevronDown
+                    className={cn("size-4 shrink-0 transition-transform", !open && "-rotate-90")}
+                    aria-hidden
+                  />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="flex flex-col gap-1">
+                {items.map((item) => renderLink(item))}
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         );
       })}
@@ -325,6 +463,7 @@ export function AppShell({
             <Search aria-hidden />
           </Button>
           <div className="ml-auto flex shrink-0 items-center gap-2">
+            <NotificationBell />
             <Button
               variant="ghost"
               size="icon"

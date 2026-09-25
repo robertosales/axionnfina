@@ -295,10 +295,81 @@ export const Route = createFileRoute("/api/chat")({
               },
             }),
 
-            /* ---------------------------------------------------------- */
-            /* Tool: metas                                                 */
-            /* ---------------------------------------------------------- */
-            metas: tool({
+/* ---------------------------------------------------------- */
+/* Tool: alertas_orcamento                                   */
+/* ---------------------------------------------------------- */
+alertas_orcamento: tool({
+  description:
+    "Retorna alertas de orçamento: categorias que atingiram 80% ou mais do limite, ou que foram ultrapassadas.",
+  inputSchema: z.object({}),
+  execute: async () => {
+    const start = new Date();
+    start.setDate(1);
+    const monthStart = start.toISOString().slice(0, 10);
+    const { data: budgets } = await supabase
+      .from("budgets")
+      .select("category, planned")
+      .eq("user_id", userId)
+      .eq("month", monthStart);
+    const { data: txs } = await supabase
+      .from("transactions")
+      .select("category, amount, type")
+      .eq("user_id", userId)
+      .gte("occurred_at", monthStart);
+    const alerts = [];
+    for (const budget of budgets ?? []) {
+      const spent = (txs ?? [])
+        .filter((t) => t.category === budget.category && t.type === "expense")
+        .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
+      const ratio = Number(budget.planned) > 0 ? spent / Number(budget.planned) : 0;
+      if (ratio >= 0.8) {
+        alerts.push({
+          category: budget.category,
+          planned: Number(budget.planned),
+          spent,
+          ratio: Math.round(ratio * 100),
+          level: ratio >= 1 ? "danger" : "warning",
+        });
+      }
+    }
+    return { alerts };
+  },
+}),
+
+/* ---------------------------------------------------------- */
+/* Tool: alertas_contas                                      */
+/* ---------------------------------------------------------- */
+alertas_contas: tool({
+  description:
+    "Retorna contas próximas ao vencimento ou já vencidas.",
+  inputSchema: z.object({}),
+  execute: async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: payables } = await supabase
+      .from("payables")
+      .select("description, amount, due_date, status")
+      .eq("user_id", userId)
+      .not("status", "eq", "paid")
+      .is("archived_at", null);
+    const alerts = [];
+    for (const payable of payables ?? []) {
+      const days = Math.round(
+        (new Date(`${payable.due_date}T23:59:59`).getTime() - Date.now()) / 86400000,
+      );
+      if (days < 0) {
+        alerts.push({ name: payable.description, daysUntil: days, status: "overdue", amount: Number(payable.amount) });
+      } else if (days <= 3) {
+        alerts.push({ name: payable.description, daysUntil: days, status: "due_soon", amount: Number(payable.amount) });
+      }
+    }
+    return { alerts };
+  },
+}),
+
+/* ---------------------------------------------------------- */
+/* Tool: metas                                                 */
+/* ---------------------------------------------------------- */
+metas: tool({
               description: "Lista as metas financeiras do usuário com progresso e prazo.",
               inputSchema: z.object({}),
               execute: async () => {

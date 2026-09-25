@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
-import { BarChart3, BrainCircuit, CalendarRange, CreditCard, Download, Landmark, PiggyBank, ReceiptText, RefreshCw, Scale, TrendingDown, TrendingUp, WalletCards } from "lucide-react";
+import { BarChart3, BrainCircuit, CalendarRange, CheckCircle2, CreditCard, Download, FileText, Landmark, PiggyBank, ReceiptText, RefreshCw, Scale, Target, TrendingDown, TrendingUp, WalletCards, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { DataState } from "@/components/finance/DataState";
@@ -42,6 +42,41 @@ export const Route = createFileRoute("/_authenticated/reports")({
 
 const presetLabels: Record<ReportPreset, string> = { current: "Este mês", previous: "Mês anterior", quarter: "Últimos 3 meses", year: "Ano vigente", custom: "Personalizado" };
 
+type ReportCategory = "Patrimônio e Orçamento" | "Controle das Contas" | "Detalhamento de Receitas e Despesas";
+
+type CatalogEntry = {
+  title: string;
+  description: string;
+  category: ReportCategory;
+  icon: typeof Landmark;
+  to: string;
+  search?: (previous: Record<string, unknown>) => Record<string, unknown>;
+};
+
+const REPORT_CATALOG: CatalogEntry[] = [
+  { title: "Balanço Patrimonial", description: "Ativos, passivos e patrimônio líquido no período.", category: "Patrimônio e Orçamento", icon: Landmark, to: "/reports", search: (p) => ({ ...p, tab: "wealth" }) },
+  { title: "Evolução do Balanço Patrimonial", description: "Variação do patrimônio líquido ao longo do tempo.", category: "Patrimônio e Orçamento", icon: TrendingUp, to: "/reports", search: (p) => ({ ...p, tab: "wealth" }) },
+  { title: "Orçamento do mês", description: "Planejado versus realizado nas categorias orçadas.", category: "Patrimônio e Orçamento", icon: PiggyBank, to: "/reports", search: (p) => ({ ...p, tab: "overview" }) },
+  { title: "Evolução das Metas", description: "Progresso das metas financeiras e aportes mensais.", category: "Patrimônio e Orçamento", icon: Target, to: "/goals" },
+  { title: "Fluxo de Caixa", description: "Entradas, saídas e resultado mês a mês.", category: "Controle das Contas", icon: ArrowLeftRight, to: "/reports", search: (p) => ({ ...p, tab: "overview" }) },
+  { title: "Contas a Pagar", description: "Compromissos futuros com vencimento.", category: "Controle das Contas", icon: ReceiptText, to: "/bills" },
+  { title: "Contas a Receber", description: "Valores a receber, como salários e reembolsos.", category: "Controle das Contas", icon: WalletCards, to: "/bills" },
+  { title: "Contas Pagas", description: "Histórico de todos os pagamentos realizados.", category: "Controle das Contas", icon: CheckCircle2, to: "/bills", search: () => ({ aba: "pagas" }) },
+  { title: "Contas Recebidas", description: "Histórico de todos os valores recebidos.", category: "Controle das Contas", icon: CheckCircle2, to: "/bills", search: () => ({ aba: "pagas" }) },
+  { title: "Crédito e faturas", description: "Faturas abertas, renda comprometida e meios de pagamento.", category: "Controle das Contas", icon: CreditCard, to: "/reports", search: (p) => ({ ...p, tab: "credit" }) },
+  { title: "Totais por Categoria", description: "Receitas e despesas agrupadas por categoria.", category: "Detalhamento de Receitas e Despesas", icon: BarChart3, to: "/reports", search: (p) => ({ ...p, tab: "expenses" }) },
+  { title: "Evolução por Categoria", description: "Tendência das receitas e despesas por categoria.", category: "Detalhamento de Receitas e Despesas", icon: TrendingDown, to: "/reports", search: (p) => ({ ...p, tab: "expenses" }) },
+  { title: "Lançamentos de Caixa", description: "Extrato detalhado de entradas e saídas.", category: "Detalhamento de Receitas e Despesas", icon: FileText, to: "/transactions" },
+  { title: "Comparação entre Períodos", description: "Período atual contra o mês anterior.", category: "Detalhamento de Receitas e Despesas", icon: Scale, to: "/reports", search: (p) => ({ ...p, tab: "overview", preset: "previous" }) },
+];
+
+const CATALOG_FILTERS: Array<{ key: ReportCategory | "Todos"; dot?: string }> = [
+  { key: "Todos" },
+  { key: "Patrimônio e Orçamento", dot: "bg-primary" },
+  { key: "Controle das Contas", dot: "bg-success" },
+  { key: "Detalhamento de Receitas e Despesas", dot: "bg-warning" },
+];
+
 function ReportsPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/reports" });
@@ -53,6 +88,15 @@ function ReportsPage() {
   const insights = useMemo(() => buildExecutiveInsights(metrics), [metrics]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [catalogQuery, setCatalogQuery] = useState("");
+  const [catalogFilter, setCatalogFilter] = useState<(typeof CATALOG_FILTERS)[number]["key"]>("Todos");
+  const catalogQueryNorm = catalogQuery.trim().toLocaleLowerCase("pt-BR");
+  const catalogEntries = REPORT_CATALOG.filter(
+    (entry) =>
+      (catalogFilter === "Todos" || entry.category === catalogFilter) &&
+      (!catalogQueryNorm ||
+        `${entry.title} ${entry.description}`.toLocaleLowerCase("pt-BR").includes(catalogQueryNorm)),
+  );
   const selectedCategoryData = metrics.categories.find((item) => item.category === selectedCategory);
   const currentNetWorth = report.data?.wealth.at(-1)?.netWorth ?? accounts.data?.reduce((sum, account) => sum + account.balance, 0) ?? 0;
   const currentMonth = filters.end.slice(0, 7);
@@ -72,6 +116,58 @@ function ReportsPage() {
       <div><Badge variant="outline" className="mb-3 border-primary/30 bg-primary/5 text-primary">DRE pessoal</Badge><h1 className="font-display text-2xl font-semibold sm:text-3xl">Central de Inteligência Financeira</h1><p className="mt-1 max-w-2xl text-sm text-muted-foreground">Entenda para onde seu dinheiro foi, como seu patrimônio evolui e quanto da renda já está comprometido.</p></div>
       <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => exportReportCsv(metrics, filters)}><Download/>CSV</Button><Button disabled={exportingPdf} onClick={async () => { setExportingPdf(true); try { await exportReportPdf(metrics, filters, insights, report.data?.wealth ?? []); toast.success("DRE pessoal gerada em PDF."); } catch { toast.error("Não foi possível gerar o PDF."); } finally { setExportingPdf(false); } }}><Download/>{exportingPdf ? "Gerando…" : "Exportar DRE"}</Button></div>
     </header>
+
+    <section aria-label="Catálogo de relatórios" className="mb-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-52 flex-1">
+          <Input
+            value={catalogQuery}
+            onChange={(event) => setCatalogQuery(event.target.value)}
+            placeholder="Pesquisar relatório"
+            aria-label="Pesquisar relatório"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {CATALOG_FILTERS.map((filter) => (
+            <Button
+              key={filter.key}
+              size="sm"
+              variant={catalogFilter === filter.key ? "default" : "outline"}
+              onClick={() => setCatalogFilter(filter.key)}
+            >
+              {filter.dot && <span className={cn("size-2 rounded-full", filter.dot)} aria-hidden />}
+              {filter.key}
+            </Button>
+          ))}
+        </div>
+      </div>
+      {catalogEntries.length === 0 ? (
+        <p className="mt-4 text-sm text-muted-foreground">Nenhum relatório encontrado para essa busca.</p>
+      ) : (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {catalogEntries.map((entry) => (
+            <Link
+              key={entry.title}
+              to={entry.to}
+              {...(entry.search ? { search: entry.search } : {})}
+              className="focus-ring rounded-xl border border-border/60 bg-card p-4 shadow-none transition-colors hover:border-primary/40 hover:bg-muted/40"
+            >
+              <div className="flex items-start gap-3">
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                  <entry.icon className="size-4" aria-hidden />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold">{entry.title}</span>
+                  <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+                    {entry.description}
+                  </span>
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
 
     <Card className="mb-5 p-4 shadow-none sm:p-5">
       <div className="flex flex-wrap items-end gap-3"><div className="min-w-0 flex-1"><Label>Período</Label><div className="mt-2 flex flex-wrap gap-2">{(Object.keys(presetLabels) as ReportPreset[]).map((preset) => <Button key={preset} size="sm" variant={search.preset === preset ? "default" : "outline"} onClick={() => selectPreset(preset)}>{presetLabels[preset]}</Button>)}</div></div><div className="w-full sm:w-64"><Label htmlFor="report-account">Instituição ou conta</Label><Select value={search.account ?? "all"} onValueChange={(value) => updateSearch({ account: value === "all" ? undefined : value })}><SelectTrigger id="report-account" className="mt-2"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todas as contas</SelectItem>{(accounts.data ?? []).map((account) => <SelectItem key={account.id} value={account.id}>{accountLabel(account)}</SelectItem>)}</SelectContent></Select></div></div>

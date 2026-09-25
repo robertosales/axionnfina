@@ -126,6 +126,7 @@ function TransactionsPage() {
   const [accountFilter, setAccountFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [tagFilter, setTagFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
@@ -221,6 +222,7 @@ function TransactionsPage() {
     merchant: "",
     accountId: "",
     occurredAt: localDateInput(),
+    tags: [] as string[],
   });
 
   const categories = useMemo(
@@ -232,17 +234,26 @@ function TransactionsPage() {
     [form.type, transactionCategories],
   );
 
+  const allTags = useMemo(
+    () =>
+      Array.from(new Set(transactions.flatMap((t) => t.tags ?? []))).sort((a, b) =>
+        a.localeCompare(b, "pt-BR"),
+      ),
+    [transactions],
+  );
+
   const filteredTransactions = useMemo(() => {
     return filterTransactions(transactions, {
       search,
       kind,
       account: accountFilter,
       category: categoryFilter,
+      tag: tagFilter,
       status: statusFilter,
       from: dateFrom,
       to: dateTo,
     });
-  }, [transactions, kind, search, accountFilter, categoryFilter, statusFilter, dateFrom, dateTo]);
+  }, [transactions, kind, search, accountFilter, categoryFilter, tagFilter, statusFilter, dateFrom, dateTo]);
 
   const total = useMemo(
     () => filteredTransactions.reduce((sum, t) => sum + t.amount, 0),
@@ -259,6 +270,7 @@ function TransactionsPage() {
       merchant: "",
       accountId: "",
       occurredAt: localDateInput(),
+      tags: [],
     });
     setOpen(true);
   }, []);
@@ -380,11 +392,12 @@ function TransactionsPage() {
       merchant: transaction.merchant,
       accountId: transaction.accountId ?? "",
       occurredAt: transaction.date,
+      tags: transaction.tags ?? [],
     });
     setOpen(true);
   }, []);
 
-  const submit = useCallback(async () => {
+const submit = useCallback(async () => {
     const value = parseFinancialInput(form.amount);
     if (!form.description.trim()) {
       toast.error("Informe a descrição da transação");
@@ -404,7 +417,7 @@ function TransactionsPage() {
     if (
       editTransactionId &&
       !(await confirm(
-        `Salvar alterações em “${form.description}”, valor ${formatBRL(value)}, data ${formatDate(form.occurredAt)}?${importedEdit?.isRecurring ? " Somente este lançamento será alterado." : ""}`,
+        `Salvar alterações em "${form.description}", valor ${formatBRL(value)}, data ${formatDate(form.occurredAt)}?${importedEdit?.isRecurring ? " Somente este lançamento será alterado." : ""}`,
       ))
     )
       return;
@@ -421,6 +434,7 @@ function TransactionsPage() {
       merchant: form.merchant.trim() || form.description.trim(),
       accountId: form.accountId || null,
       occurredAt: form.occurredAt,
+      tags: form.tags,
     };
     const options = {
       onSuccess: () => {
@@ -629,6 +643,24 @@ function TransactionsPage() {
         ),
       },
       {
+        id: "tags",
+        header: "Tags",
+        size: 120,
+        cell: ({ row }) => {
+          const tags = row.original.tags ?? [];
+          if (tags.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
+          return (
+            <div className="flex flex-wrap gap-1">
+              {tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-[10px]">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          );
+        },
+      },
+      {
         id: "actions",
         header: "",
         size: 60,
@@ -708,6 +740,22 @@ function TransactionsPage() {
         <div>
           <dt className="text-muted-foreground">Categoria</dt>
           <dd className="font-medium">{row.original.category}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Tags</dt>
+          <dd className="font-medium">
+            {(row.original.tags ?? []).length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {(row.original.tags ?? []).map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-[10px]">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </dd>
         </div>
         <div>
           <dt className="text-muted-foreground">Conta</dt>
@@ -864,6 +912,20 @@ function TransactionsPage() {
             </select>
           </div>
           <div>
+            <Label htmlFor="filter-tag">Tag</Label>
+            <select
+              id="filter-tag"
+              className="h-9 w-full rounded-md border bg-background px-2"
+              value={tagFilter}
+              onChange={(e) => setTagFilter(e.target.value)}
+            >
+              <option value="all">Todas as tags</option>
+              {allTags.map((tag) => (
+                <option key={tag}>{tag}</option>
+              ))}
+            </select>
+          </div>
+          <div>
             <Label htmlFor="filter-status">Situação</Label>
             <select
               id="filter-status"
@@ -907,6 +969,7 @@ function TransactionsPage() {
               setKind("all");
               setAccountFilter("all");
               setCategoryFilter("all");
+              setTagFilter("all");
               setStatusFilter("all");
               setDateFrom("");
               setDateTo("");
@@ -919,6 +982,7 @@ function TransactionsPage() {
           kind !== "all" ||
           accountFilter !== "all" ||
           categoryFilter !== "all" ||
+          tagFilter !== "all" ||
           statusFilter !== "all" ||
           dateFrom ||
           dateTo ||
@@ -947,6 +1011,11 @@ function TransactionsPage() {
             {categoryFilter !== "all" && (
               <Badge variant="secondary" className="max-w-full break-words whitespace-normal">
                 Categoria: {categoryFilter}
+              </Badge>
+            )}
+            {tagFilter !== "all" && (
+              <Badge variant="secondary" className="max-w-full break-words whitespace-normal">
+                Tag: {tagFilter}
               </Badge>
             )}
             {statusFilter !== "all" && (
@@ -1192,6 +1261,25 @@ function TransactionsPage() {
                   })()}
                 </div>
               )}
+              <div className="space-y-1.5">
+                <Label htmlFor="tags">Tags</Label>
+                <input
+                  id="tags"
+                  className="focus-ring flex h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="tag1, tag2, tag3"
+                  value={form.tags.join(", ")}
+                  onChange={(e) => {
+                    const tags = e.target.value
+                      .split(",")
+                      .map((t) => t.trim())
+                      .filter(Boolean);
+                    setForm((p) => ({ ...p, tags }));
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Separe as tags por vírgula para organizar suas transações
+                </p>
+              </div>
             </div>
             <DialogFooter>
               <Button

@@ -32,6 +32,7 @@ export type TransactionFilters = {
   kind: string;
   account: string;
   category: string;
+  tag?: string;
   from: string;
   to: string;
 };
@@ -41,6 +42,7 @@ export const emptyTransactionFilters: TransactionFilters = {
   kind: "all",
   account: "all",
   category: "all",
+  tag: "all",
   from: "",
   to: "",
 };
@@ -52,10 +54,11 @@ export function filterTransactions(rows: Transaction[], filters: TransactionFilt
       (filters.kind === "all" || row.kind === filters.kind) &&
       (filters.account === "all" || row.accountId === filters.account) &&
       (filters.category === "all" || row.category === filters.category) &&
+      (!filters.tag || filters.tag === "all" || (row.tags ?? []).includes(filters.tag)) &&
       (!filters.from || row.date.slice(0, 10) >= filters.from) &&
       (!filters.to || row.date.slice(0, 10) <= filters.to) &&
       (!search ||
-        [row.description, row.merchant, row.category, row.accountName].some((value) =>
+        [row.description, row.merchant, row.category, row.accountName, ...(row.tags ?? [])].some((value) =>
           value.toLocaleLowerCase("pt-BR").includes(search),
         )),
   );
@@ -67,7 +70,7 @@ export function transactionCsv(rows: Transaction[]) {
     return `"${safe.replaceAll('"', '""')}"`;
   };
   return (
-    "\uFEFFdata;descricao;estabelecimento;categoria;tipo;valor;situacao\r\n" +
+    "﻿data;descricao;estabelecimento;categoria;tags;tipo;valor;situacao\r\n" +
     rows
       .map((row) =>
         [
@@ -75,12 +78,13 @@ export function transactionCsv(rows: Transaction[]) {
           row.description,
           row.merchant,
           row.category,
+          (row.tags ?? []).join(", "),
           transactionKindLabel[row.kind],
           row.amount,
           transactionStatusText(row),
         ]
           .map((value, index) =>
-            index === 5 ? Number(value).toFixed(2).replace(".", ",") : cell(value),
+            index === 6 ? Number(value).toFixed(2).replace(".", ",") : cell(value),
           )
           .join(";"),
       )

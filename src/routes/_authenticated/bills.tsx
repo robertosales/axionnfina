@@ -6,8 +6,8 @@ import { useFinancialConfirmation } from "@/components/finance/use-financial-con
 import { ValidatedInput } from "@/components/finance/ValidatedInput";
 import { localDateInput, parseFinancialInput } from "@/lib/financial-input";
 import { createFileRoute } from "@tanstack/react-router";
-import { Receipt, Plus, Upload } from "lucide-react";
-import { useState } from "react";
+import { AlertTriangle, Receipt, Plus, Upload } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseDigitableLine } from "@/lib/boleto";
 import {
   useEntityLifecycle,
@@ -35,10 +36,13 @@ import {
   useUpsertPayable,
   useUpsertReceivable,
 } from "@/lib/finance-data";
+import { checkBillAlerts } from "@/lib/finance/budget";
 import { daysUntil, formatBRL, formatLongDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/bills")({
+  validateSearch: (search: Record<string, unknown>): { aba?: "abertas" | "pagas" } =>
+    search["aba"] === "pagas" ? { aba: "pagas" } : {},
   head: () => ({
     meta: [
       { title: "Contas a pagar e receber — Axionn Finance" },
@@ -62,6 +66,7 @@ export const Route = createFileRoute("/_authenticated/bills")({
 function BillsPage() {
   const { confirm, confirmation } = useFinancialConfirmation();
   const [showArchived, setShowArchived] = useState(false);
+  const [billAlerts, setBillAlerts] = useState<Array<{ name: string; amount: number; daysUntil: number; status: string }>>([]);
   const {
     data: bills = [],
     isLoading: loadingBills,
@@ -81,6 +86,15 @@ function BillsPage() {
   const payableLifecycle = useEntityLifecycle("payable");
   const receivableLifecycle = useEntityLifecycle("receivable");
 
+  useEffect(() => {
+    try {
+      const pendingBills = bills.filter((b) => b.dbStatus !== "paid");
+      setBillAlerts(checkBillAlerts(pendingBills));
+    } catch {
+      // Silently fail
+    }
+  }, [bills]);
+
   const [open, setOpen] = useState(false);
   const [receivableOpen, setReceivableOpen] = useState(false);
   const [editingPayableId, setEditingPayableId] = useState<string | null>(null);
@@ -93,7 +107,14 @@ function BillsPage() {
   const [payer, setPayer] = useState("");
 
   const pending = bills.filter((bill) => bill.dbStatus !== "paid");
+  const paidBills = bills.filter((bill) => bill.dbStatus === "paid");
+  const openReceivables = receivables.filter((item) => item.status !== "paid");
+  const paidReceivables = receivables.filter((item) => item.status === "paid");
   const total = pending.reduce((sum, bill) => sum + bill.amount, 0);
+  const paidTotal = paidBills.reduce((sum, bill) => sum + bill.amount, 0);
+  const [aba, setAba] = useState<"abertas" | "pagas">(Route.useSearch().aba ?? "abertas");
+  const visibleBills = aba === "abertas" ? pending : paidBills;
+  const visibleReceivables = aba === "abertas" ? openReceivables : paidReceivables;
 
   const readBoleto = () => {
     const parsed = parseDigitableLine(line);
@@ -220,14 +241,23 @@ function BillsPage() {
       {confirmation}
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Contas a pagar e receber</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {billsError || receivablesError
-              ? "Dados indisponíveis"
-              : isLoading
-                ? "Carregando contas…"
-                : `${pending.length} contas abertas · ${formatBRL(total)}`}
-          </p>
+<h1 className="text-2xl font-semibold tracking-tight">Contas a pagar e receber</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {billsError || receivablesError
+                ? "Dados indisponíveis"
+                : isLoading
+                  ? "Carregando contas…"
+                  : aba === "abertas"
+                    ? `${pending.length} contas abertas · ${formatBRL(total)}`
+                    : `${paidBills.length} contas pagas · ${formatBRL(paidTotal)}`}
+            </p>
+            {billAlerts.filter((a) => a.status === "overdue" || a.status === "due_soon").length > 0 && (
+              <Badge variant="destructive" className="mt-1">
+                <AlertTriangle className="mr-1 size-3" />
+                {billAlerts.filter((a) => a.status === "overdue").length} vencida(s),{" "}
+                {billAlerts.filter((a) => a.status === "due_soon").length} próxima(s)
+              </Badge>
+            )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <LifecycleFilter
@@ -246,6 +276,16 @@ function BillsPage() {
           )}
         </div>
       </header>
+      <Tabs value={aba} onValueChange={(v) => setAba(v as "abertas" | "pagas")} className="mb-5">
+        <TabsList>
+          <TabsTrigger value="abertas" className="text-xs">
+            A pagar e receber ({pending.length + openReceivables.length})
+          </TabsTrigger>
+          <TabsTrigger value="pagas" className="text-xs">
+            Pagas e recebidas ({paidBills.length + paidReceivables.length})
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       <DataState
         loading={loadingBills || loadingReceivables}
         error={billsError || receivablesError}
@@ -256,18 +296,22 @@ function BillsPage() {
       >
         <Card className="rounded-xl border-border/60 bg-card p-0 shadow-none">
           {isLoading && <p className="p-4 text-sm text-muted-foreground">Carregando contas…</p>}
-          {!isLoading && bills.length === 0 && (
+          {!isLoading && visibleBills.length === 0 && (
             <EmptyState
               icon={Receipt}
-              title="Nenhuma conta cadastrada"
-              description="Cadastre boletos ou contas a pagar para acompanhar seus vencimentos."
-              {...(!showArchived
+              title={aba === "abertas" ? "Nenhuma conta em aberto" : "Nenhuma conta paga"}
+              description={
+                aba === "abertas"
+                  ? "Cadastre boletos ou contas a pagar para acompanhar seus vencimentos."
+                  : "As contas marcadas como pagas aparecem aqui."
+              }
+              {...(!showArchived && aba === "abertas"
                 ? { action: { label: "Nova conta / boleto", onClick: openNewPayable } }
                 : {})}
             />
           )}
           <ul className="divide-y divide-border/60">
-            {bills.map((bill) => {
+            {visibleBills.map((bill) => {
               const days = daysUntil(bill.dueDate);
               return (
                 <li key={bill.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
@@ -283,6 +327,16 @@ function BillsPage() {
                             ? "Vence hoje"
                             : `em ${days} dias`}
                     </p>
+                    {bill.dbStatus !== "paid" && days < 3 && days >= 0 && (
+                      <Badge variant="secondary" className="mt-1 text-[10px]">
+                        <AlertTriangle className="mr-0.5 size-2" /> Vencendo em {days}d
+                      </Badge>
+                    )}
+                    {bill.dbStatus !== "paid" && days < 0 && (
+                      <Badge variant="destructive" className="mt-1 text-[10px]">
+                        <AlertTriangle className="mr-0.5 size-2" /> Atrasada
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
                     <Badge
@@ -378,12 +432,12 @@ function BillsPage() {
           </ul>
         </Card>
 
-        {(receivables.length > 0 || !showArchived) && (
+        {(visibleReceivables.length > 0 || (!showArchived && aba === "abertas")) && (
           <>
             <Separator className="my-8" />
             <h2 className="mb-3 text-base font-semibold">Contas a receber</h2>
             <Card className="rounded-xl border-border/60 bg-card p-0 shadow-none">
-              {receivables.length === 0 && (
+              {visibleReceivables.length === 0 && (
                 <EmptyState
                   icon={Receipt}
                   title="Nenhuma conta a receber"
@@ -394,7 +448,7 @@ function BillsPage() {
                 />
               )}
               <ul className="divide-y divide-border/60">
-                {receivables.map((item) => (
+                {visibleReceivables.map((item) => (
                   <li
                     key={item.id}
                     className="flex flex-wrap items-center justify-between gap-4 p-4"

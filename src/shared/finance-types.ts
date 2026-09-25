@@ -36,7 +36,7 @@ export type Account = {
   logoUrl?: string | null;
 };
 
-/** Transação financeira */
+/** Tipo de transação financeira */
 export type Transaction = {
   id: string;
   description: string;
@@ -52,6 +52,7 @@ export type Transaction = {
   isRecurring?: boolean;
   archivedAt?: string | null;
   recordOrigin?: RecordOrigin;
+  tags?: string[];
 };
 
 /** Item de orçamento */
@@ -96,4 +97,64 @@ export type AgentInsight = {
   severity: "info" | "success" | "warning" | "danger";
   archivedAt?: string | null;
   recordOrigin?: RecordOrigin;
+};
+
+/** Empréstimo */
+export type Loan = {
+  id: string;
+  name: string;
+  principal: number;
+  interestRate: number;
+  installment: number;
+  remaining: number;
+  dueDate: string;
+  status: "active" | "paid" | "overdue";
+  totalPaid: number;
+  createdAt: string;
+  archivedAt?: string | null;
+};
+
+/** Projeto pessoal */
+export type Project = {
+  id: string;
+  name: string;
+  description: string;
+  target: number;
+  current: number;
+  category: string;
+  startDate: string;
+  endDate: string;
+  status: "active" | "completed" | "archived";
+  archivedAt?: string | null;
+};
+
+/** Notificação financeira */
+export type FinancialNotification = {
+  id: string;
+  type: "budget_warning" | "budget_over" | "bill_overdue" | "bill_due_soon" | "insight";
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  actionUrl?: string;
+};
+
+/** Fundo de investimento para comparador */
+export type FundData = {
+  name: string;
+  code: string;
+  type: "DI" | "Renda Fixa" | "Multimercado" | "Ações" | "Cripto";
+  institution: string;
+  dailyReturn: number;
+  annualReturn: number;
+  minInvest: number;
+  liquidity: string;
+  rating: number;
+};
+
+/** Resultado do comparador de fundos */
+export type FundComparison = {
+  fund: FundData;
+  rank: number;
+  percentile: number;
 };

@@ -19,13 +19,18 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedGoalsRouteImport } from './routes/_authenticated/goals'
 import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated/insights'
 import { Route as AuthenticatedInvestmentsRouteImport } from './routes/_authenticated/investments'
+import { Route as AuthenticatedLoansRouteImport } from './routes/_authenticated/loans'
 import { Route as AuthenticatedPiggyBanksRouteImport } from './routes/_authenticated/piggy-banks'
+import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedReconciliationRouteImport } from './routes/_authenticated/reconciliation'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedSecurityRouteImport } from './routes/_authenticated/security'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedTagsRouteImport } from './routes/_authenticated/tags'
 import { Route as AuthenticatedTaxesRouteImport } from './routes/_authenticated/taxes'
 import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated/transactions'
+import { Route as ApiAgentHealthRouteImport } from './routes/api/agent-health'
+import { Route as ApiAgentToolsRouteImport } from './routes/api/agent-tools'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiDocumentsRouteImport } from './routes/api/documents'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
@@ -38,6 +43,7 @@ import { Route as AuthenticatedWalletIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedWalletAccountsRouteImport } from './routes/_authenticated/wallet/accounts'
 import { Route as AuthenticatedWalletConnectRouteImport } from './routes/_authenticated/wallet/connect'
 import { Route as AuthenticatedWalletImportsRouteImport } from './routes/_authenticated/wallet/imports'
+import { Route as AuthenticatedWalletStatementRouteImport } from './routes/_authenticated/wallet/statement'
 import { Route as ApiLedgerBalancesRouteImport } from './routes/api/ledger.balances'
 import { Route as ApiTransactionsSummaryRouteImport } from './routes/api/transactions.summary'
 import { Route as ApiWebhooksOpenfinanceProviderRouteImport } from './routes/api/webhooks/openfinance/$provider'
@@ -92,9 +98,19 @@ const AuthenticatedInvestmentsRoute =
     path: '/investments',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedLoansRoute = AuthenticatedLoansRouteImport.update({
+  id: '/loans',
+  path: '/loans',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPiggyBanksRoute = AuthenticatedPiggyBanksRouteImport.update({
   id: '/piggy-banks',
   path: '/piggy-banks',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedProjectsRoute = AuthenticatedProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedReconciliationRoute =
@@ -118,6 +134,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTagsRoute = AuthenticatedTagsRouteImport.update({
+  id: '/tags',
+  path: '/tags',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTaxesRoute = AuthenticatedTaxesRouteImport.update({
   id: '/taxes',
   path: '/taxes',
@@ -129,6 +150,16 @@ const AuthenticatedTransactionsRoute =
     path: '/transactions',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiAgentHealthRoute = ApiAgentHealthRouteImport.update({
+  id: '/api/agent-health',
+  path: '/api/agent-health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentToolsRoute = ApiAgentToolsRouteImport.update({
+  id: '/api/agent-tools',
+  path: '/api/agent-tools',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -193,6 +224,12 @@ const AuthenticatedWalletImportsRoute =
     path: '/wallet/imports',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedWalletStatementRoute =
+  AuthenticatedWalletStatementRouteImport.update({
+    id: '/wallet/statement',
+    path: '/wallet/statement',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiLedgerBalancesRoute = ApiLedgerBalancesRouteImport.update({
   id: '/api/ledger/balances',
   path: '/api/ledger/balances',
@@ -220,13 +257,18 @@ export interface FileRoutesByFullPath {
   '/goals': typeof AuthenticatedGoalsRoute
   '/insights': typeof AuthenticatedInsightsRoute
   '/investments': typeof AuthenticatedInvestmentsRoute
+  '/loans': typeof AuthenticatedLoansRoute
   '/piggy-banks': typeof AuthenticatedPiggyBanksRoute
+  '/projects': typeof AuthenticatedProjectsRoute
   '/reconciliation': typeof AuthenticatedReconciliationRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/security': typeof AuthenticatedSecurityRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/tags': typeof AuthenticatedTagsRoute
   '/taxes': typeof AuthenticatedTaxesRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
+  '/api/agent-health': typeof ApiAgentHealthRoute
+  '/api/agent-tools': typeof ApiAgentToolsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/documents': typeof ApiDocumentsRoute
   '/api/health': typeof ApiHealthRoute
@@ -238,6 +280,7 @@ export interface FileRoutesByFullPath {
   '/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/wallet/imports': typeof AuthenticatedWalletImportsRoute
+  '/wallet/statement': typeof AuthenticatedWalletStatementRoute
   '/api/ledger/balances': typeof ApiLedgerBalancesRoute
   '/api/transactions/summary': typeof ApiTransactionsSummaryRoute
   '/wallet/': typeof AuthenticatedWalletIndexRoute
@@ -253,13 +296,18 @@ export interface FileRoutesByTo {
   '/goals': typeof AuthenticatedGoalsRoute
   '/insights': typeof AuthenticatedInsightsRoute
   '/investments': typeof AuthenticatedInvestmentsRoute
+  '/loans': typeof AuthenticatedLoansRoute
   '/piggy-banks': typeof AuthenticatedPiggyBanksRoute
+  '/projects': typeof AuthenticatedProjectsRoute
   '/reconciliation': typeof AuthenticatedReconciliationRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/security': typeof AuthenticatedSecurityRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/tags': typeof AuthenticatedTagsRoute
   '/taxes': typeof AuthenticatedTaxesRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
+  '/api/agent-health': typeof ApiAgentHealthRoute
+  '/api/agent-tools': typeof ApiAgentToolsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/documents': typeof ApiDocumentsRoute
   '/api/health': typeof ApiHealthRoute
@@ -271,6 +319,7 @@ export interface FileRoutesByTo {
   '/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/wallet/imports': typeof AuthenticatedWalletImportsRoute
+  '/wallet/statement': typeof AuthenticatedWalletStatementRoute
   '/api/ledger/balances': typeof ApiLedgerBalancesRoute
   '/api/transactions/summary': typeof ApiTransactionsSummaryRoute
   '/wallet': typeof AuthenticatedWalletIndexRoute
@@ -288,13 +337,18 @@ export interface FileRoutesById {
   '/_authenticated/goals': typeof AuthenticatedGoalsRoute
   '/_authenticated/insights': typeof AuthenticatedInsightsRoute
   '/_authenticated/investments': typeof AuthenticatedInvestmentsRoute
+  '/_authenticated/loans': typeof AuthenticatedLoansRoute
   '/_authenticated/piggy-banks': typeof AuthenticatedPiggyBanksRoute
+  '/_authenticated/projects': typeof AuthenticatedProjectsRoute
   '/_authenticated/reconciliation': typeof AuthenticatedReconciliationRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/security': typeof AuthenticatedSecurityRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/tags': typeof AuthenticatedTagsRoute
   '/_authenticated/taxes': typeof AuthenticatedTaxesRoute
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
+  '/api/agent-health': typeof ApiAgentHealthRoute
+  '/api/agent-tools': typeof ApiAgentToolsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/documents': typeof ApiDocumentsRoute
   '/api/health': typeof ApiHealthRoute
@@ -306,6 +360,7 @@ export interface FileRoutesById {
   '/_authenticated/wallet/accounts': typeof AuthenticatedWalletAccountsRoute
   '/_authenticated/wallet/connect': typeof AuthenticatedWalletConnectRoute
   '/_authenticated/wallet/imports': typeof AuthenticatedWalletImportsRoute
+  '/_authenticated/wallet/statement': typeof AuthenticatedWalletStatementRoute
   '/api/ledger/balances': typeof ApiLedgerBalancesRoute
   '/api/transactions/summary': typeof ApiTransactionsSummaryRoute
   '/_authenticated/wallet/': typeof AuthenticatedWalletIndexRoute
@@ -323,13 +378,18 @@ export interface FileRouteTypes {
     | '/goals'
     | '/insights'
     | '/investments'
+    | '/loans'
     | '/piggy-banks'
+    | '/projects'
     | '/reconciliation'
     | '/reports'
     | '/security'
     | '/settings'
+    | '/tags'
     | '/taxes'
     | '/transactions'
+    | '/api/agent-health'
+    | '/api/agent-tools'
     | '/api/chat'
     | '/api/documents'
     | '/api/health'
@@ -341,6 +401,7 @@ export interface FileRouteTypes {
     | '/wallet/accounts'
     | '/wallet/connect'
     | '/wallet/imports'
+    | '/wallet/statement'
     | '/api/ledger/balances'
     | '/api/transactions/summary'
     | '/wallet/'
@@ -356,13 +417,18 @@ export interface FileRouteTypes {
     | '/goals'
     | '/insights'
     | '/investments'
+    | '/loans'
     | '/piggy-banks'
+    | '/projects'
     | '/reconciliation'
     | '/reports'
     | '/security'
     | '/settings'
+    | '/tags'
     | '/taxes'
     | '/transactions'
+    | '/api/agent-health'
+    | '/api/agent-tools'
     | '/api/chat'
     | '/api/documents'
     | '/api/health'
@@ -374,6 +440,7 @@ export interface FileRouteTypes {
     | '/wallet/accounts'
     | '/wallet/connect'
     | '/wallet/imports'
+    | '/wallet/statement'
     | '/api/ledger/balances'
     | '/api/transactions/summary'
     | '/wallet'
@@ -390,13 +457,18 @@ export interface FileRouteTypes {
     | '/_authenticated/goals'
     | '/_authenticated/insights'
     | '/_authenticated/investments'
+    | '/_authenticated/loans'
     | '/_authenticated/piggy-banks'
+    | '/_authenticated/projects'
     | '/_authenticated/reconciliation'
     | '/_authenticated/reports'
     | '/_authenticated/security'
     | '/_authenticated/settings'
+    | '/_authenticated/tags'
     | '/_authenticated/taxes'
     | '/_authenticated/transactions'
+    | '/api/agent-health'
+    | '/api/agent-tools'
     | '/api/chat'
     | '/api/documents'
     | '/api/health'
@@ -408,6 +480,7 @@ export interface FileRouteTypes {
     | '/_authenticated/wallet/accounts'
     | '/_authenticated/wallet/connect'
     | '/_authenticated/wallet/imports'
+    | '/_authenticated/wallet/statement'
     | '/api/ledger/balances'
     | '/api/transactions/summary'
     | '/_authenticated/wallet/'
@@ -418,6 +491,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiAgentHealthRoute: typeof ApiAgentHealthRoute
+  ApiAgentToolsRoute: typeof ApiAgentToolsRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiDocumentsRoute: typeof ApiDocumentsRoute
   ApiHealthRoute: typeof ApiHealthRoute
@@ -502,11 +577,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInvestmentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/loans': {
+      id: '/_authenticated/loans'
+      path: '/loans'
+      fullPath: '/loans'
+      preLoaderRoute: typeof AuthenticatedLoansRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/piggy-banks': {
       id: '/_authenticated/piggy-banks'
       path: '/piggy-banks'
       fullPath: '/piggy-banks'
       preLoaderRoute: typeof AuthenticatedPiggyBanksRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects': {
+      id: '/_authenticated/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof AuthenticatedProjectsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/reconciliation': {
@@ -537,6 +626,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tags': {
+      id: '/_authenticated/tags'
+      path: '/tags'
+      fullPath: '/tags'
+      preLoaderRoute: typeof AuthenticatedTagsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/taxes': {
       id: '/_authenticated/taxes'
       path: '/taxes'
@@ -550,6 +646,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/transactions'
       preLoaderRoute: typeof AuthenticatedTransactionsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/agent-health': {
+      id: '/api/agent-health'
+      path: '/api/agent-health'
+      fullPath: '/api/agent-health'
+      preLoaderRoute: typeof ApiAgentHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent-tools': {
+      id: '/api/agent-tools'
+      path: '/api/agent-tools'
+      fullPath: '/api/agent-tools'
+      preLoaderRoute: typeof ApiAgentToolsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/chat': {
       id: '/api/chat'
@@ -635,6 +745,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWalletImportsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/wallet/statement': {
+      id: '/_authenticated/wallet/statement'
+      path: '/wallet/statement'
+      fullPath: '/wallet/statement'
+      preLoaderRoute: typeof AuthenticatedWalletStatementRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/ledger/balances': {
       id: '/api/ledger/balances'
       path: '/api/ledger/balances'
@@ -667,16 +784,20 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedGoalsRoute: typeof AuthenticatedGoalsRoute
   AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
   AuthenticatedInvestmentsRoute: typeof AuthenticatedInvestmentsRoute
+  AuthenticatedLoansRoute: typeof AuthenticatedLoansRoute
   AuthenticatedPiggyBanksRoute: typeof AuthenticatedPiggyBanksRoute
+  AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRoute
   AuthenticatedReconciliationRoute: typeof AuthenticatedReconciliationRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSecurityRoute: typeof AuthenticatedSecurityRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedTagsRoute: typeof AuthenticatedTagsRoute
   AuthenticatedTaxesRoute: typeof AuthenticatedTaxesRoute
   AuthenticatedTransactionsRoute: typeof AuthenticatedTransactionsRoute
   AuthenticatedWalletAccountsRoute: typeof AuthenticatedWalletAccountsRoute
   AuthenticatedWalletConnectRoute: typeof AuthenticatedWalletConnectRoute
   AuthenticatedWalletImportsRoute: typeof AuthenticatedWalletImportsRoute
+  AuthenticatedWalletStatementRoute: typeof AuthenticatedWalletStatementRoute
   AuthenticatedWalletIndexRoute: typeof AuthenticatedWalletIndexRoute
 }
 
@@ -688,16 +809,20 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedGoalsRoute: AuthenticatedGoalsRoute,
   AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
   AuthenticatedInvestmentsRoute: AuthenticatedInvestmentsRoute,
+  AuthenticatedLoansRoute: AuthenticatedLoansRoute,
   AuthenticatedPiggyBanksRoute: AuthenticatedPiggyBanksRoute,
+  AuthenticatedProjectsRoute: AuthenticatedProjectsRoute,
   AuthenticatedReconciliationRoute: AuthenticatedReconciliationRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSecurityRoute: AuthenticatedSecurityRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedTagsRoute: AuthenticatedTagsRoute,
   AuthenticatedTaxesRoute: AuthenticatedTaxesRoute,
   AuthenticatedTransactionsRoute: AuthenticatedTransactionsRoute,
   AuthenticatedWalletAccountsRoute: AuthenticatedWalletAccountsRoute,
   AuthenticatedWalletConnectRoute: AuthenticatedWalletConnectRoute,
   AuthenticatedWalletImportsRoute: AuthenticatedWalletImportsRoute,
+  AuthenticatedWalletStatementRoute: AuthenticatedWalletStatementRoute,
   AuthenticatedWalletIndexRoute: AuthenticatedWalletIndexRoute,
 }
 
@@ -720,6 +845,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiAgentHealthRoute: ApiAgentHealthRoute,
+  ApiAgentToolsRoute: ApiAgentToolsRoute,
   ApiChatRoute: ApiChatRoute,
   ApiDocumentsRoute: ApiDocumentsRoute,
   ApiHealthRoute: ApiHealthRoute,

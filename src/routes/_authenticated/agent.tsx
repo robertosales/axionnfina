@@ -1,8 +1,8 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { createFileRoute } from "@tanstack/react-router";
-import { Bot, Loader2, Send, Sparkles, User } from "lucide-react";
-import { useState } from "react";
+import { Bot, Loader2, Send, Sparkles, User, AlertTriangle, Bell } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { ToolCallRenderer } from "@/components/agent/ToolCallCards";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccounts, useBudgets, useGoals, useInsights } from "@/lib/finance-data";
+import { fetchBudgetAlerts, fetchBillAlerts } from "@/lib/finance/budget";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +52,8 @@ function AgentPage() {
   const { items: budgetItems } = useBudgets();
   const { data: goals = [] } = useGoals();
   const { data: insights = [] } = useInsights();
+  const [budgetAlerts, setBudgetAlerts] = useState<Array<{ category: string; ratio: number; level: string }>>([]);
+  const [billAlerts, setBillAlerts] = useState<Array<{ name: string; daysUntil: number; status: string }>>([]);
 
   const { messages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({
@@ -68,6 +71,25 @@ function AgentPage() {
   const liquidity = accounts
     .filter((account) => account.type !== "CREDIT_CARD")
     .reduce((sum, account) => sum + account.balance, 0);
+
+  const loadAlerts = async () => {
+    try {
+      const bAlerts = await fetchBudgetAlerts();
+      setBudgetAlerts(
+        bAlerts.map((a) => ({ category: a.category, ratio: a.ratio, level: a.level })),
+      );
+      const billAlertsResult = await fetchBillAlerts();
+      setBillAlerts(
+        billAlertsResult.map((a) => ({ name: a.name, daysUntil: a.daysUntil, status: a.status })),
+      );
+    } catch {
+      // Silently fail
+    }
+  };
+
+  useEffect(() => {
+    void loadAlerts();
+  }, []);
 
   const send = (text: string) => {
     const content = text.trim();
@@ -251,18 +273,47 @@ function AgentPage() {
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Alertas de orçamento
           </h3>
-          <ul className="mt-2 space-y-1 text-xs">
-            {budgetItems
-              .filter((item) => item.planned > 0 && item.spent / item.planned >= 0.8)
-              .map((item) => (
-                <li key={item.id} className="flex items-center justify-between gap-2">
-                  <span className="truncate">{item.category}</span>
-                  <Badge variant="outline" className="rounded-full text-[10px]">
-                    {Math.round((item.spent / item.planned) * 100)}%
+          {budgetAlerts.length > 0 ? (
+            <ul className="mt-2 space-y-1 text-xs">
+              {budgetAlerts.map((alert, i) => (
+                <li key={i} className="flex items-center justify-between gap-2">
+                  <span className="truncate">{alert.category}</span>
+<Badge
+                     variant={alert.level === "danger" ? "destructive" : "secondary"}
+                     className="rounded-full text-[10px]"
+                   >
+                    <AlertTriangle className="mr-0.5 size-2" />
+                    {Math.round(alert.ratio * 100)}%
                   </Badge>
                 </li>
               ))}
-          </ul>
+            </ul>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-1">Orçamento dentro do esperado</p>
+          )}
+
+          <Separator className="my-4" />
+
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Contas a vencer
+          </h3>
+          {billAlerts.length > 0 ? (
+            <ul className="mt-2 space-y-1 text-xs">
+              {billAlerts.map((alert, i) => (
+                <li key={i} className="flex items-center justify-between gap-2">
+                  <span className="truncate">{alert.name}</span>
+<Badge
+                     variant={alert.status === "overdue" ? "destructive" : "secondary"}
+                     className="rounded-full text-[10px]"
+                   >
+                    {alert.daysUntil}d
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-1">Nenhuma conta próxima do vencimento</p>
+          )}
 
           <Separator className="my-4" />
 

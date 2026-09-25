@@ -74,6 +74,7 @@ export function useTransactions(limit: number | null = 200, showArchived = false
         isRecurring: row.is_recurring,
         archivedAt: row.archived_at,
         recordOrigin: row.record_origin as NonNullable<Transaction["recordOrigin"]>,
+        tags: (row as unknown as { tags?: string[] }).tags ?? [],
       }));
     },
   });
@@ -90,6 +91,7 @@ export function useCreateTransaction() {
       merchant?: string;
       accountId?: string | null;
       occurredAt: string;
+      tags?: string[];
     }) => {
       const { error } = await supabase.rpc("create_manual_transaction", {
         p_data: {
@@ -100,6 +102,7 @@ export function useCreateTransaction() {
           category: input.category,
           merchant: input.merchant ?? null,
           occurred_at: input.occurredAt,
+          tags: input.tags ?? [],
         } as unknown as DbJson,
       });
       if (error) throw error;
@@ -181,6 +184,7 @@ export function useUpdateTransaction() {
       merchant?: string;
       accountId?: string | null;
       occurredAt: string;
+      tags?: string[];
     }) => {
       const { error } = await supabase.rpc("edit_transaction", {
         p_id: input.id,
@@ -192,6 +196,7 @@ export function useUpdateTransaction() {
           category: input.category,
           merchant: input.merchant ?? null,
           occurred_at: input.occurredAt,
+          tags: input.tags ?? null,
         },
       });
       if (error) throw error;

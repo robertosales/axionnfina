@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { untypedDb } from "./common";
 
 export type LifecycleEntity =
   | "account"
@@ -12,7 +13,9 @@ export type LifecycleEntity =
   | "payable"
   | "receivable"
   | "tax_event"
-  | "insight";
+  | "insight"
+  | "loan"
+  | "project";
 
 export const lifecycleQueryKey: Record<LifecycleEntity, string> = {
   account: "accounts",
@@ -26,6 +29,8 @@ export const lifecycleQueryKey: Record<LifecycleEntity, string> = {
   receivable: "receivables",
   tax_event: "tax-events",
   insight: "insights",
+  loan: "loans",
+  project: "projects",
 };
 
 export async function setArchived(entity: LifecycleEntity, id: string, archived: boolean) {
@@ -63,6 +68,10 @@ export async function setArchived(entity: LifecycleEntity, id: string, archived:
         return supabase.from("tax_events").update({ archived_at: archivedAt }).eq("id", id);
       case "insight":
         return supabase.from("agent_insights").update({ archived_at: archivedAt }).eq("id", id);
+      case "loan":
+        return untypedDb().from("loans").update({ archived_at: archivedAt }).eq("id", id);
+      case "project":
+        return untypedDb().from("projects").update({ archived_at: archivedAt }).eq("id", id);
     }
   };
   const { error } = await run();
@@ -94,6 +103,10 @@ export async function deleteEntity(entity: LifecycleEntity, id: string) {
         return supabase.from("tax_events").delete().eq("id", id);
       case "insight":
         return supabase.from("agent_insights").delete().eq("id", id);
+      case "loan":
+        return untypedDb().from("loans").delete().eq("id", id);
+      case "project":
+        return untypedDb().from("projects").delete().eq("id", id);
     }
   };
   const { error } = await run();

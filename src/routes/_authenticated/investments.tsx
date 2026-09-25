@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/finance/EmptyState";
 import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { FgcExposurePanel } from "@/components/finance/FgcExposurePanel";
 import { FirstInvestmentGuide } from "@/components/finance/FirstInvestmentGuide";
+import { FundComparator } from "@/components/finance/FundComparator";
 import { InvestmentMaturityLadder } from "@/components/finance/InvestmentMaturityLadder";
 import { InvestmentPlanSimulator } from "@/components/finance/InvestmentPlanSimulator";
 import { InvestmentPlanTracking } from "@/components/finance/InvestmentPlanTracking";
@@ -45,6 +46,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import {
   useEntityLifecycle,
+  useFundComparisons,
   useInvestments,
   useUpsertInvestmentPosition,
   type Position,
@@ -80,6 +82,7 @@ function InvestmentsPage() {
   const [showArchived, setShowArchived] = useState(false);
   const { positions, allocation, total, isLoading, isError, refetch } =
     useInvestments(showArchived);
+  const { data: fundComparisons = [] } = useFundComparisons();
   const lifecycle = useEntityLifecycle("investment");
   const upsert = useUpsertInvestmentPosition();
   const [open, setOpen] = useState(false);
@@ -231,6 +234,7 @@ function InvestmentsPage() {
           <div className="mb-6 space-y-6">
             <FgcExposurePanel positions={positions} />
             <InvestmentMaturityLadder positions={positions} />
+            <FundComparator data={fundComparisons} />
           </div>
         )}
 

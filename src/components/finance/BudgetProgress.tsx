@@ -1,5 +1,6 @@
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { AlertTriangle } from "lucide-react";
 import type { BudgetItem } from "@/shared/finance-types";
 
 /** Barra de orçamento com marcadores de threshold (80% alerta, 100% estouro). */
@@ -17,7 +18,12 @@ export function BudgetProgress({ item }: { item: BudgetItem }) {
   return (
     <div className="space-y-2">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-sm font-medium">{item.category}</span>
+        <span className="text-sm font-medium">
+          {item.category}
+          {ratio >= 0.8 && (
+            <AlertTriangle className="inline size-3 ml-1" />
+          )}
+        </span>
         <span className="numeric text-xs text-muted-foreground">
           <span className={cn(state === "danger" && "text-danger")}>{formatBRL(item.spent)}</span>
           {" / "}
@@ -51,6 +57,11 @@ export function BudgetProgress({ item }: { item: BudgetItem }) {
           </span>
         )}
       </div>
+      {ratio >= 0.8 && (
+        <p className={cn("text-[10px] font-medium", ratio >= 1 ? "text-danger" : "text-warning")}>
+          {ratio >= 1 ? "⚠ Orçamento ultrapassado!" : "⚡ Atenção: 80% do orçamento utilizado"}
+        </p>
+      )}
     </div>
   );
 }

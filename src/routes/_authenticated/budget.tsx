@@ -5,8 +5,8 @@ import { useFinancialConfirmation } from "@/components/finance/use-financial-con
 import { ValidatedInput } from "@/components/finance/ValidatedInput";
 import { parseFinancialInput } from "@/lib/financial-input";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Wallet } from "lucide-react";
-import { useState } from "react";
+import { AlertTriangle, Plus, Wallet } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { BudgetProgress } from "@/components/finance/BudgetProgress";
@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/finance/EmptyState";
 import { EntityActionsMenu } from "@/components/finance/EntityActionsMenu";
 import { LifecycleFilter } from "@/components/finance/LifecycleFilter";
 import { AppShell } from "@/components/layout/AppShell";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useBudgets, useEntityLifecycle, useUpsertBudget } from "@/lib/finance-data";
+import { fetchBudgetAlerts } from "@/lib/finance/budget";
 import { formatBRL } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/budget")({
@@ -51,6 +53,7 @@ export const Route = createFileRoute("/_authenticated/budget")({
 function BudgetPage() {
   const { confirm, confirmation } = useFinancialConfirmation();
   const [showArchived, setShowArchived] = useState(false);
+  const [alerts, setAlerts] = useState<Array<{ category: string; ratio: number; level: "warning" | "danger" }>>([]);
   const {
     items: budgetItems,
     isLoading,
@@ -66,6 +69,21 @@ function BudgetPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [category, setCategory] = useState("");
   const [planned, setPlanned] = useState("");
+
+  const loadAlerts = async () => {
+    try {
+      const result = await fetchBudgetAlerts();
+      setAlerts(
+        result.map((a) => ({ category: a.category, ratio: a.ratio, level: a.level })),
+      );
+    } catch {
+      // Silently fail
+    }
+  };
+
+  useEffect(() => {
+    void loadAlerts();
+  }, []);
 
   const save = async () => {
     const value = parseFinancialInput(planned);
@@ -128,6 +146,36 @@ function BudgetPage() {
           )}
         </div>
       </header>
+      {alerts.length > 0 && (
+        <section aria-label="Alertas de orçamento" className="mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="size-4 text-warning" aria-hidden />
+            <h2 className="text-sm font-semibold text-warning">
+              Alertas de Orçamento
+            </h2>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {alerts.map((alert) => (
+              <Card
+                key={alert.category}
+                className={`border p-3 ${alert.level === "danger" ? "border-danger/40 bg-danger/5" : "border-warning/40 bg-warning/5"}`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{alert.category}</span>
+                  <Badge variant={alert.level === "danger" ? "destructive" : "secondary"}>
+                    {Math.round(alert.ratio * 100)}%
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {alert.level === "danger"
+                    ? "Orçamento ultrapassado!"
+                    : "Atenção: 80% do orçamento utilizado"}
+                </p>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
       <DataState loading={isLoading} error={queryError || isError} onRetry={() => void refetch()}>
         {budgetItems.length === 0 && (
           <EmptyState

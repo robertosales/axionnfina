@@ -6,7 +6,7 @@ import { useFinancialConfirmation } from "@/components/finance/use-financial-con
 import { ValidatedInput } from "@/components/finance/ValidatedInput";
 import { localDateInput, parseFinancialInput } from "@/lib/financial-input";
 import { createFileRoute } from "@tanstack/react-router";
-import { FileText, Plus } from "lucide-react";
+import { Download, FileText, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -166,6 +166,34 @@ function TaxesPage() {
     { label: "Dividendos", base: data?.dividends ?? 0, tax: 0, note: "Isentos na pessoa física" },
   ];
 
+  const exportCarneLeao = () => {
+    const cell = (v: string | number) => `"${String(v).replaceAll('"', '""')}"`;
+    const lines = [
+      "﻿mes;ano;natureza;base_calculo;imposto;retido_fonte;darf_estimada",
+      ...rows.map((r) =>
+        [
+          String(now.getMonth() + 1).padStart(2, "0"),
+          now.getFullYear(),
+          r.label,
+          Number(r.base).toFixed(2).replace(".", ","),
+          Number(r.tax).toFixed(2).replace(".", ","),
+          Number(data?.withheld ?? 0).toFixed(2).replace(".", ","),
+          Number(data?.darf_due ?? 0).toFixed(2).replace(".", ","),
+        ]
+          .map((v, i) => (i > 2 ? v : cell(v)))
+          .join(";"),
+      ),
+    ];
+    const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `carne-leao-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("Carnê-Leão exportado em CSV");
+  };
+
   return (
     <AppShell>
       {confirmation}
@@ -238,6 +266,9 @@ function TaxesPage() {
                 Estimativa informativa gerada a partir das operações sincronizadas. A apuração
                 definitiva depende da conferência de custos médios e prejuízos acumulados.
               </p>
+              <Button variant="outline" size="sm" className="mt-4 w-full" onClick={exportCarneLeao}>
+                <Download className="size-4" /> Exportar Carnê-Leão (CSV)
+              </Button>
             </Card>
           </div>
         )}

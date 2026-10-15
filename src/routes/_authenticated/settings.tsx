@@ -156,17 +156,12 @@ function SettingsPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             {isLoading && <p className="text-sm text-muted-foreground">Carregando contas…</p>}
             {!isLoading && accounts.length === 0 && (
-              <EmptyState
-                title="Nenhuma conta cadastrada"
-                className="sm:col-span-2"
-              />
+              <EmptyState title="Nenhuma conta cadastrada" className="sm:col-span-2" />
             )}
             {accounts.map((account) => (
               <AccountCard key={account.id} account={account} />
             ))}
           </div>
-
-
         </div>
 
         <Card className="h-fit rounded-xl border-border/60 p-5 shadow-elevation-1">

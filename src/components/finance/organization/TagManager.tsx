@@ -31,7 +31,13 @@ import { formatBRL } from "@/lib/format";
 
 export function TagManager() {
   const { confirm, confirmation } = useFinancialConfirmation();
-  const { data: transactions = [], isLoading, isError, error: queryError, refetch } = useTransactions(null);
+  const {
+    data: transactions = [],
+    isLoading,
+    isError,
+    error: queryError,
+    refetch,
+  } = useTransactions(null);
   const rename = useBulkRenameTag();
   const [search, setSearch] = useState("");
   const [renameOpen, setRenameOpen] = useState(false);
@@ -71,7 +77,8 @@ export function TagManager() {
       toast.error("Essa tag já existe. Use Mesclar para juntar as duas.");
       return;
     }
-    if (!(await confirm(`Renomear a tag "${activeTag}" para "${name}" em todos os lançamentos?`))) return;
+    if (!(await confirm(`Renomear a tag "${activeTag}" para "${name}" em todos os lançamentos?`)))
+      return;
     rename.mutate(
       { from: activeTag, to: name, transactions },
       {
@@ -108,7 +115,11 @@ export function TagManager() {
 
   const doDelete = async (tag: string) => {
     const count = stats.find((s) => s.tag === tag)?.count ?? 0;
-    if (!(await confirm(`Excluir a tag "${tag}" de ${count} lançamento(s)? Os lançamentos são mantidos.`)))
+    if (
+      !(await confirm(
+        `Excluir a tag "${tag}" de ${count} lançamento(s)? Os lançamentos são mantidos.`,
+      ))
+    )
       return;
     rename.mutate(
       { from: tag, to: null, transactions },
@@ -210,7 +221,12 @@ export function TagManager() {
               />
             </div>
             <DialogFooter>
-              <Button data-financial-submit type="button" onClick={doRename} disabled={rename.isPending}>
+              <Button
+                data-financial-submit
+                type="button"
+                onClick={doRename}
+                disabled={rename.isPending}
+              >
                 {rename.isPending ? "Salvando…" : "Renomear"}
               </Button>
             </DialogFooter>

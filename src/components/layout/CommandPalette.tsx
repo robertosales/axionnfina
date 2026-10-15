@@ -70,10 +70,22 @@ export function CommandPalette({ open, onOpenChange }: Props) {
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading="Navegar">
-          <CommandItem value="Categorias e Tags categorias" onSelect={() => run("Categorias", () => navigate({ to: "/categories", search: { tab: "categories" } }))}>
+          <CommandItem
+            value="Categorias e Tags categorias"
+            onSelect={() =>
+              run("Categorias", () =>
+                navigate({ to: "/categories", search: { tab: "categories" } }),
+              )
+            }
+          >
             <Tags className="size-4" /> Categorias e Tags
           </CommandItem>
-          <CommandItem value="Tags etiquetas" onSelect={() => run("Tags", () => navigate({ to: "/categories", search: { tab: "tags" } }))}>
+          <CommandItem
+            value="Tags etiquetas"
+            onSelect={() =>
+              run("Tags", () => navigate({ to: "/categories", search: { tab: "tags" } }))
+            }
+          >
             <Tag className="size-4" /> Tags
           </CommandItem>
           <CommandItem onSelect={() => run("Agente", () => navigate({ to: "/agent" }))}>

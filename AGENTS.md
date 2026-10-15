@@ -14,3 +14,7 @@
 - O usuário administra o Supabase exclusivamente pelo Lovable.
 - Prepare migrations SQL e instruções concretas para o usuário executar pelo Lovable; não presuma acesso direto ao banco nem solicite credenciais.
 - Não marque migrations, RLS ou regeneração de tipos como validadas sem receber o resultado da execução no Supabase.
+
+## Organization navigation
+
+- Manage transaction categories and tags in independent UI components under the authenticated `/categories` route with URL-backed tabs; keep `/tags` redirecting to the Tags tab so published links remain usable.

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.15"
   }
   public: {
     Tables: {
@@ -1726,6 +1726,54 @@ export type Database = {
         }
         Relationships: []
       }
+      loans: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          due_date: string
+          id: string
+          installment: number
+          interest_rate: number
+          name: string
+          principal: number
+          remaining: number
+          status: string
+          total_paid: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          due_date: string
+          id?: string
+          installment: number
+          interest_rate?: number
+          name: string
+          principal: number
+          remaining?: number
+          status?: string
+          total_paid?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          due_date?: string
+          id?: string
+          installment?: number
+          interest_rate?: number
+          name?: string
+          principal?: number
+          remaining?: number
+          status?: string
+          total_paid?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       net_worth_snapshots: {
         Row: {
           created_at: string
@@ -1782,6 +1830,39 @@ export type Database = {
           enabled?: boolean
           id?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          id: string
+          message: string
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean
+          title?: string
+          type?: string
           user_id?: string
         }
         Relationships: []
@@ -2265,6 +2346,54 @@ export type Database = {
           liquidity_preference?: string
           risk_profile?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          archived_at: string | null
+          category: string
+          created_at: string
+          current: number
+          description: string
+          end_date: string
+          id: string
+          name: string
+          start_date: string
+          status: string
+          target: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          category?: string
+          created_at?: string
+          current?: number
+          description?: string
+          end_date: string
+          id?: string
+          name: string
+          start_date: string
+          status?: string
+          target: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          category?: string
+          created_at?: string
+          current?: number
+          description?: string
+          end_date?: string
+          id?: string
+          name?: string
+          start_date?: string
+          status?: string
+          target?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -2848,6 +2977,7 @@ export type Database = {
           record_origin: string
           status: Database["public"]["Enums"]["transaction_status"]
           subcategory_id: string | null
+          tags: string[]
           transfer_pair_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
@@ -2878,6 +3008,7 @@ export type Database = {
           record_origin?: string
           status?: Database["public"]["Enums"]["transaction_status"]
           subcategory_id?: string | null
+          tags?: string[]
           transfer_pair_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
@@ -2908,6 +3039,7 @@ export type Database = {
           record_origin?: string
           status?: Database["public"]["Enums"]["transaction_status"]
           subcategory_id?: string | null
+          tags?: string[]
           transfer_pair_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string

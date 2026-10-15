@@ -1,18 +1,16 @@
 import { FinancialForm } from "@/components/finance/FinancialForm";
-import { DataState } from "@/components/finance/DataState";
 import { EmptyState } from "@/components/finance/EmptyState";
 import { MoneyInput } from "@/components/finance/MoneyInput";
 import { ValidatedInput } from "@/components/finance/ValidatedInput";
 import { PrivacySettings } from "@/components/finance/privacy-settings";
 import { parseFinancialInput } from "@/lib/financial-input";
 import { createFileRoute } from "@tanstack/react-router";
-import { Archive, CheckCircle2, Link2, Pencil, Plus, ShieldCheck, Tags } from "lucide-react";
+import { CheckCircle2, Link2, Plus, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { AccountCard } from "@/components/finance/AccountCard";
 import { AppShell } from "@/components/layout/AppShell";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -22,7 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -35,12 +32,8 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
   useAccounts,
-  useArchiveTransactionCategory,
   useCreateOpenFinanceConsent,
-  useCreateTransactionCategory,
   useOpenFinanceInstitutions,
-  useTransactionCategories,
-  useUpdateTransactionCategoryDefinition,
   useUpsertAccount,
 } from "@/lib/finance-data";
 import type { AccountType } from "@/shared/finance-types";
@@ -80,10 +73,6 @@ function SettingsPage() {
   const upsertAccount = useUpsertAccount();
   const institutionsQuery = useOpenFinanceInstitutions();
   const createConsent = useCreateOpenFinanceConsent();
-  const categoriesQuery = useTransactionCategories();
-  const createCategory = useCreateTransactionCategory();
-  const archiveCategory = useArchiveTransactionCategory();
-  const updateCategory = useUpdateTransactionCategoryDefinition();
   const [open, setOpen] = useState(false);
   const [institution, setInstitution] = useState("");
   const [name, setName] = useState("");
@@ -95,25 +84,6 @@ function SettingsPage() {
     Object.fromEntries(scopes.map((s) => [s.id, s.default])),
   );
   const [institutionId, setInstitutionId] = useState("");
-  const [categoryLabel, setCategoryLabel] = useState("");
-  const [categoryKind, setCategoryKind] = useState<"income" | "expense" | "transfer">("expense");
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
-  const [editingCategoryLabel, setEditingCategoryLabel] = useState("");
-
-  const saveCategory = () => {
-    createCategory.mutate(
-      { label: categoryLabel, kind: categoryKind },
-      {
-        onSuccess: () => {
-          toast.success("Categoria criada");
-          setCategoryLabel("");
-        },
-        onError: (error) =>
-          toast.error("Não foi possível concluir a operação. Confira os dados e tente novamente."),
-      },
-    );
-  };
-
   const connectOpenFinance = () => {
     if (!institutionId) {
       toast.error("Selecione uma instituição participante");
@@ -196,141 +166,7 @@ function SettingsPage() {
             ))}
           </div>
 
-          <Card className="p-5">
-            <div className="flex items-center gap-2">
-              <Tags className="size-4 text-primary" aria-hidden />
-              <h2 className="text-lg font-semibold">Categorias</h2>
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Organize os nomes usados nos seus lançamentos.
-            </p>
-            <div className="mt-5 grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_150px_auto]">
-              <div className="space-y-2">
-                <Label htmlFor="category-label">Nome da categoria</Label>
-                <Input
-                  id="category-label"
-                  value={categoryLabel}
-                  onChange={(event) => setCategoryLabel(event.target.value)}
-                  placeholder="Nova categoria"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category-kind">Tipo</Label>
-                <Select
-                  value={categoryKind}
-                  onValueChange={(value) => setCategoryKind(value as "income" | "expense")}
-                >
-                  <SelectTrigger id="category-kind" aria-label="Tipo da categoria">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="expense">Despesa</SelectItem>
-                    <SelectItem value="income">Receita</SelectItem>
-                    <SelectItem value="transfer">Transferência</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                onClick={saveCategory}
-                disabled={createCategory.isPending || !categoryLabel.trim()}
-              >
-                <Plus className="size-4" /> Adicionar
-              </Button>
-            </div>
-            <DataState
-              loading={categoriesQuery.isLoading}
-              error={categoriesQuery.error}
-              empty={!categoriesQuery.data?.length}
-              onRetry={() => void categoriesQuery.refetch()}
-            >
-              <div className="mt-5 overflow-hidden rounded-xl border border-border/60">
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 bg-muted px-4 py-3 text-xs font-semibold">
-                  <span>Nome e tipo</span>
-                  <span>Ações</span>
-                </div>
-                {(categoriesQuery.data ?? []).map((category) => (
-                  <div key={category.id} className="border-t border-border/60">
-                    <div className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-muted/30">
-                      <div className="min-w-0">
-                        <p className="break-words text-sm font-medium">{category.label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {category.kind === "income"
-                            ? "Receita"
-                            : category.kind === "expense"
-                              ? "Despesa"
-                              : "Sistema"}
-                        </p>
-                      </div>
-                      {!category.isSystem && (
-                        <div className="flex shrink-0 gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-10"
-                            title="Editar categoria"
-                            aria-label={`Editar categoria ${category.label}`}
-                            onClick={() => {
-                              setEditingCategoryId(category.id);
-                              setEditingCategoryLabel(category.label);
-                            }}
-                          >
-                            <Pencil className="size-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-10"
-                            title="Arquivar categoria"
-                            aria-label={`Arquivar categoria ${category.label}`}
-                            onClick={() =>
-                              archiveCategory.mutate(category.id, {
-                                onSuccess: () => toast.success("Categoria arquivada"),
-                                onError: (error) =>
-                                  toast.error(
-                                    "Não foi possível concluir a operação. Confira os dados e tente novamente.",
-                                  ),
-                              })
-                            }
-                          >
-                            <Archive className="size-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                    {editingCategoryId === category.id && (
-                      <div className="flex flex-wrap gap-2 bg-muted/20 p-4">
-                        <Input
-                          value={editingCategoryLabel}
-                          onChange={(event) => setEditingCategoryLabel(event.target.value)}
-                          aria-label="Novo nome da categoria"
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            updateCategory.mutate(
-                              { id: category.id, label: editingCategoryLabel },
-                              {
-                                onSuccess: () => {
-                                  setEditingCategoryId(null);
-                                  toast.success("Categoria atualizada");
-                                },
-                                onError: (error) =>
-                                  toast.error(
-                                    "Não foi possível concluir a operação. Confira os dados e tente novamente.",
-                                  ),
-                              },
-                            )
-                          }
-                        >
-                          Salvar
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </DataState>
-          </Card>
+
         </div>
 
         <Card className="h-fit rounded-xl border-border/60 p-5 shadow-elevation-1">

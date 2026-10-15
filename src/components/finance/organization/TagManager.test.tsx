@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ mutate: vi.fn(), confirm: vi.fn() }));
@@ -30,7 +30,7 @@ describe("TagManager", () => {
     render(<TagManager />);
     fireEvent.click(screen.getAllByRole("button", { name: "Renomear" })[0] as HTMLElement);
     fireEvent.change(screen.getByLabelText("Novo nome"), { target: { value: "moradia" } });
-    fireEvent.click(screen.getByRole("button", { name: "Renomear", exact: true }).closest('[role="dialog"]')?.querySelector("button[data-financial-submit]") ?? screen.getAllByRole("button", { name: "Renomear" }).at(-1) as HTMLElement);
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Renomear", exact: true }));
     await waitFor(() => expect(mocks.mutate).toHaveBeenCalledWith(expect.objectContaining({ from: "casa", to: "moradia" }), expect.any(Object)));
     expect(mocks.confirm).toHaveBeenCalled();
   });

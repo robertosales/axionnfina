@@ -30,7 +30,7 @@ describe("TagManager", () => {
     render(<TagManager />);
     fireEvent.click(screen.getAllByRole("button", { name: "Renomear" })[0] as HTMLElement);
     fireEvent.change(screen.getByLabelText("Novo nome"), { target: { value: "moradia" } });
-    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Renomear", exact: true }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /^Renomear$/ }));
     await waitFor(() => expect(mocks.mutate).toHaveBeenCalledWith(expect.objectContaining({ from: "casa", to: "moradia" }), expect.any(Object)));
     expect(mocks.confirm).toHaveBeenCalled();
   });

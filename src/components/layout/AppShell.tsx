@@ -69,8 +69,8 @@ const navItems: NavItem[] = [
   { to: "/wallet", label: "Carteira", icon: Wallet, group: "Vida financeira" },
   { to: "/wallet/accounts", label: "Contas bancárias", icon: CreditCard, group: "Vida financeira" },
   { to: "/transactions", label: "Transações", icon: Receipt, group: "Vida financeira" },
+  { to: "/categories", label: "Categorias e Tags", icon: Tag, group: "Vida financeira" },
   { to: "/wallet/statement", label: "Extrato de contas", icon: ScrollText, group: "Vida financeira" },
-  { to: "/tags", label: "Tags", icon: Tag, group: "Vida financeira" },
   {
     to: "/bills",
     label: "Contas a pagar e receber",

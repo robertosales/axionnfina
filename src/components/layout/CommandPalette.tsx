@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Bot, Plus, RefreshCw, Send, Target } from "lucide-react";
+import { Bot, Plus, RefreshCw, Send, Target, Tags, Tag } from "lucide-react";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
@@ -70,6 +70,12 @@ export function CommandPalette({ open, onOpenChange }: Props) {
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading="Navegar">
+          <CommandItem value="Categorias e Tags categorias" onSelect={() => run("Categorias", () => navigate({ to: "/categories", search: { tab: "categories" } }))}>
+            <Tags className="size-4" /> Categorias e Tags
+          </CommandItem>
+          <CommandItem value="Tags etiquetas" onSelect={() => run("Tags", () => navigate({ to: "/categories", search: { tab: "tags" } }))}>
+            <Tag className="size-4" /> Tags
+          </CommandItem>
           <CommandItem onSelect={() => run("Agente", () => navigate({ to: "/agent" }))}>
             <Bot className="size-4" /> Perguntar ao agente
           </CommandItem>

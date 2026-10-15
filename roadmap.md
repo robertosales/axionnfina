@@ -12,5 +12,6 @@
 
 - [x] Separar o gerenciamento de categorias e tags sem alterar operações financeiras
 - [x] Criar página com abas e atualizar menu e busca
-- [ ] Preservar endereço antigo e validar ações em sessão autenticada
-- [ ] Conferir apresentação em computador e celular e compilação
+- [x] Preservar endereço antigo; validar criação, renomeação e arquivamento de categoria em sessão autenticada
+- [x] Conferir apresentação em computador e celular e compilação
+- [x] Testar pesquisa, renomeação, exclusão e cancelamento de tags com dados isolados (a conta exibe zero tags)

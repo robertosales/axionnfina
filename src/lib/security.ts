@@ -6,21 +6,14 @@
 /** Content Security Policy */
 const isDev = process.env["NODE_ENV"] !== "production";
 
-const scriptSrc = [
-  "'self'",
-  !isDev ? "" : "'unsafe-eval'",
-  "https://va.vercel-scripts.com",
-]
-  .filter(Boolean)
-  .join(" ");
-
 export const CSP_HEADER = [
-  `script-src 'self' ${isDev ? "'unsafe-eval' " : ""}https://va.vercel-scripts.com`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https:",
-  "font-src 'self' https://fonts.gstatic.com",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openfinancebrasil.org.br",
-  "frame-ancestors 'none'",
+  `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval' " : ""}https://va.vercel-scripts.com https://cdn.gpteng.co`,
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openfinancebrasil.org.br https://*.lovable.app https://cdn.gpteng.co https://brapi.dev https://query1.finance.yahoo.com",
+  "worker-src 'self' blob:",
+  "frame-ancestors 'self' https://*.lovable.app https://*.lovable.dev https://lovable.dev",
   "base-uri 'self'",
   "form-action 'self'",
 ].join("; ");
@@ -29,8 +22,6 @@ export const CSP_HEADER = [
 export const SECURITY_HEADERS: Record<string, string> = {
   "Content-Security-Policy": CSP_HEADER,
   "X-Content-Type-Options": "nosniff",
-  "X-Frame-Options": "DENY",
-  "X-XSS-Protection": "1; mode=block",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
 };
